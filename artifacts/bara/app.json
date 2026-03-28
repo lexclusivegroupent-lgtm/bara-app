@@ -1,0 +1,69 @@
+{
+  "expo": {
+    "name": "Bära",
+    "slug": "bara",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "bara",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1B2A4A"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.bara.app",
+      "config": {
+        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+      }
+    },
+    "android": {
+      "package": "com.bara.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#1B2A4A"
+      },
+      "config": {
+        "googleMaps": {
+          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
+        }
+      }
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/icon.png",
+      "name": "Bära",
+      "shortName": "Bära",
+      "description": "On-demand furniture transport and junk pickup in Sweden",
+      "themeColor": "#1B2A4A",
+      "backgroundColor": "#1B2A4A",
+      "display": "standalone",
+      "orientation": "portrait",
+      "lang": "sv"
+    },
+    "plugins": [
+      [
+        "expo-router",
+        {
+          "origin": "https://replit.com/"
+        }
+      ],
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-location",
+        {
+          "locationAlwaysAndWhenInUsePermission": "Bära needs your location to show nearby jobs on the map.",
+          "locationWhenInUsePermission": "Bära needs your location to show nearby jobs on the map."
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
