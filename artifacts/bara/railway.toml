@@ -1,5 +1,5 @@
 [build]
-buildCommand = "npm install -g pnpm && pnpm install && node scripts/build.js"
+buildCommand = "npm install -g pnpm@latest && pnpm install --no-frozen-lockfile && node scripts/build.js"
 
 [deploy]
 startCommand = "node server/serve.js"
