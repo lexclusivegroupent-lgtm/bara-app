@@ -1,7 +1,7 @@
 FROM node:18-alpine
 WORKDIR /app
 COPY artifacts/api-server/package*.json ./
-RUN npm install
+RUN npm install --legacy-peer-deps
 COPY artifacts/api-server/ .
 RUN npm run build
 EXPOSE 3000
