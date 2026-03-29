@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "cd artifacts/api-server && npm install && npm run build"
+buildCommand = "cd artifacts/api-server && npm install --legacy-peer-deps && npm run build"
 
 [deploy]
 startCommand = "node artifacts/api-server/dist/index.js"
