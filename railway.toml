@@ -1,3 +1,6 @@
 [build]
 installCommand = "npm install -g pnpm && pnpm install"
 buildCommand = "pnpm --filter @workspace/api-server build"
+
+[deploy]
+startCommand = "node artifacts/api-server/dist/index.js"
