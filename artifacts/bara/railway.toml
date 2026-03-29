@@ -1,0 +1,7 @@
+[build]
+buildCommand = "npm install -g pnpm && pnpm install && node scripts/build.js"
+
+[deploy]
+startCommand = "node server/serve.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
