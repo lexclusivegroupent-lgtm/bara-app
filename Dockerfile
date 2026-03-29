@@ -14,4 +14,4 @@ RUN npm install --legacy-peer-deps
 # Build the api-server
 RUN npm run build
 EXPOSE 3000
-CMD ["node", "dist/index.mjs"]
+CMD ["node", "--enable-source-maps", "dist/index.mjs"]
