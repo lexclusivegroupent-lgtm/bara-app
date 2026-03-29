@@ -1,5 +1,6 @@
 FROM node:18-alpine
 WORKDIR /app
+ARG CACHEBUST=2
 # Copy ALL source code first (needed for file: protocol packages)
 COPY lib/ ./lib/
 COPY artifacts/api-server/ ./artifacts/api-server/
