@@ -1,0 +1,43 @@
+name: Build Bara Static Bundle
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'artifacts/bara/static-build/**'
+
+jobs:
+  build-static:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install pnpm
+        run: npm install -g pnpm@latest
+
+      - name: Install dependencies
+        working-directory: artifacts/bara
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Build static Expo bundle
+        working-directory: artifacts/bara
+        env:
+          EXPO_PUBLIC_DOMAIN: app.baraapp.se
+          CI: true
+        run: node scripts/build.js
+
+      - name: Commit and push static-build
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add artifacts/bara/static-build/
+          git diff --staged --quiet && echo "No changes to commit" || git commit -m "chore: rebuild Expo static bundle [skip ci]"
+          git push
