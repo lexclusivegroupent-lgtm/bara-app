@@ -1,5 +1,5 @@
 [build]
-buildCommand = "npm install -g pnpm@latest && pnpm install --no-frozen-lockfile && node scripts/build.js"
+buildCommand = "npm install --legacy-peer-deps"
 
 [deploy]
 startCommand = "node server/serve.js"
