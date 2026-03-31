@@ -2,10 +2,9 @@
 # All paths here are relative to artifacts/api-server/
 
 [build]
-builder = "NIXPACKS"
-# Step up to the repo root so pnpm workspace dependencies resolve correctly,
-# then build only the api-server package.
-buildCommand = "cd ../../ && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build"
+builder = "DOCKERFILE"
+# The Dockerfile at the repo root handles the full monorepo build:
+# copies lib/ and artifacts/api-server/, installs all dependencies, and builds the api-server.
 
 [deploy]
 # dist/index.mjs is relative to artifacts/api-server/ (the service root)
