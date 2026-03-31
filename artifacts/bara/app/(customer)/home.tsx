@@ -106,6 +106,12 @@ export default function CustomerHome() {
             onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "furniture_transport" } })}
           />
           <ServiceCard
+            icon="package-variant"
+            title="Bulky Delivery"
+            subtitle="Large items"
+            onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "bulky_delivery" } })}
+          />
+          <ServiceCard
             icon="delete-sweep"
             title="Junk & Trash"
             subtitle="Home pickup"
