@@ -18,7 +18,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/AuthContext";
 import { Colors } from "@/constants/colors";
-import { BASE_URL, formatSEK, formatDate, getStatusColor, getStatusLabel } from "@/constants/config";
+import { BASE_URL, formatSEK, formatDate, getStatusColor, getStatusLabel, CANCELLATION_FEE } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { Job } from "@/components/JobCard";
 import { PhotoPicker } from "@/components/PhotoPicker";
@@ -43,6 +43,7 @@ export default function JobStatusScreen() {
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [showCancelFeeModal, setShowCancelFeeModal] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [disputing, setDisputing] = useState(false);
@@ -270,7 +271,7 @@ export default function JobStatusScreen() {
               ) : (
                 <>
                   <Feather name="x-circle" size={16} color={Colors.error} />
-                  <Text style={styles.cancelBtnText}>Cancel Job</Text>
+                  <Text style={styles.cancelBtnText}>Cancel Job — Free</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -278,10 +279,38 @@ export default function JobStatusScreen() {
         )}
 
         {(job.status === "accepted" || job.status === "arrived" || job.status === "in_progress") && (
-          <View style={styles.cancelLocked}>
-            <Feather name="lock" size={14} color={Colors.textMuted} />
-            <Text style={styles.cancelLockedText}>
-              Cannot cancel — a driver has already accepted this job
+          <>
+            {cancelError && (
+              <TouchableOpacity style={styles.cancelError} onPress={() => setCancelError(null)} activeOpacity={0.8}>
+                <Feather name="alert-circle" size={14} color={Colors.error} />
+                <Text style={styles.cancelErrorText}>{cancelError}</Text>
+                <Feather name="x" size={14} color={Colors.error} />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={styles.cancelWithFeeBtn}
+              onPress={() => setShowCancelFeeModal(true)}
+              activeOpacity={0.85}
+            >
+              <Feather name="x-circle" size={15} color={Colors.error} />
+              <Text style={styles.cancelWithFeeBtnText}>Cancel Job</Text>
+              <View style={styles.feePill}>
+                <Text style={styles.feePillText}>{CANCELLATION_FEE} kr fee</Text>
+              </View>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {job.status === "cancelled_by_customer" && (
+          <View style={styles.cancelledWithFeeCard}>
+            <View style={styles.cancelledWithFeeHeader}>
+              <Feather name="x-circle" size={16} color={Colors.error} />
+              <Text style={styles.cancelledWithFeeTitle}>Job Cancelled</Text>
+            </View>
+            <Text style={styles.cancelledWithFeeText}>
+              You cancelled after a driver had accepted this job. A cancellation fee of{" "}
+              <Text style={{ fontFamily: "Inter_700Bold" }}>{formatSEK(job.cancellationFee ?? CANCELLATION_FEE)}</Text>{" "}
+              applies to compensate the driver for their time.
             </Text>
           </View>
         )}
@@ -310,6 +339,56 @@ export default function JobStatusScreen() {
 
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 20 }} />
       </ScrollView>
+
+      <Modal visible={showCancelFeeModal} animationType="slide" transparent presentationStyle="overFullScreen">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.feeModalIcon}>
+              <Feather name="alert-triangle" size={28} color={Colors.error} />
+            </View>
+            <Text style={styles.feeModalTitle}>Cancellation Fee</Text>
+            <Text style={styles.feeModalBody}>
+              A driver has already accepted this job and may be on their way. Cancelling now will charge a{" "}
+              <Text style={styles.feeModalAmount}>{formatSEK(CANCELLATION_FEE)}</Text> fee to compensate the driver for their time.
+            </Text>
+            <View style={styles.feeBreakdown}>
+              <View style={styles.feeBreakdownRow}>
+                <Text style={styles.feeBreakdownLabel}>Cancellation fee</Text>
+                <Text style={styles.feeBreakdownValue}>{formatSEK(CANCELLATION_FEE)}</Text>
+              </View>
+              <View style={styles.feeBreakdownRow}>
+                <Text style={styles.feeBreakdownLabel}>Driver receives</Text>
+                <Text style={[styles.feeBreakdownValue, { color: Colors.success }]}>{formatSEK(CANCELLATION_FEE)}</Text>
+              </View>
+            </View>
+            <Text style={styles.feeModalHint}>
+              If the driver cancels or doesn't show up, you won't be charged.
+            </Text>
+            <View style={styles.feeModalActions}>
+              <TouchableOpacity
+                style={styles.feeModalKeepBtn}
+                onPress={() => setShowCancelFeeModal(false)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.feeModalKeepText}>Keep Job</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.feeModalConfirmBtn, cancelling && styles.cancelBtnDisabled]}
+                onPress={() => { setShowCancelFeeModal(false); handleCancel(); }}
+                disabled={cancelling}
+                activeOpacity={0.85}
+              >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.feeModalConfirmText}>Cancel & Pay Fee</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       <Modal visible={showDisputeModal} animationType="slide" transparent presentationStyle="overFullScreen">
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
@@ -570,6 +649,153 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
+  },
+  cancelWithFeeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderWidth: 1.5,
+    borderColor: `${Colors.error}60`,
+    backgroundColor: `${Colors.error}10`,
+  },
+  cancelWithFeeBtnText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.error,
+  },
+  feePill: {
+    backgroundColor: `${Colors.error}22`,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderWidth: 1,
+    borderColor: `${Colors.error}40`,
+  },
+  feePillText: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.error,
+  },
+  cancelledWithFeeCard: {
+    backgroundColor: `${Colors.error}10`,
+    borderRadius: 14,
+    padding: 16,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: `${Colors.error}30`,
+  },
+  cancelledWithFeeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  cancelledWithFeeTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: Colors.error,
+  },
+  cancelledWithFeeText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 20,
+  },
+  feeModalIcon: {
+    alignSelf: "center",
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: `${Colors.error}15`,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  feeModalTitle: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    textAlign: "center",
+    marginBottom: 10,
+  },
+  feeModalBody: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 22,
+    textAlign: "center",
+  },
+  feeModalAmount: {
+    fontFamily: "Inter_700Bold",
+    color: Colors.error,
+  },
+  feeBreakdown: {
+    backgroundColor: Colors.navy,
+    borderRadius: 12,
+    padding: 14,
+    gap: 8,
+    marginVertical: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  feeBreakdownRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  feeBreakdownLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  feeBreakdownValue: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  feeModalHint: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 17,
+    fontStyle: "italic",
+  },
+  feeModalActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 8,
+  },
+  feeModalKeepBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  feeModalKeepText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  feeModalConfirmBtn: {
+    flex: 1,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: Colors.error,
+  },
+  feeModalConfirmText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: "#fff",
   },
   freeLaunchCard: {
     flexDirection: "row",
