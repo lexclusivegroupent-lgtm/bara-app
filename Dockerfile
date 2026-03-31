@@ -6,12 +6,13 @@ RUN npm install -g pnpm@9
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY lib/ ./lib/
 COPY artifacts/api-server/ ./artifacts/api-server/
+COPY start.sh ./start.sh
 
 RUN pnpm install --frozen-lockfile
 
-RUN pnpm --filter @workspace/db run push-force
-
 RUN pnpm --filter @workspace/api-server run build
 
+RUN chmod +x /app/start.sh
+
 EXPOSE 3000
-CMD ["node", "--enable-source-maps", "./artifacts/api-server/dist/index.mjs"]
+CMD ["/app/start.sh"]
