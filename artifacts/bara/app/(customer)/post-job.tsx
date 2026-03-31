@@ -196,6 +196,19 @@ export default function PostJobScreen() {
           />
         </FormField>
 
+        <View style={styles.prohibitedCard}>
+          <View style={styles.prohibitedHeader}>
+            <Feather name="alert-triangle" size={14} color={Colors.gold} />
+            <Text style={styles.prohibitedTitle}>Prohibited Items</Text>
+          </View>
+          <Text style={styles.prohibitedText}>
+            Weapons · Illegal substances · Stolen goods · Hazardous materials · Live animals
+          </Text>
+          <Text style={styles.prohibitedSubtext}>
+            Transporting prohibited items may result in account suspension and legal action.
+          </Text>
+        </View>
+
         <View style={styles.photoSection}>
           <View style={styles.photoSectionHeader}>
             <Feather name="camera" size={13} color={Colors.textMuted} />
@@ -453,6 +466,38 @@ const styles = StyleSheet.create({
     color: Colors.navy,
   },
   disabled: { opacity: 0.7 },
+  prohibitedCard: {
+    backgroundColor: `${Colors.gold}10`,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}25`,
+    gap: 6,
+  },
+  prohibitedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  prohibitedTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  prohibitedText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  prohibitedSubtext: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 17,
+  },
   freeLaunchNote: {
     flexDirection: "row",
     alignItems: "flex-start",
