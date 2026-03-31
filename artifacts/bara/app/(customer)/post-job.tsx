@@ -21,12 +21,12 @@ import { safeJson } from "@/utils/api";
 import { PhotoPicker } from "@/components/PhotoPicker";
 
 export default function PostJobScreen() {
-  const { type } = useLocalSearchParams<{ type: "furniture_transport" | "junk_pickup" }>();
+  const { type } = useLocalSearchParams<{ type: "furniture_transport" | "bulky_delivery" | "junk_pickup" }>();
   const { user, token } = useAuth();
   const insets = useSafeAreaInsets();
 
-  const jobType = (type || "furniture_transport") as "furniture_transport" | "junk_pickup";
-  const isFurniture = jobType === "furniture_transport";
+  const jobType = (type || "furniture_transport") as "furniture_transport" | "bulky_delivery" | "junk_pickup";
+  const isFurniture = jobType === "furniture_transport" || jobType === "bulky_delivery";
 
   const [pickupAddress, setPickupAddress] = useState("");
   const [dropoffAddress, setDropoffAddress] = useState("");
@@ -38,6 +38,7 @@ export default function PostJobScreen() {
   const [calculating, setCalculating] = useState(false);
   const [agreedToOwnership, setAgreedToOwnership] = useState(false);
   const [customerPhotos, setCustomerPhotos] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const pricing = calculatePrice(jobType, distanceKm);
 
@@ -61,23 +62,23 @@ export default function PostJobScreen() {
 
   async function handlePost() {
     if (!itemDescription.trim()) {
-      Alert.alert("Missing Info", "Please describe the items.");
+      setError("Please describe the items.");
       return;
     }
     if (!preferredTime.trim()) {
-      Alert.alert("Missing Info", "Please enter a preferred time.");
+      setError("Please enter a preferred time.");
       return;
     }
     if (isFurniture && (!pickupAddress.trim() || !dropoffAddress.trim())) {
-      Alert.alert("Missing Info", "Please enter pickup and drop-off addresses.");
+      setError("Please enter pickup and drop-off addresses.");
       return;
     }
     if (!isFurniture && !homeAddress.trim()) {
-      Alert.alert("Missing Info", "Please enter your home address.");
+      setError("Please enter your home address.");
       return;
     }
     if (!agreedToOwnership) {
-      Alert.alert("Confirmation Required", "Please confirm item ownership.");
+      setError("Please confirm that you own or have permission to move the items.");
       return;
     }
 
@@ -109,7 +110,7 @@ export default function PostJobScreen() {
       if (!res.ok) throw new Error(data.error || "Failed to post job");
       router.replace("/(customer)/my-jobs");
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to post job.");
+      setError(e.message || "Failed to post job. Please try again.");
     } finally {
       setLoading(false);
     }
