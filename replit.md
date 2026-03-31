@@ -1,8 +1,35 @@
-# Workspace
+# Workspace — Bära App
 
 ## Overview
 
 pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+
+## Bära — Mobile App
+
+On-demand furniture transport and junk pickup for Sweden. Navy (#1B2A4A) + Gold (#C9A84C) brand.
+
+### Mobile App (`artifacts/bara/`)
+- Expo React Native with file-based routing (expo-router)
+- Customer + Driver dual roles (+ "both" role)
+- 3 job types: furniture_transport, bulky_delivery, junk_pickup
+- Full job lifecycle: pending → accepted → arrived → in_progress → completed (+ cancelled/disputed)
+- Auth: JWT stored in AsyncStorage ("bara_token"), forgot/reset password flow
+- Forgot password: `POST /api/auth/forgot-password` → returns devToken in non-prod, logs to console
+- Reset password: `POST /api/auth/reset-password` → validates SHA-256 hashed token with expiry
+
+### API Server (`artifacts/api-server/`)
+- Express 5 + PostgreSQL + Drizzle ORM
+- Railway deployment: startCommand = `node artifacts/api-server/dist/index.mjs`
+- Health check: `GET /api/healthz`
+- Admin stats: `GET /api/admin/stats?key=bara-admin-2025`
+
+### Key Config
+- Admin key: `ADMIN_STATS_KEY` env var (default: "bara-admin-2025")
+- JWT secret: `JWT_SECRET` env var
+- Google Maps: `EXPO_PUBLIC_GOOGLE_MAPS_KEY` env var
+- SMTP (optional): `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` for real email sending
+- Without SMTP: devToken is returned in API response (NODE_ENV !== "production")
+- See `.env.example` for all env vars
 
 ## Stack
 
