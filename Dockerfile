@@ -9,6 +9,8 @@ COPY artifacts/api-server/ ./artifacts/api-server/
 
 RUN pnpm install --frozen-lockfile
 
+RUN pnpm --filter @workspace/db run push-force
+
 RUN pnpm --filter @workspace/api-server run build
 
 EXPOSE 3000
