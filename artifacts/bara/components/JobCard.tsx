@@ -19,6 +19,7 @@ export interface Job {
   priceTotal: number;
   driverPayout: number;
   platformFee: number;
+  customerPrice?: number | null;
   rating?: number | null;
   paymentStatus: "unpaid" | "paid";
   city: string;
@@ -85,8 +86,15 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
         <View style={styles.priceSection}>
           {showDriverEarnings ? (
             <View style={styles.earningsContainer}>
-              <Text style={styles.price}>{formatSEK(job.priceTotal)}</Text>
+              <Text style={styles.price}>
+                {formatSEK(job.customerPrice ?? job.priceTotal)}
+              </Text>
               <Text style={styles.earnings}>You earn {formatSEK(job.driverPayout)}</Text>
+              {job.customerPrice != null && job.customerPrice !== job.priceTotal && (
+                <Text style={styles.suggestedLabel}>
+                  Suggested {formatSEK(job.priceTotal)}
+                </Text>
+              )}
             </View>
           ) : (
             <View style={styles.freeBadge}>
@@ -206,6 +214,13 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: Colors.success,
+  },
+  suggestedLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textDecorationLine: "line-through",
+    textAlign: "right",
   },
   freeBadge: {
     flexDirection: "row",
