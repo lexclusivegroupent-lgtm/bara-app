@@ -14,6 +14,10 @@ export const usersTable = pgTable("users", {
   rating: numeric("rating", { precision: 3, scale: 2 }),
   totalJobs: integer("total_jobs").notNull().default(0),
   vehicleDescription: text("vehicle_description"),
+  verificationStatus: text("verification_status").notNull().default("unverified").$type<"unverified" | "pending" | "verified">(),
+  driverLicenseStatus: text("driver_license_status").notNull().default("not_submitted").$type<"not_submitted" | "submitted" | "approved" | "rejected">(),
+  cancellationsCount: integer("cancellations_count").notNull().default(0),
+  noShowCount: integer("no_show_count").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
