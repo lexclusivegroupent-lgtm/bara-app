@@ -8,7 +8,7 @@ export const jobsTable = pgTable("jobs", {
   customerId: integer("customer_id").notNull().references(() => usersTable.id),
   driverId: integer("driver_id").references(() => usersTable.id),
   jobType: text("job_type").notNull().$type<"furniture_transport" | "junk_pickup">(),
-  status: text("status").notNull().default("pending").$type<"pending" | "accepted" | "in_progress" | "completed" | "cancelled">(),
+  status: text("status").notNull().default("pending").$type<"pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "disputed">(),
   pickupAddress: text("pickup_address"),
   dropoffAddress: text("dropoff_address"),
   homeAddress: text("home_address"),
@@ -24,9 +24,13 @@ export const jobsTable = pgTable("jobs", {
   photosCustomer: text("photos_customer").array(),
   photosPickup: text("photos_pickup").array(),
   photosDropoff: text("photos_dropoff").array(),
+  disputed: boolean("disputed").notNull().default(false),
+  disputeReason: text("dispute_reason"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   acceptedAt: timestamp("accepted_at"),
+  arrivedAt: timestamp("arrived_at"),
   completedAt: timestamp("completed_at"),
+  disputedAt: timestamp("disputed_at"),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });
