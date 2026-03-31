@@ -1,12 +1,19 @@
 import { Router, type IRouter } from "express";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
+import { Resend } from "resend";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { authenticate, signToken, AuthenticatedRequest } from "../middlewares/auth";
 
 const router: IRouter = Router();
+
+function getResend(): Resend | null {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return null;
+  return new Resend(apiKey);
+}
 
 router.post("/register", async (req, res) => {
   const { email, password, fullName, role, city, vehicleDescription } = req.body;
@@ -106,6 +113,7 @@ router.post("/forgot-password", async (req, res) => {
   }
 
   const SUCCESS_MSG = "If that email is registered, you will receive a reset link shortly.";
+  const isProd = process.env.NODE_ENV === "production";
 
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
@@ -123,23 +131,41 @@ router.post("/forgot-password", async (req, res) => {
       .set({ resetToken: tokenHash, resetTokenExpiry: expiry })
       .where(eq(usersTable.id, user.id));
 
-    const smtpConfigured = !!(
-      process.env.SMTP_HOST &&
-      process.env.SMTP_USER &&
-      process.env.SMTP_PASS
-    );
+    const appBaseUrl = process.env.APP_BASE_URL || "https://bara.app";
+    const resetLink = `${appBaseUrl}/reset-password?token=${plainToken}`;
+    const resend = getResend();
 
-    if (!smtpConfigured) {
-      req.log?.info({ email: user.email }, "DEV: Password reset token logged (no SMTP configured)");
-      console.log(`\n[DEV] Password reset token for ${user.email}:\n  Token: ${plainToken}\n  Expires: ${expiry.toISOString()}\n`);
-      res.json({
-        message: SUCCESS_MSG,
-        ...(process.env.NODE_ENV !== "production" && { devToken: plainToken }),
+    if (resend) {
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "Bära <noreply@bara.app>";
+      await resend.emails.send({
+        from: fromEmail,
+        to: user.email,
+        subject: "Reset your Bära password",
+        html: `
+          <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; color: #1B2A4A;">
+            <h2 style="color: #1B2A4A;">Reset your password</h2>
+            <p>Someone requested a password reset for your Bära account.</p>
+            <p>
+              <a href="${resetLink}"
+                 style="display:inline-block;background:#C9A84C;color:#1B2A4A;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;">
+                Reset Password
+              </a>
+            </p>
+            <p style="color:#666;font-size:13px;">This link expires in 1 hour. If you didn't request this, you can safely ignore this email.</p>
+          </div>
+        `,
       });
-      return;
+      req.log?.info({ email: user.email }, "Password reset email sent via Resend");
+    } else {
+      req.log?.info({ email: user.email, resetLink }, "Password reset requested (no Resend configured — token logged)");
+      console.log(`\n[RESET] Password reset for ${user.email}:\n  Link: ${resetLink}\n  Token: ${plainToken}\n  Expires: ${expiry.toISOString()}\n`);
+
+      if (!isProd) {
+        res.json({ message: SUCCESS_MSG, devToken: plainToken });
+        return;
+      }
     }
 
-    req.log?.info({ email: user.email }, "Password reset requested (SMTP send placeholder)");
     res.json({ message: SUCCESS_MSG });
   } catch (err) {
     req.log?.error(err, "Forgot password error");
