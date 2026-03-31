@@ -23,6 +23,7 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     priceTotal: parseFloat(job.priceTotal),
     driverPayout: parseFloat(job.driverPayout),
     platformFee: parseFloat(job.platformFee),
+    customerPrice: job.customerPrice ? parseFloat(job.customerPrice) : null,
     rating: job.rating ? parseFloat(job.rating) : null,
     paymentStatus: job.paymentStatus,
     city: job.city,
@@ -100,7 +101,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
   const {
     jobType, pickupAddress, dropoffAddress, homeAddress,
     itemDescription, preferredTime, distanceKm, priceTotal,
-    driverPayout, platformFee, city, customerPhotos,
+    driverPayout, platformFee, city, customerPhotos, customerPrice,
   } = req.body;
 
   if (!jobType || !itemDescription || !preferredTime || !city || priceTotal == null) {
@@ -108,9 +109,25 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  if (!["furniture_transport", "junk_pickup"].includes(jobType)) {
+  if (!["furniture_transport", "bulky_delivery", "junk_pickup"].includes(jobType)) {
     res.status(400).json({ error: "Invalid jobType" });
     return;
+  }
+
+  const suggested = parseFloat(priceTotal);
+  const minAllowed = Math.max(299, Math.round(suggested * 0.70));
+  const maxAllowed = Math.round(suggested * 1.30);
+
+  let resolvedCustomerPrice: number | null = null;
+  if (customerPrice != null) {
+    const cp = parseFloat(customerPrice);
+    if (isNaN(cp) || cp < minAllowed || cp > maxAllowed) {
+      res.status(400).json({
+        error: `Customer price must be between ${minAllowed} and ${maxAllowed} kr (±30% of suggested ${Math.round(suggested)} kr)`,
+      });
+      return;
+    }
+    resolvedCustomerPrice = Math.round(cp);
   }
 
   try {
@@ -127,6 +144,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       priceTotal: priceTotal.toString(),
       driverPayout: (driverPayout ?? Math.round(priceTotal * 0.75)).toString(),
       platformFee: (platformFee ?? Math.round(priceTotal * 0.25)).toString(),
+      customerPrice: resolvedCustomerPrice != null ? resolvedCustomerPrice.toString() : null,
       paymentStatus: "unpaid",
       city,
       photosCustomer: Array.isArray(customerPhotos) ? customerPhotos : [],
