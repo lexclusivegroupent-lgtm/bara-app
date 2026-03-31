@@ -19,6 +19,7 @@ export const jobsTable = pgTable("jobs", {
   driverPayout: numeric("driver_payout", { precision: 10, scale: 2 }).notNull(),
   platformFee: numeric("platform_fee", { precision: 10, scale: 2 }).notNull(),
   rating: numeric("rating", { precision: 3, scale: 2 }),
+  customerPrice: numeric("customer_price", { precision: 10, scale: 2 }),
   paymentStatus: text("payment_status").notNull().default("unpaid").$type<"unpaid" | "paid">(),
   city: text("city").notNull(),
   photosCustomer: text("photos_customer").array(),
