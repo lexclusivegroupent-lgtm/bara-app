@@ -29,9 +29,13 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     photosCustomer: job.photosCustomer || [],
     photosPickup: job.photosPickup || [],
     photosDropoff: job.photosDropoff || [],
+    disputed: job.disputed,
+    disputeReason: job.disputeReason,
     createdAt: job.createdAt.toISOString(),
     acceptedAt: job.acceptedAt?.toISOString() || null,
+    arrivedAt: job.arrivedAt?.toISOString() || null,
     completedAt: job.completedAt?.toISOString() || null,
+    disputedAt: job.disputedAt?.toISOString() || null,
     customer: customer ? formatUser(customer) : null,
     driver: driver ? formatUser(driver) : null,
   };
@@ -168,6 +172,34 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
   }
 });
 
+router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
+    if (existing.driverId !== req.userId) {
+      res.status(403).json({ error: "Only the assigned driver can mark arrival" });
+      return;
+    }
+    if (existing.status !== "accepted") {
+      res.status(400).json({ error: "Job must be in accepted state to mark arrival" });
+      return;
+    }
+
+    await db.update(jobsTable).set({
+      status: "arrived",
+      arrivedAt: new Date(),
+    }).where(eq(jobsTable.id, jobId));
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+  } catch (err) {
+    req.log?.error(err, "Arrived job error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/:id/photos", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
@@ -208,7 +240,7 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
       res.status(403).json({ error: "Only the assigned driver can complete this job" });
       return;
     }
-    if (existing.status !== "accepted" && existing.status !== "in_progress") {
+    if (!["accepted", "arrived", "in_progress"].includes(existing.status)) {
       res.status(400).json({ error: "Job cannot be completed in its current state" });
       return;
     }
@@ -235,6 +267,44 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
     res.json(enriched);
   } catch (err) {
     req.log?.error(err, "Complete job error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/dispute", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  const { reason } = req.body;
+  if (!reason || !reason.trim()) {
+    res.status(400).json({ error: "A reason is required to flag a dispute" });
+    return;
+  }
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
+    if (existing.customerId !== req.userId && existing.driverId !== req.userId) {
+      res.status(403).json({ error: "You are not part of this job" });
+      return;
+    }
+    if (existing.status === "cancelled") {
+      res.status(400).json({ error: "Cannot dispute a cancelled job" });
+      return;
+    }
+    if (existing.disputed) {
+      res.status(400).json({ error: "This job has already been flagged for dispute" });
+      return;
+    }
+
+    await db.update(jobsTable).set({
+      disputed: true,
+      disputeReason: reason.trim(),
+      disputedAt: new Date(),
+    }).where(eq(jobsTable.id, jobId));
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+  } catch (err) {
+    req.log?.error(err, "Dispute job error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -319,13 +389,19 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
       res.status(400).json({ error: "Job cannot be cancelled in its current state" });
       return;
     }
-    // Customers can only cancel before a driver accepts
     if (existing.customerId === req.userId && existing.status !== "pending") {
       res.status(400).json({ error: "Cannot cancel — a driver has already accepted this job" });
       return;
     }
 
     await db.update(jobsTable).set({ status: "cancelled" }).where(eq(jobsTable.id, jobId));
+
+    if (existing.driverId === req.userId) {
+      await db.update(usersTable).set({
+        cancellationsCount: sql`${usersTable.cancellationsCount} + 1`,
+      }).where(eq(usersTable.id, req.userId!));
+    }
+
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
   } catch (err) {
