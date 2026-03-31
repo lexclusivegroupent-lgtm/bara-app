@@ -13,6 +13,7 @@
     "@workspace/api-zod": "file:../../lib/api-zod",
     "@workspace/db": "file:../../lib/db",
     "bcryptjs": "^3.0.3",
+    "zod": "^3.25.76",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "^0.45.1",
