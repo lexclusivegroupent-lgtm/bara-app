@@ -21,14 +21,35 @@ export const SWEDISH_CITIES = [
   "Sundsvall",
 ];
 
-export function calculatePrice(jobType: "furniture_transport" | "junk_pickup", distanceKm: number): {
+export type JobType = "furniture_transport" | "bulky_delivery" | "junk_pickup";
+
+export function calculatePrice(jobType: JobType, distanceKm: number): {
   priceTotal: number;
   driverPayout: number;
   platformFee: number;
 } {
-  const basePrice = jobType === "furniture_transport" ? 299 : 199;
-  const ratePerKm = jobType === "furniture_transport" ? 15 : 10;
-  const minimum = 349;
+  let basePrice: number;
+  let ratePerKm: number;
+  let minimum: number;
+
+  switch (jobType) {
+    case "furniture_transport":
+      basePrice = 299;
+      ratePerKm = 15;
+      minimum = 349;
+      break;
+    case "bulky_delivery":
+      basePrice = 249;
+      ratePerKm = 12;
+      minimum = 299;
+      break;
+    case "junk_pickup":
+    default:
+      basePrice = 199;
+      ratePerKm = 10;
+      minimum = 249;
+      break;
+  }
 
   const priceTotal = Math.max(minimum, basePrice + distanceKm * ratePerKm);
   const rounded = Math.round(priceTotal);
@@ -51,23 +72,36 @@ export function formatDate(dateStr: string): string {
 
 export function getStatusColor(status: string): string {
   switch (status) {
-    case "pending": return "#8B9CBD";
-    case "accepted": return "#4A9EE8";
+    case "pending":     return "#8B9CBD";
+    case "accepted":    return "#4A9EE8";
+    case "arrived":     return "#A47FE8";
     case "in_progress": return "#E87A2A";
-    case "completed": return "#4CAF82";
-    case "cancelled": return "#E05252";
-    default: return "#8B9CBD";
+    case "completed":   return "#4CAF82";
+    case "cancelled":   return "#E05252";
+    case "disputed":    return "#C9A84C";
+    default:            return "#8B9CBD";
   }
 }
 
 export function getStatusLabel(status: string): string {
   switch (status) {
-    case "pending": return "Pending";
-    case "accepted": return "Accepted";
+    case "pending":     return "Pending";
+    case "accepted":    return "Accepted";
+    case "arrived":     return "Driver Arrived";
     case "in_progress": return "In Progress";
-    case "completed": return "Completed";
-    case "cancelled": return "Cancelled";
-    default: return status;
+    case "completed":   return "Completed";
+    case "cancelled":   return "Cancelled";
+    case "disputed":    return "Disputed";
+    default:            return status;
+  }
+}
+
+export function getJobTypeLabel(jobType: string): string {
+  switch (jobType) {
+    case "furniture_transport": return "Furniture Transport";
+    case "bulky_delivery":      return "Bulky Item Delivery";
+    case "junk_pickup":         return "Junk & Trash Pickup";
+    default:                    return jobType;
   }
 }
 
