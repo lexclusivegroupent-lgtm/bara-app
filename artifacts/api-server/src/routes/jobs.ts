@@ -24,6 +24,7 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     driverPayout: parseFloat(job.driverPayout),
     platformFee: parseFloat(job.platformFee),
     customerPrice: job.customerPrice ? parseFloat(job.customerPrice) : null,
+    cancellationFee: job.cancellationFee ? parseFloat(job.cancellationFee) : null,
     rating: job.rating ? parseFloat(job.rating) : null,
     paymentStatus: job.paymentStatus,
     city: job.city,
@@ -390,6 +391,10 @@ router.post("/:id/rate", authenticate, async (req: AuthenticatedRequest, res) =>
   }
 });
 
+// Cancellation fee applied when customer cancels AFTER a driver has accepted.
+// Default: 150 kr fixed fee. Update this constant to change the policy.
+const CANCELLATION_FEE_AFTER_ACCEPTANCE = 150;
+
 router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
@@ -403,18 +408,32 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
       res.status(403).json({ error: "You are not authorized to cancel this job" });
       return;
     }
-    if (existing.status === "completed" || existing.status === "cancelled") {
+    if (["completed", "cancelled", "cancelled_by_customer"].includes(existing.status)) {
       res.status(400).json({ error: "Job cannot be cancelled in its current state" });
       return;
     }
-    if (existing.customerId === req.userId && existing.status !== "pending") {
-      res.status(400).json({ error: "Cannot cancel — a driver has already accepted this job" });
-      return;
-    }
 
-    await db.update(jobsTable).set({ status: "cancelled" }).where(eq(jobsTable.id, jobId));
+    const isCustomer = existing.customerId === req.userId;
+    const driverAssigned = !!existing.driverId && existing.status !== "pending";
 
-    if (existing.driverId === req.userId) {
+    if (isCustomer) {
+      if (!driverAssigned) {
+        // Before acceptance — free cancellation, job simply disappears
+        await db.update(jobsTable).set({ status: "cancelled" }).where(eq(jobsTable.id, jobId));
+      } else {
+        // After acceptance — cancellation fee applies
+        await db.update(jobsTable).set({
+          status: "cancelled_by_customer",
+          cancellationFee: CANCELLATION_FEE_AFTER_ACCEPTANCE.toString(),
+        }).where(eq(jobsTable.id, jobId));
+      }
+    } else {
+      // Driver cancels their accepted job — no fee to customer, but driver gets a strike
+      await db.update(jobsTable).set({
+        status: "cancelled",
+        driverId: null,
+      }).where(eq(jobsTable.id, jobId));
+
       await db.update(usersTable).set({
         cancellationsCount: sql`${usersTable.cancellationsCount} + 1`,
       }).where(eq(usersTable.id, req.userId!));
