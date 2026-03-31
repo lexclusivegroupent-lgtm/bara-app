@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   StyleSheet,
   ActivityIndicator,
-  Alert,
   Platform,
   KeyboardAvoidingView,
   ScrollView,
@@ -25,17 +24,19 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
-      Alert.alert("Missing Fields", "Please enter your email and password.");
+      setError("Please enter your email and password.");
       return;
     }
+    setError(null);
     setLoading(true);
     try {
       await login(email.trim(), password);
     } catch (e: any) {
-      Alert.alert("Login Failed", e.message || "Invalid credentials.");
+      setError(e.message || "Invalid credentials. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -91,7 +92,12 @@ export default function LoginScreen() {
             </View>
 
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Password</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>Password</Text>
+                <TouchableOpacity onPress={() => router.push("/forgot-password")}>
+                  <Text style={styles.forgotLink}>Forgot password?</Text>
+                </TouchableOpacity>
+              </View>
               <View style={styles.inputWrapper}>
                 <Feather name="lock" size={16} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
@@ -99,7 +105,7 @@ export default function LoginScreen() {
                   placeholder="Your password"
                   placeholderTextColor={Colors.textMuted}
                   value={password}
-                  onChangeText={setPassword}
+                  onChangeText={(t) => { setPassword(t); setError(null); }}
                   secureTextEntry={!showPassword}
                   autoCapitalize="none"
                 />
@@ -108,6 +114,13 @@ export default function LoginScreen() {
                 </TouchableOpacity>
               </View>
             </View>
+
+            {error && (
+              <View style={styles.errorBanner}>
+                <Feather name="alert-circle" size={14} color={Colors.error} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            )}
 
             <TouchableOpacity
               style={[styles.loginBtn, loading && styles.disabled]}
@@ -178,12 +191,39 @@ const styles = StyleSheet.create({
   inputGroup: {
     gap: 8,
   },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
   label: {
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.textMuted,
     letterSpacing: 0.5,
     textTransform: "uppercase",
+  },
+  forgotLink: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.gold,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: `${Colors.error}18`,
+    borderWidth: 1,
+    borderColor: `${Colors.error}40`,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
   },
   inputWrapper: {
     flexDirection: "row",
