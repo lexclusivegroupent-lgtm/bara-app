@@ -9,7 +9,7 @@ export interface Job {
   customerId: number;
   driverId?: number | null;
   jobType: "furniture_transport" | "junk_pickup";
-  status: "pending" | "accepted" | "in_progress" | "completed" | "cancelled";
+  status: "pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "disputed";
   pickupAddress?: string | null;
   dropoffAddress?: string | null;
   homeAddress?: string | null;
@@ -20,6 +20,7 @@ export interface Job {
   driverPayout: number;
   platformFee: number;
   customerPrice?: number | null;
+  cancellationFee?: number | null;
   rating?: number | null;
   paymentStatus: "unpaid" | "paid";
   city: string;
@@ -104,6 +105,15 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
           )}
         </View>
       </View>
+
+      {job.status === "cancelled_by_customer" && job.cancellationFee != null && (
+        <View style={styles.compensationBanner}>
+          <Feather name="shield" size={13} color={Colors.success} />
+          <Text style={styles.compensationText}>
+            Cancellation compensation: {formatSEK(job.cancellationFee)}
+          </Text>
+        </View>
+      )}
 
       {showAcceptButton && (
         <TouchableOpacity
@@ -236,6 +246,22 @@ const styles = StyleSheet.create({
   freeText: {
     fontSize: 11,
     fontFamily: "Inter_700Bold",
+    color: Colors.success,
+  },
+  compensationBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    backgroundColor: `${Colors.success}15`,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: `${Colors.success}30`,
+  },
+  compensationText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
     color: Colors.success,
   },
   acceptBtn: {
