@@ -9,11 +9,16 @@ on:
 jobs:
   build-static:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -27,6 +32,22 @@ jobs:
         working-directory: artifacts/bara
         run: pnpm install --no-frozen-lockfile
 
+      - name: Create placeholder logo if missing
+        working-directory: artifacts/bara
+        run: |
+          mkdir -p assets/images
+          if [ ! -f assets/images/logo.png ]; then
+            node -e "
+            const fs = require('fs');
+            // Minimal 1x1 transparent PNG (67 bytes)
+            const png = Buffer.from(
+              '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489000000'
+              + '0a49444154789c6260000000020001e221bc330000000049454e44ae426082', 'hex');
+            fs.writeFileSync('assets/images/logo.png', png);
+            console.log('Created placeholder assets/images/logo.png');
+            "
+          fi
+
       - name: Build static Expo bundle
         working-directory: artifacts/bara
         env:
@@ -38,6 +59,7 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git add artifacts/bara/static-build/
           git diff --staged --quiet && echo "No changes to commit" || git commit -m "chore: rebuild Expo static bundle [skip ci]"
           git push
