@@ -23,6 +23,32 @@ interface Props {
   label?: string;
 }
 
+async function uploadToCloudinary(base64DataUri: string): Promise<string> {
+  const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
+  const uploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
+
+  if (!cloudName || !uploadPreset) {
+    throw new Error("Photo upload is not configured. Contact support.");
+  }
+
+  const formData = new FormData();
+  formData.append("file", base64DataUri);
+  formData.append("upload_preset", uploadPreset);
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+    { method: "POST", body: formData }
+  );
+
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error(err?.error?.message || "Upload failed. Please try again.");
+  }
+
+  const data = await response.json();
+  return data.secure_url as string;
+}
+
 async function requestCameraPermission(): Promise<boolean> {
   if (Platform.OS === "web") return true;
   const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -53,12 +79,27 @@ export function PhotoPicker({ photos, onChange, maxPhotos = 3, editable = true, 
   const [picking, setPicking] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [fullScreen, setFullScreen] = useState<string | null>(null);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  async function handlePicked(base64: string | undefined) {
+    if (!base64) return;
+    setUploadError(null);
+    setPicking(true);
+    try {
+      const dataUri = `data:image/jpeg;base64,${base64}`;
+      const url = await uploadToCloudinary(dataUri);
+      onChange?.([...photos, url]);
+    } catch (e: any) {
+      setUploadError(e?.message || "Photo upload failed. Please try again.");
+    } finally {
+      setPicking(false);
+    }
+  }
 
   async function pickFromCamera() {
     setShowModal(false);
     const ok = await requestCameraPermission();
     if (!ok) return;
-    setPicking(true);
     try {
       const result = await ImagePicker.launchCameraAsync({
         allowsEditing: true,
@@ -66,14 +107,11 @@ export function PhotoPicker({ photos, onChange, maxPhotos = 3, editable = true, 
         base64: true,
         exif: false,
       });
-      if (!result.canceled && result.assets[0]?.base64) {
-        const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        onChange?.([...photos, base64]);
+      if (!result.canceled) {
+        await handlePicked(result.assets[0]?.base64 ?? undefined);
       }
     } catch {
-      Alert.alert("Error", "Could not open camera.");
-    } finally {
-      setPicking(false);
+      setUploadError("Could not open camera.");
     }
   }
 
@@ -81,7 +119,6 @@ export function PhotoPicker({ photos, onChange, maxPhotos = 3, editable = true, 
     setShowModal(false);
     const ok = await requestLibraryPermission();
     if (!ok) return;
-    setPicking(true);
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
         allowsEditing: true,
@@ -89,18 +126,16 @@ export function PhotoPicker({ photos, onChange, maxPhotos = 3, editable = true, 
         base64: true,
         exif: false,
       });
-      if (!result.canceled && result.assets[0]?.base64) {
-        const base64 = `data:image/jpeg;base64,${result.assets[0].base64}`;
-        onChange?.([...photos, base64]);
+      if (!result.canceled) {
+        await handlePicked(result.assets[0]?.base64 ?? undefined);
       }
     } catch {
-      Alert.alert("Error", "Could not open photo library.");
-    } finally {
-      setPicking(false);
+      setUploadError("Could not open photo library.");
     }
   }
 
   function removePhoto(index: number) {
+    setUploadError(null);
     onChange?.(photos.filter((_, i) => i !== index));
   }
 
@@ -152,9 +187,16 @@ export function PhotoPicker({ photos, onChange, maxPhotos = 3, editable = true, 
         )}
       </ScrollView>
 
+      {uploadError && (
+        <View style={styles.errorBanner}>
+          <Feather name="alert-circle" size={13} color={Colors.error} />
+          <Text style={styles.errorText}>{uploadError}</Text>
+        </View>
+      )}
+
       {editable && (
         <Text style={styles.hint}>
-          {photos.length}/{maxPhotos} photo{maxPhotos !== 1 ? "s" : ""}
+          {picking ? "Uploading…" : `${photos.length}/${maxPhotos} photo${maxPhotos !== 1 ? "s" : ""}`}
         </Text>
       )}
 
@@ -266,6 +308,21 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: `${Colors.error}15`,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+  },
+  errorText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.error,
+    flex: 1,
   },
   modalOverlay: {
     flex: 1,
