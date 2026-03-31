@@ -15,18 +15,27 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * c;
 }
 
-const SWEDISH_CITIES: Record<string, { lat: number; lon: number }> = {
-  "Stockholm": { lat: 59.3293, lon: 18.0686 },
-  "Göteborg": { lat: 57.7089, lon: 11.9746 },
-  "Malmö": { lat: 55.6050, lon: 13.0038 },
-  "Uppsala": { lat: 59.8586, lon: 17.6389 },
-  "Västerås": { lat: 59.6099, lon: 16.5448 },
-  "Örebro": { lat: 59.2741, lon: 15.2066 },
-  "Linköping": { lat: 58.4108, lon: 15.6214 },
-  "Helsingborg": { lat: 56.0465, lon: 12.6945 },
-  "Jönköping": { lat: 57.7826, lon: 14.1618 },
-  "Norrköping": { lat: 58.5942, lon: 16.1826 },
-};
+function getMapsKey(): string | undefined {
+  return process.env.GOOGLE_MAPS_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
+}
+
+async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  const key = getMapsKey();
+  if (!key) return null;
+
+  const query = encodeURIComponent(`${address}, Sweden`);
+  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${key}&region=se&language=sv`;
+
+  const res = await fetch(url);
+  if (!res.ok) return null;
+
+  const data = await res.json();
+  if (data.status === "OK" && data.results?.[0]) {
+    const { lat, lng } = data.results[0].geometry.location;
+    return { lat, lon: lng };
+  }
+  return null;
+}
 
 router.post("/", authenticate, async (req, res) => {
   const { origin, destination } = req.body;
@@ -36,9 +45,31 @@ router.post("/", authenticate, async (req, res) => {
     return;
   }
 
+  const key = getMapsKey();
+  if (!key) {
+    res.status(503).json({
+      error: "Distance calculation is unavailable. GOOGLE_MAPS_KEY is not configured on the server.",
+      code: "MAPS_KEY_MISSING",
+    });
+    return;
+  }
+
   try {
-    const estimatedKm = 8 + Math.random() * 22;
-    const distanceKm = Math.round(estimatedKm * 10) / 10;
+    const [originCoords, destCoords] = await Promise.all([
+      geocodeAddress(origin),
+      geocodeAddress(destination),
+    ]);
+
+    if (!originCoords || !destCoords) {
+      res.status(422).json({
+        error: "Could not find one or both addresses. Please check the addresses and try again.",
+        code: "GEOCODE_FAILED",
+      });
+      return;
+    }
+
+    const rawKm = haversineDistance(originCoords.lat, originCoords.lon, destCoords.lat, destCoords.lon);
+    const distanceKm = Math.max(1, Math.round(rawKm * 10) / 10);
 
     res.json({
       distanceKm,
