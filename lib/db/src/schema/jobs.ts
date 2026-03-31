@@ -7,7 +7,7 @@ export const jobsTable = pgTable("jobs", {
   id: serial("id").primaryKey(),
   customerId: integer("customer_id").notNull().references(() => usersTable.id),
   driverId: integer("driver_id").references(() => usersTable.id),
-  jobType: text("job_type").notNull().$type<"furniture_transport" | "junk_pickup">(),
+  jobType: text("job_type").notNull().$type<"furniture_transport" | "bulky_delivery" | "junk_pickup">(),
   status: text("status").notNull().default("pending").$type<"pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "disputed">(),
   pickupAddress: text("pickup_address"),
   dropoffAddress: text("dropoff_address"),
