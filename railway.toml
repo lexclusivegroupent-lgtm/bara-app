@@ -3,7 +3,7 @@ builder = "NIXPACKS"
 buildCommand = "cd artifacts/api-server && npm install --legacy-peer-deps && npm run build"
 
 [deploy]
-startCommand = "node artifacts/api-server/dist/index.js"
+startCommand = "node artifacts/api-server/dist/index.mjs"
 healthcheckPath = "/api/healthz"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
