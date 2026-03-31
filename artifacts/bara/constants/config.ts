@@ -70,29 +70,35 @@ export function formatDate(dateStr: string): string {
   return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
+// Fee charged to customer when they cancel AFTER a driver has accepted.
+// Must match CANCELLATION_FEE_AFTER_ACCEPTANCE in the API server.
+export const CANCELLATION_FEE = 150;
+
 export function getStatusColor(status: string): string {
   switch (status) {
-    case "pending":     return "#8B9CBD";
-    case "accepted":    return "#4A9EE8";
-    case "arrived":     return "#A47FE8";
-    case "in_progress": return "#E87A2A";
-    case "completed":   return "#4CAF82";
-    case "cancelled":   return "#E05252";
-    case "disputed":    return "#C9A84C";
-    default:            return "#8B9CBD";
+    case "pending":               return "#8B9CBD";
+    case "accepted":              return "#4A9EE8";
+    case "arrived":               return "#A47FE8";
+    case "in_progress":           return "#E87A2A";
+    case "completed":             return "#4CAF82";
+    case "cancelled":             return "#E05252";
+    case "cancelled_by_customer": return "#E05252";
+    case "disputed":              return "#C9A84C";
+    default:                      return "#8B9CBD";
   }
 }
 
 export function getStatusLabel(status: string): string {
   switch (status) {
-    case "pending":     return "Pending";
-    case "accepted":    return "Accepted";
-    case "arrived":     return "Driver Arrived";
-    case "in_progress": return "In Progress";
-    case "completed":   return "Completed";
-    case "cancelled":   return "Cancelled";
-    case "disputed":    return "Disputed";
-    default:            return status;
+    case "pending":               return "Pending";
+    case "accepted":              return "Accepted";
+    case "arrived":               return "Driver Arrived";
+    case "in_progress":           return "In Progress";
+    case "completed":             return "Completed";
+    case "cancelled":             return "Cancelled";
+    case "cancelled_by_customer": return "Cancelled (Fee Applied)";
+    case "disputed":              return "Disputed";
+    default:                      return status;
   }
 }
 
