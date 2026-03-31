@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/AuthContext";
 import { Colors } from "@/constants/colors";
-import { BASE_URL, formatSEK, formatDate } from "@/constants/config";
+import { BASE_URL, formatSEK, formatDate, CANCELLATION_FEE } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { Job } from "@/components/JobCard";
 import { BottomNav } from "@/components/BottomNav";
@@ -135,6 +135,50 @@ export default function DriverActiveJobScreen() {
           <MaterialCommunityIcons name="clipboard-text-outline" size={40} color={Colors.textMuted} />
           <Text style={styles.emptyText}>No active job</Text>
           <Text style={styles.emptySubtext}>Accept a job from the Map tab</Text>
+        </View>
+        <BottomNav />
+      </View>
+    );
+  }
+
+  if (job.status === "cancelled_by_customer") {
+    const fee = job.cancellationFee ?? CANCELLATION_FEE;
+    return (
+      <View style={[styles.container, { backgroundColor: Colors.navy }]}>
+        <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
+          <Text style={styles.headerTitle}>Job Cancelled</Text>
+        </View>
+        <View style={styles.loadingState}>
+          <View style={styles.cancelledIcon}>
+            <Feather name="x-circle" size={36} color={Colors.error} />
+          </View>
+          <Text style={styles.cancelledTitle}>Customer Cancelled</Text>
+          <Text style={styles.cancelledSubtext}>
+            The customer cancelled this job after you had accepted it.
+          </Text>
+          <View style={styles.compensationCard}>
+            <View style={styles.compensationCardHeader}>
+              <Feather name="shield" size={16} color={Colors.success} />
+              <Text style={styles.compensationCardTitle}>You're Protected</Text>
+            </View>
+            <Text style={styles.compensationCardBody}>
+              A cancellation fee of{" "}
+              <Text style={{ fontFamily: "Inter_700Bold", color: Colors.gold }}>{formatSEK(fee)}</Text>{" "}
+              has been charged to the customer as compensation for your time.
+            </Text>
+            <View style={styles.compensationRow}>
+              <Text style={styles.compensationLabel}>Your compensation</Text>
+              <Text style={styles.compensationAmount}>{formatSEK(fee)}</Text>
+            </View>
+          </View>
+          <TouchableOpacity
+            style={styles.backToMapBtn}
+            onPress={() => router.replace("/(driver)/map")}
+            activeOpacity={0.85}
+          >
+            <Feather name="map" size={15} color={Colors.navy} />
+            <Text style={styles.backToMapText}>Find Another Job</Text>
+          </TouchableOpacity>
         </View>
         <BottomNav />
       </View>
@@ -511,5 +555,85 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     marginTop: -8,
+  },
+  cancelledIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: `${Colors.error}15`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelledTitle: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  cancelledSubtext: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+    paddingHorizontal: 20,
+  },
+  compensationCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 18,
+    marginHorizontal: 20,
+    gap: 10,
+    borderWidth: 1,
+    borderColor: `${Colors.success}40`,
+    width: "100%",
+  },
+  compensationCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  compensationCardTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.success,
+  },
+  compensationCardBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 20,
+  },
+  compensationRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 10,
+    marginTop: 2,
+  },
+  compensationLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  compensationAmount: {
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  backToMapBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.gold,
+    paddingHorizontal: 24,
+    paddingVertical: 14,
+    borderRadius: 14,
+    marginTop: 4,
+  },
+  backToMapText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
   },
 });
