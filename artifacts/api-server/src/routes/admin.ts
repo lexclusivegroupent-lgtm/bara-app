@@ -1,13 +1,26 @@
 import { Router, type IRouter, Request, Response } from "express";
 import { db } from "@workspace/db";
 import { jobsTable, usersTable } from "@workspace/db";
-import { eq, sql, count, and } from "drizzle-orm";
+import { eq, sql, count } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+const DEFAULT_ADMIN_KEY = "bara-admin-2025";
+
 function checkAdminKey(req: Request, res: Response): boolean {
-  const adminKey = process.env.ADMIN_STATS_KEY || "bara-admin-2025";
-  const provided = (req.headers["x-admin-key"] as string) || (req.query.key as string);
+  const isProd = process.env.NODE_ENV === "production";
+  const configuredKey = process.env.BARA_ADMIN_KEY || process.env.ADMIN_STATS_KEY;
+
+  if (isProd && (!configuredKey || configuredKey === DEFAULT_ADMIN_KEY)) {
+    res.status(403).json({
+      error: "Admin stats are disabled. Set ADMIN_STATS_KEY to a secure value in your production environment variables.",
+    });
+    return false;
+  }
+
+  const adminKey = (configuredKey || DEFAULT_ADMIN_KEY).trim();
+  const provided = ((req.headers["x-admin-key"] as string) || (req.query.key as string) || "").trim();
+
   if (!provided || provided !== adminKey) {
     res.status(401).json({ error: "Unauthorized. Provide x-admin-key header or ?key= query param." });
     return false;
