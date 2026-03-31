@@ -1,0 +1,11 @@
+node_modules
+**/node_modules
+**/.git
+**/dist
+artifacts/bara
+artifacts/mockup-sandbox
+lib/api-client-react
+lib/api-spec
+.github
+*.log
+.env
