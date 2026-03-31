@@ -7,6 +7,9 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
+  Modal,
+  TextInput,
+  KeyboardAvoidingView,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -23,12 +26,13 @@ import { PhotoPicker } from "@/components/PhotoPicker";
 const STEPS = [
   { key: "pending", label: "Job Posted", icon: "clipboard-check" },
   { key: "accepted", label: "Driver Assigned", icon: "account-check" },
+  { key: "arrived", label: "Driver Arrived", icon: "map-marker-check" },
   { key: "in_progress", label: "En Route", icon: "truck-fast" },
   { key: "completed", label: "Completed", icon: "check-circle" },
 ];
 
 function getStepIndex(status: string) {
-  const map: Record<string, number> = { pending: 0, accepted: 1, in_progress: 2, completed: 3 };
+  const map: Record<string, number> = { pending: 0, accepted: 1, arrived: 2, in_progress: 3, completed: 4 };
   return map[status] ?? 0;
 }
 
@@ -39,6 +43,10 @@ export default function JobStatusScreen() {
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
+  const [disputeReason, setDisputeReason] = useState("");
+  const [disputing, setDisputing] = useState(false);
+  const [disputeError, setDisputeError] = useState<string | null>(null);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["job", id],
@@ -60,6 +68,28 @@ export default function JobStatusScreen() {
         </View>
       </View>
     );
+  }
+
+  async function handleDispute() {
+    if (!disputeReason.trim()) return;
+    setDisputing(true);
+    setDisputeError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${id}/dispute`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: disputeReason.trim() }),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Could not flag dispute");
+      queryClient.invalidateQueries({ queryKey: ["job", id] });
+      setShowDisputeModal(false);
+      setDisputeReason("");
+    } catch (e: any) {
+      setDisputeError(e.message || "Could not submit dispute. Please try again.");
+    } finally {
+      setDisputing(false);
+    }
   }
 
   async function handleCancel() {
@@ -247,7 +277,7 @@ export default function JobStatusScreen() {
           </>
         )}
 
-        {(job.status === "accepted" || job.status === "in_progress") && (
+        {(job.status === "accepted" || job.status === "arrived" || job.status === "in_progress") && (
           <View style={styles.cancelLocked}>
             <Feather name="lock" size={14} color={Colors.textMuted} />
             <Text style={styles.cancelLockedText}>
@@ -256,8 +286,74 @@ export default function JobStatusScreen() {
           </View>
         )}
 
+        {job.disputed ? (
+          <View style={styles.disputedCard}>
+            <Feather name="alert-triangle" size={14} color={Colors.gold} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.disputedTitle}>Dispute Reported</Text>
+              {job.disputeReason && (
+                <Text style={styles.disputedReason}>"{job.disputeReason}"</Text>
+              )}
+              <Text style={styles.disputedSubtext}>Our team will review this within 24 hours.</Text>
+            </View>
+          </View>
+        ) : (job.status !== "pending" && job.status !== "cancelled") && (
+          <TouchableOpacity
+            style={styles.disputeBtn}
+            onPress={() => setShowDisputeModal(true)}
+            activeOpacity={0.8}
+          >
+            <Feather name="flag" size={14} color={Colors.textMuted} />
+            <Text style={styles.disputeBtnText}>Report an Issue</Text>
+          </TouchableOpacity>
+        )}
+
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 20 }} />
       </ScrollView>
+
+      <Modal visible={showDisputeModal} animationType="slide" transparent presentationStyle="overFullScreen">
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Report an Issue</Text>
+              <TouchableOpacity onPress={() => { setShowDisputeModal(false); setDisputeError(null); }} style={styles.modalClose}>
+                <Feather name="x" size={20} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Describe the problem. Our team will review your report within 24 hours.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Driver didn't arrive, item was damaged..."
+              placeholderTextColor={Colors.textMuted}
+              value={disputeReason}
+              onChangeText={setDisputeReason}
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            {disputeError && (
+              <View style={styles.disputeError}>
+                <Feather name="alert-circle" size={14} color={Colors.error} />
+                <Text style={styles.disputeErrorText}>{disputeError}</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.submitDisputeBtn, (!disputeReason.trim() || disputing) && styles.disabled]}
+              onPress={handleDispute}
+              disabled={!disputeReason.trim() || disputing}
+              activeOpacity={0.85}
+            >
+              {disputing
+                ? <ActivityIndicator color={Colors.navy} />
+                : <Text style={styles.submitDisputeBtnText}>Submit Report</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -523,4 +619,129 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.error,
   },
+  disputeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  disputeBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  disputedCard: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: `${Colors.gold}12`,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}30`,
+  },
+  disputedTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+  },
+  disputedReason: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    fontStyle: "italic",
+    marginTop: 2,
+  },
+  disputedSubtext: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    marginTop: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 16,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  modalHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  modalTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
+  modalClose: { padding: 4 },
+  modalSubtitle: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 20,
+    marginTop: -8,
+  },
+  modalInput: {
+    backgroundColor: Colors.navy,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    minHeight: 100,
+  },
+  disputeError: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: `${Colors.error}18`,
+    borderWidth: 1,
+    borderColor: `${Colors.error}40`,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  disputeErrorText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
+  },
+  submitDisputeBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  submitDisputeBtnText: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
+  },
+  disabled: { opacity: 0.5 },
 });
