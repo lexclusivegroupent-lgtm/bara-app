@@ -1,18 +1,15 @@
-FROM node:18.20.8-alpine3.21
+FROM node:20-alpine
 WORKDIR /app
-ARG CACHEBUST=2
-# Copy ALL source code first (needed for file: protocol packages)
+
+RUN npm install -g pnpm@9
+
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 COPY lib/ ./lib/
 COPY artifacts/api-server/ ./artifacts/api-server/
-# Install dependencies for local packages first
-WORKDIR /app/lib/db
-RUN npm install --legacy-peer-deps
-WORKDIR /app/lib/api-zod
-RUN npm install --legacy-peer-deps
-# Install api-server dependencies (file: packages will resolve correctly now)
-WORKDIR /app/artifacts/api-server
-RUN npm install --legacy-peer-deps
-# Build the api-server
-RUN npm run build
+
+RUN pnpm install --frozen-lockfile
+
+RUN pnpm --filter @workspace/api-server run build
+
 EXPOSE 3000
-CMD ["node", "--enable-source-maps", "dist/index.mjs"]
+CMD ["node", "--enable-source-maps", "./artifacts/api-server/dist/index.mjs"]
