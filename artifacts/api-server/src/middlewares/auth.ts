@@ -1,9 +1,21 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { db, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
 
-const JWT_SECRET = process.env.JWT_SECRET || "bara-secret-key-change-in-production";
+const INSECURE_DEFAULT = "bara-secret-key-change-in-production";
+const isProd = process.env.NODE_ENV === "production";
+
+if (isProd) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret || secret === INSECURE_DEFAULT) {
+    throw new Error(
+      "FATAL: JWT_SECRET must be set to a secure random value in production.\n" +
+      "Generate one with:  openssl rand -hex 32\n" +
+      "Then set it as the JWT_SECRET environment variable."
+    );
+  }
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || INSECURE_DEFAULT;
 
 export interface AuthenticatedRequest extends Request {
   userId?: number;
