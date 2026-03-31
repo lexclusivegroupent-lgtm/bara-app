@@ -38,8 +38,13 @@ export default function PostJobScreen() {
   const [agreedToOwnership, setAgreedToOwnership] = useState(false);
   const [customerPhotos, setCustomerPhotos] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [customerPriceInput, setCustomerPriceInput] = useState("");
+  const [priceError, setPriceError] = useState<string | null>(null);
 
   const pricing = calculatePrice(jobType, distanceKm);
+  const suggestedPrice = pricing.priceTotal;
+  const minPrice = Math.max(299, Math.round(suggestedPrice * 0.70));
+  const maxPrice = Math.round(suggestedPrice * 1.30);
 
   async function estimateDistance() {
     if (!pickupAddress || !dropoffAddress) return;
@@ -54,7 +59,11 @@ export default function PostJobScreen() {
         body: JSON.stringify({ origin: pickupAddress, destination: dropoffAddress }),
       });
       const data = await safeJson(res);
-      if (data.distanceKm) setDistanceKm(data.distanceKm);
+      if (data.distanceKm) {
+        setDistanceKm(data.distanceKm);
+        setCustomerPriceInput("");
+        setPriceError(null);
+      }
     } catch {}
     setCalculating(false);
   }
@@ -81,6 +90,18 @@ export default function PostJobScreen() {
       return;
     }
 
+    setPriceError(null);
+    const cpRaw = customerPriceInput.trim();
+    let resolvedCustomerPrice: number | null = null;
+    if (cpRaw) {
+      const cp = parseInt(cpRaw, 10);
+      if (isNaN(cp) || cp < minPrice || cp > maxPrice) {
+        setPriceError(`Enter a price between ${minPrice} and ${maxPrice} kr`);
+        return;
+      }
+      resolvedCustomerPrice = cp;
+    }
+
     setLoading(true);
     try {
       const { priceTotal, driverPayout, platformFee } = calculatePrice(jobType, distanceKm);
@@ -101,6 +122,7 @@ export default function PostJobScreen() {
           priceTotal,
           driverPayout,
           platformFee,
+          customerPrice: resolvedCustomerPrice,
           city: user?.city,
           customerPhotos,
         }),
@@ -241,6 +263,41 @@ export default function PostJobScreen() {
             <Text style={styles.calculatingText}>Estimating distance...</Text>
           </View>
         )}
+
+        <View style={styles.priceCard}>
+          <Text style={styles.priceCardTitle}>Your Offer to Driver</Text>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Suggested price</Text>
+            <Text style={styles.priceValue}>{formatSEK(suggestedPrice)}</Text>
+          </View>
+          <View style={styles.priceRow}>
+            <Text style={styles.priceLabel}>Allowed range</Text>
+            <Text style={styles.priceValue}>{formatSEK(minPrice)} – {formatSEK(maxPrice)}</Text>
+          </View>
+          <View style={styles.priceInputRow}>
+            <View style={[styles.priceInputWrap, priceError ? styles.priceInputError : null]}>
+              <TextInput
+                style={styles.priceInput}
+                placeholder={suggestedPrice.toString()}
+                placeholderTextColor={Colors.textMuted}
+                value={customerPriceInput}
+                onChangeText={(v) => {
+                  setCustomerPriceInput(v.replace(/[^0-9]/g, ""));
+                  setPriceError(null);
+                }}
+                keyboardType="number-pad"
+                returnKeyType="done"
+              />
+              <Text style={styles.priceUnit}>kr</Text>
+            </View>
+          </View>
+          {priceError && (
+            <Text style={styles.priceErrorText}>{priceError}</Text>
+          )}
+          <Text style={styles.priceHint}>
+            Leave blank to use the suggested price. Drivers see your offered price before accepting.
+          </Text>
+        </View>
 
         <View style={styles.freeLaunchNote}>
           <Feather name="gift" size={14} color={Colors.success} />
@@ -497,6 +554,45 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     lineHeight: 17,
+  },
+  priceInputRow: {
+    marginTop: 4,
+  },
+  priceInputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: Colors.navy,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 6,
+  },
+  priceInputError: {
+    borderColor: "#E05252",
+  },
+  priceInput: {
+    flex: 1,
+    fontSize: 20,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  priceUnit: {
+    fontSize: 16,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textMuted,
+  },
+  priceErrorText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#E05252",
+  },
+  priceHint: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 16,
   },
   freeLaunchNote: {
     flexDirection: "row",
