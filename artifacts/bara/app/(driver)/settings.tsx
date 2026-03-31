@@ -220,7 +220,14 @@ export default function DriverSettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>Legal</Text>
           <SettingsRow icon="file-text" label="Terms of Service" onPress={() => router.push("/terms")} />
-          <SettingsRow icon="shield" label="Privacy Policy" onPress={() => {}} />
+          <SettingsRow icon="shield" label="Privacy Policy" onPress={() => router.push("/privacy")} />
+          <SettingsRow icon="truck" label="Driver Terms" onPress={() => router.push("/driver-terms")} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>Privacy & Data</Text>
+          <SettingsRow icon="download" label="Request Data Export" onPress={() => router.push("/privacy")} />
+          <SettingsRow icon="trash-2" label="Request Account Deletion" onPress={() => router.push("/privacy")} danger />
         </View>
 
         <View style={styles.section}>
