@@ -4,8 +4,8 @@
 [build]
 builder = "NIXPACKS"
 # Step up to the repo root so pnpm workspace dependencies resolve correctly,
-# then build only the api-server package.
-buildCommand = "cd ../../ && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build"
+# then run DB migrations and build the api-server package.
+buildCommand = "cd ../../ && pnpm install --frozen-lockfile && pnpm --filter @workspace/db run push-force && pnpm --filter @workspace/api-server run build"
 
 [deploy]
 # dist/index.mjs is relative to artifacts/api-server/ (the service root)
