@@ -18,6 +18,7 @@ export const usersTable = pgTable("users", {
   driverLicenseStatus: text("driver_license_status").notNull().default("not_submitted").$type<"not_submitted" | "submitted" | "approved" | "rejected">(),
   cancellationsCount: integer("cancellations_count").notNull().default(0),
   noShowCount: integer("no_show_count").notNull().default(0),
+  pushToken: text("push_token"),
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   passwordChangedAt: timestamp("password_changed_at"),
