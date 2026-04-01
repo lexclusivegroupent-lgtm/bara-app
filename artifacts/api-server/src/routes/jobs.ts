@@ -5,6 +5,7 @@ import { eq, and, sql } from "drizzle-orm";
 import { authenticate, AuthenticatedRequest } from "../middlewares/auth";
 import { formatUser } from "./auth";
 import { sendPushToUser, sendPush } from "../utils/push";
+import { sendReceiptEmail } from "../utils/email";
 
 const router: IRouter = Router();
 
@@ -347,6 +348,24 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
         sound: "default",
       },
     ]).catch(() => {});
+
+    // Send receipt email to customer (fire-and-forget — never blocks job completion)
+    if (enriched?.customer?.email) {
+      const finalPrice = enriched.customerPrice ?? enriched.priceTotal;
+      sendReceiptEmail({
+        jobId,
+        jobType: enriched.jobType,
+        completedAt: enriched.completedAt ?? new Date().toISOString(),
+        pickupAddress: enriched.pickupAddress,
+        dropoffAddress: enriched.dropoffAddress,
+        homeAddress: enriched.homeAddress,
+        priceTotal: finalPrice,
+        driverName: enriched.driver?.fullName ?? "Your driver",
+        driverRating: enriched.driver?.rating,
+        customerName: enriched.customer.fullName,
+        customerEmail: enriched.customer.email,
+      }).catch((err) => req.log?.error(err, "Receipt email failed"));
+    }
   } catch (err) {
     req.log?.error(err, "Complete job error");
     res.status(500).json({ error: "Internal server error" });
