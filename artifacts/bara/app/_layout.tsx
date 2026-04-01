@@ -6,9 +6,10 @@ import {
   useFonts,
 } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack } from "expo-router";
+import { Stack, useRouter } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
+import * as Notifications from "expo-notifications";
+import React, { useEffect, useRef } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -32,9 +33,42 @@ function isFontRegistrationConflict(error: unknown): boolean {
   );
 }
 
+function NotificationNavigator() {
+  const router = useRouter();
+  const responseListener = useRef<Notifications.EventSubscription | null>(null);
+
+  useEffect(() => {
+    // Handle taps on notifications while app is running or in background
+    responseListener.current = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = response.notification.request.content.data as Record<string, unknown>;
+      const screen = data?.screen as string | undefined;
+      const jobId = data?.jobId as number | undefined;
+
+      if (!screen || !jobId) return;
+
+      // Small delay so the navigator is ready
+      setTimeout(() => {
+        if (screen === "customer-job") {
+          router.push(`/(customer)/job-status?id=${jobId}` as any);
+        } else if (screen === "driver-job") {
+          router.push("/(driver)/active-job" as any);
+        }
+      }, 300);
+    });
+
+    return () => {
+      responseListener.current?.remove();
+    };
+  }, [router]);
+
+  return null;
+}
+
 function RootLayoutNav() {
   return (
-    <Stack
+    <>
+      <NotificationNavigator />
+      <Stack
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: Colors.navy },
@@ -49,6 +83,7 @@ function RootLayoutNav() {
       <Stack.Screen name="(customer)" options={{ headerShown: false }} />
       <Stack.Screen name="(driver)" options={{ headerShown: false }} />
     </Stack>
+    </>
   );
 }
 
