@@ -1,3 +1,4 @@
+// Build trigger: nixpacks.toml installed at repo root
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
