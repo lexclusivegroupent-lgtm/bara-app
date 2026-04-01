@@ -4,6 +4,7 @@ import { jobsTable, usersTable, ratingsTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { authenticate, AuthenticatedRequest } from "../middlewares/auth";
 import { formatUser } from "./auth";
+import { sendPushToUser, sendPush } from "../utils/push";
 
 const router: IRouter = Router();
 
@@ -153,6 +154,24 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
 
     const enriched = await getJobWithUsers(job.id);
     res.status(201).json(enriched);
+
+    // Notify all available drivers in the same city (fire and forget)
+    const typeLabel = jobType === "furniture_transport" ? "Furniture transport" : jobType === "bulky_delivery" ? "Bulky delivery" : "Junk pickup";
+    db.select({ pushToken: usersTable.pushToken }).from(usersTable)
+      .where(and(eq(usersTable.city, city), eq(usersTable.isAvailable, true)))
+      .then((drivers) => {
+        const messages = drivers
+          .filter((d) => d.pushToken)
+          .map((d) => ({
+            to: d.pushToken!,
+            title: `New job in ${city}`,
+            body: `${typeLabel} — ${itemDescription.trim().slice(0, 60)}`,
+            data: { screen: "driver-job", jobId: job.id },
+            sound: "default" as const,
+          }));
+        return sendPush(messages);
+      })
+      .catch(() => {});
   } catch (err) {
     req.log?.error(err, "Create job error");
     res.status(500).json({ error: "Internal server error" });
@@ -185,6 +204,18 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
+
+    // Notify customer that driver accepted
+    const [customer] = await db.select({ pushToken: usersTable.pushToken, fullName: usersTable.fullName })
+      .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+    const [driver] = await db.select({ fullName: usersTable.fullName })
+      .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1).catch(() => []);
+    sendPushToUser(
+      customer?.pushToken,
+      "Driver on the way! 🚛",
+      `${driver?.fullName ?? "Your driver"} has accepted your job and is heading over.`,
+      { screen: "customer-job", jobId }
+    ).catch(() => {});
   } catch (err) {
     req.log?.error(err, "Accept job error");
     res.status(500).json({ error: "Internal server error" });
@@ -213,6 +244,16 @@ router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res)
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
+
+    // Notify customer that driver has arrived
+    const [arrivedCustomer] = await db.select({ pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+    sendPushToUser(
+      arrivedCustomer?.pushToken,
+      "Driver has arrived! 📍",
+      "Your driver is at the pickup location and ready to go.",
+      { screen: "customer-job", jobId }
+    ).catch(() => {});
   } catch (err) {
     req.log?.error(err, "Arrived job error");
     res.status(500).json({ error: "Internal server error" });
@@ -284,6 +325,28 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
+
+    // Notify both customer and driver that job is complete
+    const [completedCustomer] = await db.select({ pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+    const [completedDriver] = await db.select({ pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1).catch(() => []);
+    sendPush([
+      {
+        to: completedCustomer?.pushToken ?? "",
+        title: "Job completed! ✅",
+        body: "Your job is done. Please take a moment to rate your driver.",
+        data: { screen: "customer-job", jobId },
+        sound: "default",
+      },
+      {
+        to: completedDriver?.pushToken ?? "",
+        title: "Great work! 💰",
+        body: "Job marked as complete. Payment is on its way.",
+        data: { screen: "driver-job", jobId },
+        sound: "default",
+      },
+    ]).catch(() => {});
   } catch (err) {
     req.log?.error(err, "Complete job error");
     res.status(500).json({ error: "Internal server error" });
@@ -426,6 +489,18 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
           status: "cancelled_by_customer",
           cancellationFee: CANCELLATION_FEE_AFTER_ACCEPTANCE.toString(),
         }).where(eq(jobsTable.id, jobId));
+
+        // Notify driver they've been cancelled on and will receive compensation
+        if (existing.driverId) {
+          const [cancelledDriver] = await db.select({ pushToken: usersTable.pushToken })
+            .from(usersTable).where(eq(usersTable.id, existing.driverId)).limit(1).catch(() => []);
+          sendPushToUser(
+            cancelledDriver?.pushToken,
+            "Job cancelled by customer",
+            `You'll receive ${CANCELLATION_FEE_AFTER_ACCEPTANCE} kr compensation for your time.`,
+            { screen: "driver-job", jobId }
+          ).catch(() => {});
+        }
       }
     } else {
       // Driver cancels their accepted job — no fee to customer, but driver gets a strike
@@ -437,6 +512,16 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
       await db.update(usersTable).set({
         cancellationsCount: sql`${usersTable.cancellationsCount} + 1`,
       }).where(eq(usersTable.id, req.userId!));
+
+      // Notify customer their driver cancelled
+      const [cancelledCustomer] = await db.select({ pushToken: usersTable.pushToken })
+        .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+      sendPushToUser(
+        cancelledCustomer?.pushToken,
+        "Driver cancelled your job",
+        "Don't worry — your job is back on the map and available for other drivers.",
+        { screen: "customer-job", jobId }
+      ).catch(() => {});
     }
 
     const enriched = await getJobWithUsers(jobId);
