@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { setBaseUrl, setAuthTokenGetter } from "../src/lib/api-client-react";
+import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
+import { registerForPushNotificationsAsync } from "@/utils/pushSetup";
 
 const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
 setBaseUrl(BASE_URL);
@@ -129,6 +130,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthTokenGetter(() => tok);
     await AsyncStorage.setItem("bara_token", tok);
     await AsyncStorage.setItem("bara_user", JSON.stringify(userData));
+    // Register and upload push token in the background — never blocks login
+    registerForPushNotificationsAsync()
+      .then((pushToken) => {
+        if (!pushToken) return;
+        return fetch(`${BASE_URL}/api/users/push-token`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${tok}` },
+          body: JSON.stringify({ token: pushToken }),
+        });
+      })
+      .catch(() => {});
   }
 
   async function logout() {
