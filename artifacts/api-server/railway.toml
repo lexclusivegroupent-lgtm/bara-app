@@ -5,7 +5,7 @@
 builder = "NIXPACKS"
 # Step up to the repo root so pnpm workspace dependencies resolve correctly,
 # then build the api-server package.
-buildCommand = "cd ../../ && corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build"
+buildCommand = "cd ../../ && corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/api-server run build"
 
 [deploy]
 # Runs DB migrations then starts the server (migrations need runtime env vars)
