@@ -28,6 +28,8 @@ export const jobsTable = pgTable("jobs", {
   photosDropoff: text("photos_dropoff").array(),
   disputed: boolean("disputed").notNull().default(false),
   disputeReason: text("dispute_reason"),
+  disputeResolvedNote: text("dispute_resolved_note"),
+  disputeResolvedAt: timestamp("dispute_resolved_at"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   acceptedAt: timestamp("accepted_at"),
   arrivedAt: timestamp("arrived_at"),
