@@ -1,4 +1,4 @@
-// Build trigger: nixpacks.toml installed at repo root
+// Builfixed start command path in root railway.toml
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
