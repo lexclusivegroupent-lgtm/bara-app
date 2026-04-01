@@ -18,6 +18,7 @@ import { Colors } from "@/constants/colors";
 import { BASE_URL, calculatePrice, formatSEK } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { PlacesAutocomplete, type PlaceResult } from "@/components/PlacesAutocomplete";
 
 export default function PostJobScreen() {
   const { type } = useLocalSearchParams<{ type: "furniture_transport" | "bulky_delivery" | "junk_pickup" }>();
@@ -28,7 +29,9 @@ export default function PostJobScreen() {
   const isFurniture = jobType === "furniture_transport" || jobType === "bulky_delivery";
 
   const [pickupAddress, setPickupAddress] = useState("");
+  const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [dropoffAddress, setDropoffAddress] = useState("");
+  const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [homeAddress, setHomeAddress] = useState("");
   const [itemDescription, setItemDescription] = useState("");
   const [preferredTime, setPreferredTime] = useState("");
@@ -46,8 +49,35 @@ export default function PostJobScreen() {
   const minPrice = Math.max(299, Math.round(suggestedPrice * 0.70));
   const maxPrice = Math.round(suggestedPrice * 1.30);
 
+  // Haversine formula for direct distance between two lat/lng points
+  function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lng2 - lng1) * Math.PI / 180;
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // Auto-calculate distance whenever both sets of coordinates are available
+  useEffect(() => {
+    if (!isFurniture) return;
+    if (pickupCoords && dropoffCoords) {
+      const km = Math.max(1, Math.round(haversineKm(
+        pickupCoords.lat, pickupCoords.lng,
+        dropoffCoords.lat, dropoffCoords.lng
+      ) * 10) / 10);
+      setDistanceKm(km);
+      setCustomerPriceInput("");
+      setPriceError(null);
+    }
+  }, [pickupCoords, dropoffCoords, isFurniture]);
+
   async function estimateDistance() {
+    // Only called as fallback when coordinates aren't available from autocomplete
     if (!pickupAddress || !dropoffAddress) return;
+    if (pickupCoords && dropoffCoords) return; // already calculated via haversine
     setCalculating(true);
     try {
       const res = await fetch(`${BASE_URL}/api/distance`, {
@@ -66,6 +96,28 @@ export default function PostJobScreen() {
       }
     } catch {}
     setCalculating(false);
+  }
+
+  // Fallback: when user types manually (no coords from Places), debounce a server geocode call
+  useEffect(() => {
+    if (!isFurniture) return;
+    if (pickupCoords && dropoffCoords) return; // haversine effect handles this
+    if (!pickupAddress.trim() || !dropoffAddress.trim()) return;
+
+    const timer = setTimeout(() => {
+      estimateDistance();
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [pickupAddress, dropoffAddress]);
+
+  function handlePickupSelect(result: PlaceResult) {
+    setPickupAddress(result.address);
+    setPickupCoords(result.lat != null && result.lng != null ? { lat: result.lat, lng: result.lng } : null);
+  }
+
+  function handleDropoffSelect(result: PlaceResult) {
+    setDropoffAddress(result.address);
+    setDropoffCoords(result.lat != null && result.lng != null ? { lat: result.lat, lng: result.lng } : null);
   }
 
   async function handlePost() {
@@ -173,34 +225,29 @@ export default function PostJobScreen() {
         {isFurniture ? (
           <>
             <FormField label="Pickup Address" icon="map-pin">
-              <TextInput
-                style={styles.input}
-                placeholder="Enter pickup address"
-                placeholderTextColor={Colors.textMuted}
+              <PlacesAutocomplete
                 value={pickupAddress}
-                onChangeText={setPickupAddress}
-                onBlur={estimateDistance}
+                onSelect={handlePickupSelect}
+                placeholder="Search pickup address..."
+                token={token}
               />
             </FormField>
             <FormField label="Drop-off Address" icon="flag">
-              <TextInput
-                style={styles.input}
-                placeholder="Enter drop-off address"
-                placeholderTextColor={Colors.textMuted}
+              <PlacesAutocomplete
                 value={dropoffAddress}
-                onChangeText={setDropoffAddress}
-                onBlur={estimateDistance}
+                onSelect={handleDropoffSelect}
+                placeholder="Search drop-off address..."
+                token={token}
               />
             </FormField>
           </>
         ) : (
           <FormField label="Home Address" icon="home">
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your home address"
-              placeholderTextColor={Colors.textMuted}
+            <PlacesAutocomplete
               value={homeAddress}
-              onChangeText={setHomeAddress}
+              onSelect={(r) => setHomeAddress(r.address)}
+              placeholder="Search your home address..."
+              token={token}
             />
           </FormField>
         )}
