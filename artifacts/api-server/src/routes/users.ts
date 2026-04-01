@@ -7,6 +7,21 @@ import { formatUser } from "./auth";
 
 const router: IRouter = Router();
 
+router.put("/push-token", authenticate, async (req: AuthenticatedRequest, res) => {
+  const { token } = req.body;
+  if (!token || typeof token !== "string") {
+    res.status(400).json({ error: "token is required" });
+    return;
+  }
+  try {
+    await db.update(usersTable).set({ pushToken: token }).where(eq(usersTable.id, req.userId!));
+    res.json({ ok: true });
+  } catch (err) {
+    req.log?.error(err, "Save push token error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
   const { fullName, city, vehicleDescription, isAvailable, profilePhoto, role } = req.body;
 
