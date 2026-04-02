@@ -3,18 +3,18 @@
   "version": "0.0.0",
   "license": "MIT",
   "packageManager": "pnpm@9.12.3",
+  "workspaces": [
+    "packages/*",
+    "artifacts/*",
+    "lib/*"
+  ],
   "scripts": {
-    "build": "cd artifacts/api-server && npm install && npm run build",
-    "start": "node artifacts/api-server/dist/index.mjs",
     "typecheck:libs": "tsc --build",
-    "typecheck": "npm run typecheck:libs && npm run --workspaces --if-present typecheck"
+    "typecheck": "pnpm run typecheck:libs && pnpm --filter '*' --if-present run typecheck"
   },
   "private": true,
   "devDependencies": {
     "prettier": "^3.8.1",
     "typescript": "~5.9.2"
-  },
-  "dependencies": {
-    "@replit/connectors-sdk": "^0.3.0"
   }
 }
