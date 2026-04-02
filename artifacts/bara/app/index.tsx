@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
-  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -70,11 +69,9 @@ export default function HomeScreen() {
     >
       <View style={[styles.content, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20), paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 20) }]}>
         <Animated.View style={[styles.logoSection, logoStyle]}>
-          <Image
-            source={require("../assets/images/logo.png")}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
+          <View style={styles.logoImage}>
+            <MaterialCommunityIcons name="truck-fast" size={56} color={Colors.gold} />
+          </View>
           <Text style={styles.appName}>Bära</Text>
           <Text style={styles.taglineEN}>Carry anything, anywhere</Text>
           <Text style={styles.taglineSV}>Bär vad som helst, vart som helst</Text>
@@ -157,6 +154,11 @@ const styles = StyleSheet.create({
     height: 120,
     marginBottom: 16,
     borderRadius: 26,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: `${Colors.gold}18`,
+    borderWidth: 1.5,
+    borderColor: `${Colors.gold}50`,
   },
   appName: {
     fontSize: 48,
