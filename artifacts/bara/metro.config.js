@@ -1,3 +1,16 @@
 const { getDefaultConfig } = require("expo/metro-config");
+const path = require("path");
 
-module.exports = getDefaultConfig(__dirname);
+const config = getDefaultConfig(__dirname);
+
+// Add workspace support for monorepo
+config.watchFolders = [
+  path.resolve(__dirname, "../.."),
+];
+
+config.resolver.nodeModulesPaths = [
+  path.resolve(__dirname, "../../node_modules"),
+  path.resolve(__dirname, "node_modules"),
+];
+
+module.exports = config;
