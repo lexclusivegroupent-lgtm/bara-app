@@ -28,14 +28,38 @@ app.use(
 );
 
 const corsOrigin = process.env.CORS_ORIGIN;
+
+// Build allowed origins list. Falls back to known production domains so that
+// credentials-bearing requests from app.baraapp.se always work even if
+// CORS_ORIGIN hasn't been set yet in the environment.
+const FALLBACK_ORIGINS = [
+  "https://baraapp.se",
+  "https://app.baraapp.se",
+  "https://www.baraapp.se",
+];
+const allowedOrigins: string[] = corsOrigin
+  ? corsOrigin.split(",").map((o) => o.trim())
+  : FALLBACK_ORIGINS;
+
 if (process.env.NODE_ENV === "production" && !corsOrigin) {
-  logger.warn(
-    "CORS_ORIGIN is not set — allowing all origins. " +
-    "Set CORS_ORIGIN to your app domain for production security."
+  logger.info(
+    { allowedOrigins },
+    "CORS_ORIGIN not set — using built-in fallback origins. " +
+    "Set CORS_ORIGIN=https://baraapp.se,https://app.baraapp.se in Railway for explicit control."
   );
 }
+
 app.use(cors({
-  origin: corsOrigin ? corsOrigin.split(",").map((o) => o.trim()) : "*",
+  // Using a function instead of a static list so that:
+  // 1. Requests with no Origin header (native mobile, curl) always pass through
+  // 2. "credentials: true" works correctly (can't use "*" with credentials)
+  // 3. In development every origin is permitted
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    if (process.env.NODE_ENV !== "production") return callback(null, true);
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error(`Origin ${origin} not allowed by CORS`));
+  },
   credentials: true,
 }));
 
