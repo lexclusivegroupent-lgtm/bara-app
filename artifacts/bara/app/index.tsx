@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -24,6 +25,31 @@ import { useAuth } from "@/context/AuthContext";
 import { Colors } from "@/constants/colors";
 
 const { width, height } = Dimensions.get("window");
+
+/**
+ * Asset fail-safe logo: renders assets/logo.png and falls back to the
+ * branded truck icon if the image fails to load (missing file, network
+ * error, or corrupt asset).
+ */
+function LogoWithFallback() {
+  const [hasError, setHasError] = React.useState(false);
+
+  if (hasError) {
+    // Themed placeholder — always renders correctly
+    return (
+      <MaterialCommunityIcons name="truck-fast" size={56} color={Colors.gold} />
+    );
+  }
+
+  return (
+    <Image
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      source={require("../assets/logo.png")}
+      style={{ width: 72, height: 72, resizeMode: "contain" }}
+      onError={() => setHasError(true)}
+    />
+  );
+}
 
 export default function HomeScreen() {
   const { user, isLoading } = useAuth();
@@ -67,10 +93,21 @@ export default function HomeScreen() {
       colors={[Colors.surfaceDark, Colors.navy, Colors.surface]}
       style={styles.container}
     >
-      <View style={[styles.content, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20), paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 20) }]}>
+      <View
+        style={[
+          styles.content,
+          {
+            paddingTop:
+              insets.top + (Platform.OS === "web" ? 67 : 20),
+            paddingBottom:
+              insets.bottom + (Platform.OS === "web" ? 34 : 20),
+          },
+        ]}
+      >
+        {/* ── Logo ── */}
         <Animated.View style={[styles.logoSection, logoStyle]}>
           <View style={styles.logoImage}>
-            <MaterialCommunityIcons name="truck-fast" size={56} color={Colors.gold} />
+            <LogoWithFallback />
           </View>
           <Text style={styles.appName}>Bära</Text>
           <Text style={styles.taglineEN}>Carry anything, anywhere</Text>
@@ -81,6 +118,7 @@ export default function HomeScreen() {
           </View>
         </Animated.View>
 
+        {/* ── Service cards ── */}
         <Animated.View style={[styles.serviceCards, contentStyle]}>
           <ServiceCard
             icon="sofa"
@@ -96,6 +134,42 @@ export default function HomeScreen() {
           />
         </Animated.View>
 
+        {/* ── AI Culture Shock Assistant (web teaser) ── */}
+        {Platform.OS === "web" && (
+          <Animated.View style={[styles.aiSection, contentStyle]}>
+            <View style={styles.aiHeader}>
+              <MaterialCommunityIcons
+                name="robot-excited-outline"
+                size={18}
+                color={Colors.gold}
+              />
+              <Text style={styles.aiHeaderText}>
+                AI Culture Shock Assistant
+              </Text>
+              <View style={styles.betaBadge}>
+                <Text style={styles.betaText}>BETA</Text>
+              </View>
+            </View>
+
+            {/* Mock AI conversation bubble */}
+            <View style={styles.aiBubble}>
+              <Text style={styles.aiBubbleText}>
+                🇸🇪{"  "}"Hej! New to Sweden? Pro tip: Swedes take furniture
+                moving{" "}
+                <Text style={{ fontStyle: "italic" }}>very</Text> seriously —
+                almost as seriously as their right to silence in elevators. Let
+                Bära handle the heavy lifting while you practice your{" "}
+                <Text style={{ fontStyle: "italic" }}>lagom</Text>."
+              </Text>
+            </View>
+
+            <Text style={styles.aiSubtext}>
+              Full AI culture guide · Coming soon
+            </Text>
+          </Animated.View>
+        )}
+
+        {/* ── CTA buttons ── */}
         <Animated.View style={[styles.buttons, contentStyle]}>
           <TouchableOpacity
             style={styles.getStartedBtn}
@@ -119,7 +193,17 @@ export default function HomeScreen() {
   );
 }
 
-function ServiceCard({ icon, title, subtitle, delay }: { icon: any; title: string; subtitle: string; delay: number }) {
+function ServiceCard({
+  icon,
+  title,
+  subtitle,
+  delay,
+}: {
+  icon: any;
+  title: string;
+  subtitle: string;
+  delay: number;
+}) {
   return (
     <Animated.View entering={FadeInDown.delay(delay + 600).springify()}>
       <View style={styles.serviceCard}>
@@ -145,6 +229,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     justifyContent: "space-between",
   },
+
+  // ── Logo section ──────────────────────────────────────────────
   logoSection: {
     alignItems: "center",
     paddingTop: 40,
@@ -196,6 +282,8 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.success,
   },
+
+  // ── Service cards ──────────────────────────────────────────────
   serviceCards: {
     gap: 12,
   },
@@ -231,6 +319,62 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     marginTop: 2,
   },
+
+  // ── AI Culture Shock Assistant ────────────────────────────────
+  aiSection: {
+    backgroundColor: `${Colors.gold}0D`,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}35`,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  aiHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  aiHeaderText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+    flex: 1,
+  },
+  betaBadge: {
+    backgroundColor: `${Colors.gold}20`,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}45`,
+  },
+  betaText: {
+    fontSize: 9,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+    letterSpacing: 0.8,
+  },
+  aiBubble: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.gold,
+  },
+  aiBubbleText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  aiSubtext: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+
+  // ── Buttons ────────────────────────────────────────────────────
   buttons: {
     gap: 12,
     paddingBottom: 16,

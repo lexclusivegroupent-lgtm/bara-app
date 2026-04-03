@@ -1,11 +1,12 @@
-const NAVY = "#1B2A4A";
-const GOLD = "#C9A84C";
-const GOLD_LIGHT = "#E8C97A";
-const GOLD_DARK = "#A88535";
+// @lexxinsweden brand palette — Navy #000080 · Gold #FFD700
+const NAVY = "#000080";
+const GOLD = "#FFD700";
+const GOLD_LIGHT = "#FFE84D";
+const GOLD_DARK = "#CCA800";
 const OFF_WHITE = "#F5F0E8";
-const SURFACE = "#243252";
-const SURFACE_DARK = "#0F1A2E";
-const TEXT_MUTED = "#8B9CBD";
+const SURFACE = "#001099";
+const SURFACE_DARK = "#000055";
+const TEXT_MUTED = "#9AACD4";
 const ERROR = "#E05252";
 const SUCCESS = "#4CAF82";
 const ORANGE = "#E87A2A";
@@ -27,9 +28,9 @@ export const Colors = {
   textSecondary: TEXT_MUTED,
   background: NAVY,
   card: SURFACE,
-  border: "#2D3F60",
-  
-  statusPending: "#8B9CBD",
+  border: "#1A2BA8",
+
+  statusPending: "#9AACD4",
   statusAccepted: "#4A9EE8",
   statusInProgress: ORANGE,
   statusCompleted: SUCCESS,

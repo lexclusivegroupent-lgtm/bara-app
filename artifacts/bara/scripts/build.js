@@ -16,7 +16,7 @@ const path = require("path");
 const fs = require("fs");
 
 const projectRoot = path.resolve(__dirname, "..");
-const outputDir = process.env.OUTPUT_DIR || "static-build";
+const outputDir = process.env.OUTPUT_DIR || "dist";
 const outPath = path.join(projectRoot, outputDir);
 
 console.log("=== Bära — Expo web export ===");
@@ -38,7 +38,7 @@ const env = {
 
 // expo export handles bundling + asset processing in one shot.
 // --platform web   → only the web target (no native bundles needed for CI)
-// --output-dir     → write output to static-build/ instead of default dist/
+// --output-dir     → write output to dist/ (served by server/serve.js)
 const cmd = `npx expo export --platform web --output-dir ${outputDir}`;
 
 console.log(`Running: ${cmd}\n`);

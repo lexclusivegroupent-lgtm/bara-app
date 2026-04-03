@@ -1,0 +1,16 @@
+# Railway service config for the Bära web frontend.
+# Set the service root directory to artifacts/bara/ in the Railway dashboard.
+# All paths here are relative to artifacts/bara/
+
+[build]
+builder = "NIXPACKS"
+# Step up to repo root so pnpm workspace deps resolve, then build the web bundle.
+buildCommand = "cd ../../ && corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --no-frozen-lockfile && pnpm --filter @workspace/bara run build"
+
+[deploy]
+# Serve the Expo web SPA from dist/
+startCommand = "node server/serve.js"
+healthcheckPath = "/"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5
