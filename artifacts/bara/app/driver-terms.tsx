@@ -105,7 +105,7 @@ export default function DriverTermsScreen() {
 
         <Text style={styles.sectionTitle}>Förarvillkor (Svenska)</Text>
         <Text style={styles.body}>
-          Genom att registrera dig som förare på Bära intygar du att du är en självständig uppdragstagare, inte anställd av Bära AB. Du ansvarar för egna skatter och försäkringar. Du åtar dig att alltid ta obligatoriska foton, behandla föremål varsamt och aldrig transportera förbjudna föremål. Vid frågor, kontakta oss på support@bara.se.
+          Genom att registrera dig som förare på Bära intygar du att du är en självständig uppdragstagare, inte anställd av Bära AB. Du ansvarar för egna skatter och försäkringar. Du åtar dig att alltid ta obligatoriska foton, behandla föremål varsamt och aldrig transportera förbjudna föremål. Vid frågor, kontakta oss på hello@baraapp.se.
         </Text>
 
         <View style={{ height: 40 }} />

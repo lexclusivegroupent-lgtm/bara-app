@@ -203,7 +203,7 @@ function buildReceiptHtml(data: ReceiptData): string {
                   <td style="padding:0 0 8px;">
                     <p style="margin:0;font-size:13px;color:#666;line-height:1.7;">
                       Have a question about this job? Reply to this email or contact us at
-                      <a href="mailto:support@baraapp.se" style="color:#C9A84C;text-decoration:none;font-weight:500;">support@baraapp.se</a>
+                      <a href="mailto:hello@baraapp.se" style="color:#C9A84C;text-decoration:none;font-weight:500;">hello@baraapp.se</a>
                       and reference job <span style="font-family:monospace;">#${String(jobId).padStart(6, "0")}</span>.
                     </p>
                   </td>

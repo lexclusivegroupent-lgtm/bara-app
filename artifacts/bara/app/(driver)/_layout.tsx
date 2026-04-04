@@ -13,6 +13,8 @@ export default function DriverLayout() {
     >
       <Stack.Screen name="map" />
       <Stack.Screen name="active-job" />
+      <Stack.Screen name="earnings" />
+      <Stack.Screen name="job-complete" />
       <Stack.Screen name="rate" />
       <Stack.Screen name="settings" />
       <Stack.Screen name="edit-profile" />

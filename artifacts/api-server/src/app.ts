@@ -2,8 +2,14 @@ import express, { type Express } from "express";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
+import path from "path";
+import fs from "fs";
+import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app: Express = express();
 
@@ -29,9 +35,6 @@ app.use(
 
 const corsOrigin = process.env.CORS_ORIGIN;
 
-// Build allowed origins list. Falls back to known production domains so that
-// credentials-bearing requests from app.baraapp.se always work even if
-// CORS_ORIGIN hasn't been set yet in the environment.
 const FALLBACK_ORIGINS = [
   "https://baraapp.se",
   "https://app.baraapp.se",
@@ -50,10 +53,6 @@ if (process.env.NODE_ENV === "production" && !corsOrigin) {
 }
 
 app.use(cors({
-  // Using a function instead of a static list so that:
-  // 1. Requests with no Origin header (native mobile, curl) always pass through
-  // 2. "credentials: true" works correctly (can't use "*" with credentials)
-  // 3. In development every origin is permitted
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (process.env.NODE_ENV !== "production") return callback(null, true);
@@ -80,5 +79,24 @@ app.use("/api/auth/register", authLimiter);
 app.use("/api/auth/forgot-password", authLimiter);
 
 app.use("/api", router);
+
+// Serve the Expo web static build at the root URL.
+// Path resolves to artifacts/bara/static-build/ relative to the monorepo root.
+const staticBuildPath = path.resolve(__dirname, "../../../artifacts/bara/static-build");
+
+if (fs.existsSync(staticBuildPath)) {
+  logger.info({ staticBuildPath }, "Serving Expo web build from static-build/");
+  app.use(express.static(staticBuildPath));
+  app.get("/{*path}", (_req, res) => {
+    const indexPath = path.join(staticBuildPath, "index.html");
+    if (fs.existsSync(indexPath)) {
+      res.sendFile(indexPath);
+    } else {
+      res.status(404).json({ error: "Web build not found" });
+    }
+  });
+} else {
+  logger.warn({ staticBuildPath }, "Expo static-build not found — only API routes will be served");
+}
 
 export default app;
