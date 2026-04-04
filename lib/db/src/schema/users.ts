@@ -13,6 +13,7 @@ export const usersTable = pgTable("users", {
   isAvailable: boolean("is_available").notNull().default(true),
   rating: numeric("rating", { precision: 3, scale: 2 }),
   totalJobs: integer("total_jobs").notNull().default(0),
+  vehicleType: text("vehicle_type").$type<"cargo_bike" | "car_trailer" | "pickup" | "small_van" | "large_van" | "truck">(),
   vehicleDescription: text("vehicle_description"),
   verificationStatus: text("verification_status").notNull().default("unverified").$type<"unverified" | "pending" | "verified">(),
   driverLicenseStatus: text("driver_license_status").notNull().default("not_submitted").$type<"not_submitted" | "submitted" | "approved" | "rejected">(),

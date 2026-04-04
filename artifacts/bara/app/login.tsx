@@ -15,10 +15,12 @@ import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,7 +30,7 @@ export default function LoginScreen() {
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
-      setError("Please enter your email and password.");
+      setError(t("pleaseFillAll"));
       return;
     }
     setError(null);
@@ -69,13 +71,13 @@ export default function LoginScreen() {
             <View style={styles.logoSmall}>
               <MaterialCommunityIcons name="truck-delivery" size={28} color={Colors.gold} />
             </View>
-            <Text style={styles.title}>Welcome back</Text>
-            <Text style={styles.subtitle}>Log in to your Bära account</Text>
+            <Text style={styles.title}>{t("welcomeBack")}</Text>
+            <Text style={styles.subtitle}>{t("loginSubtitle")}</Text>
           </View>
 
           <View style={styles.form}>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>{t("email")}</Text>
               <View style={styles.inputWrapper}>
                 <Feather name="mail" size={16} color={Colors.textMuted} style={styles.inputIcon} />
                 <TextInput
@@ -93,9 +95,9 @@ export default function LoginScreen() {
 
             <View style={styles.inputGroup}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>Password</Text>
+                <Text style={styles.label}>{t("password")}</Text>
                 <TouchableOpacity onPress={() => router.push("/forgot-password")}>
-                  <Text style={styles.forgotLink}>Forgot password?</Text>
+                  <Text style={styles.forgotLink}>{t("forgotPassword")}</Text>
                 </TouchableOpacity>
               </View>
               <View style={styles.inputWrapper}>
@@ -131,15 +133,15 @@ export default function LoginScreen() {
               {loading ? (
                 <ActivityIndicator color={Colors.navy} />
               ) : (
-                <Text style={styles.loginBtnText}>Log In</Text>
+                <Text style={styles.loginBtnText}>{t("loginBtn")}</Text>
               )}
             </TouchableOpacity>
           </View>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>{t("noAccount")}</Text>
             <TouchableOpacity onPress={() => router.replace("/register")}>
-              <Text style={styles.footerLink}>Sign Up</Text>
+              <Text style={styles.footerLink}>{t("signUp")}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>

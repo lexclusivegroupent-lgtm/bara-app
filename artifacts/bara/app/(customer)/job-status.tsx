@@ -17,11 +17,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL, formatSEK, formatDate, getStatusColor, getStatusLabel, CANCELLATION_FEE } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { Job } from "@/components/JobCard";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { BaraDateTimePicker } from "@/components/BaraDateTimePicker";
+import { VehicleBadge } from "@/components/VehicleTypePicker";
 
 const STEPS = [
   { key: "pending", label: "Job Posted", icon: "clipboard-check" },
@@ -39,6 +42,7 @@ function getStepIndex(status: string) {
 export default function JobStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState(false);
@@ -48,6 +52,10 @@ export default function JobStatusScreen() {
   const [disputeReason, setDisputeReason] = useState("");
   const [disputing, setDisputing] = useState(false);
   const [disputeError, setDisputeError] = useState<string | null>(null);
+  const [rescheduleTime, setRescheduleTime] = useState<Date | null>(null);
+  const [rescheduling, setRescheduling] = useState(false);
+  const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+  const [rescheduleSuccess, setRescheduleSuccess] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["job", id],
@@ -110,6 +118,29 @@ export default function JobStatusScreen() {
       setCancelError(e.message || "Could not cancel job. Please try again.");
     } finally {
       setCancelling(false);
+    }
+  }
+
+  async function handleReschedule(newTime: Date) {
+    setRescheduling(true);
+    setRescheduleError(null);
+    setRescheduleSuccess(false);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${id}/reschedule`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ preferredTime: newTime.toISOString() }),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Could not reschedule");
+      queryClient.invalidateQueries({ queryKey: ["job", id] });
+      setRescheduleTime(newTime);
+      setRescheduleSuccess(true);
+      setTimeout(() => setRescheduleSuccess(false), 3000);
+    } catch (e: any) {
+      setRescheduleError(e.message || "Could not reschedule. Please try again.");
+    } finally {
+      setRescheduling(false);
     }
   }
 
@@ -193,6 +224,9 @@ export default function JobStatusScreen() {
               </View>
               <View style={styles.driverDetails}>
                 <Text style={styles.driverName}>{job.driver.fullName}</Text>
+                {job.driver.vehicleType && (
+                  <VehicleBadge vehicleType={job.driver.vehicleType} lang="en" />
+                )}
                 {job.driver.rating && (
                   <View style={styles.ratingRow}>
                     <Feather name="star" size={12} color={Colors.gold} />
@@ -251,6 +285,41 @@ export default function JobStatusScreen() {
           </View>
         )}
 
+        {(job.status === "pending" || job.status === "accepted") && (
+          <View style={styles.rescheduleCard}>
+            <View style={styles.rescheduleTitleRow}>
+              <Feather name="calendar" size={15} color={Colors.gold} />
+              <Text style={styles.rescheduleTitle}>{t("rescheduleJob")}</Text>
+            </View>
+            {rescheduling ? (
+              <View style={styles.reschedulingRow}>
+                <ActivityIndicator size="small" color={Colors.gold} />
+                <Text style={styles.reschedulingText}>{t("rescheduling")}</Text>
+              </View>
+            ) : (
+              <BaraDateTimePicker
+                value={rescheduleTime || (job.preferredTime ? new Date(job.preferredTime) : null)}
+                onChange={handleReschedule}
+                minimumDate={new Date(Date.now() + 60 * 60 * 1000)}
+                placeholder={t("selectDateTimePlaceholder")}
+              />
+            )}
+            {rescheduleSuccess && (
+              <View style={styles.rescheduleSuccess}>
+                <Feather name="check-circle" size={14} color={Colors.success} />
+                <Text style={styles.rescheduleSuccessText}>{t("rescheduledMsg")}</Text>
+              </View>
+            )}
+            {rescheduleError && (
+              <TouchableOpacity style={styles.cancelError} onPress={() => setRescheduleError(null)} activeOpacity={0.8}>
+                <Feather name="alert-circle" size={14} color={Colors.error} />
+                <Text style={styles.cancelErrorText}>{rescheduleError}</Text>
+                <Feather name="x" size={14} color={Colors.error} />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         {job.status === "pending" && (
           <>
             {cancelError && (
@@ -276,6 +345,17 @@ export default function JobStatusScreen() {
               )}
             </TouchableOpacity>
           </>
+        )}
+
+        {(job.status === "accepted" || job.status === "arrived" || job.status === "in_progress") && (
+          <TouchableOpacity
+            style={styles.chatBtn}
+            onPress={() => router.push({ pathname: "/chat", params: { jobId: String(job.id) } })}
+            activeOpacity={0.85}
+          >
+            <Feather name="message-circle" size={16} color={Colors.gold} />
+            <Text style={styles.chatBtnText}>Chat with Driver</Text>
+          </TouchableOpacity>
         )}
 
         {(job.status === "accepted" || job.status === "arrived" || job.status === "in_progress") && (
@@ -616,6 +696,22 @@ const styles = StyleSheet.create({
     borderColor: `${Colors.success}30`,
   },
   ratedText: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.success },
+  chatBtn: {
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  chatBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+  },
   cancelBtn: {
     borderRadius: 14,
     paddingVertical: 15,
@@ -827,6 +923,53 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     letterSpacing: 0.3,
     textTransform: "uppercase",
+  },
+  rescheduleCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 16,
+    gap: 12,
+  },
+  rescheduleTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  rescheduleTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+    letterSpacing: 0.3,
+  },
+  reschedulingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingVertical: 4,
+  },
+  reschedulingText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  rescheduleSuccess: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: `${Colors.success}18`,
+    borderWidth: 1,
+    borderColor: `${Colors.success}40`,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  rescheduleSuccessText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.success,
   },
   cancelError: {
     flexDirection: "row",

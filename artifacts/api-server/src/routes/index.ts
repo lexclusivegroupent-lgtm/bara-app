@@ -6,6 +6,9 @@ import jobsRouter from "./jobs";
 import distanceRouter from "./distance";
 import adminRouter from "./admin";
 import placesRouter from "./places";
+import addressesRouter from "./addresses";
+import promosRouter from "./promos";
+import supportRouter from "./support";
 
 const router: IRouter = Router();
 
@@ -16,5 +19,8 @@ router.use("/jobs", jobsRouter);
 router.use("/distance", distanceRouter);
 router.use("/admin", adminRouter);
 router.use("/places", placesRouter);
+router.use("/addresses", addressesRouter);
+router.use("/promos", promosRouter);
+router.use("/support", supportRouter);
 
 export default router;

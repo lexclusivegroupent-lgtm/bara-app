@@ -14,15 +14,18 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL, calculatePrice, formatSEK } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { PlacesAutocomplete, type PlaceResult } from "@/components/PlacesAutocomplete";
+import { BaraDateTimePicker } from "@/components/BaraDateTimePicker";
 
 export default function PostJobScreen() {
   const { type } = useLocalSearchParams<{ type: "furniture_transport" | "bulky_delivery" | "junk_pickup" }>();
   const { user, token } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const jobType = (type || "furniture_transport") as "furniture_transport" | "bulky_delivery" | "junk_pickup";
@@ -33,8 +36,9 @@ export default function PostJobScreen() {
   const [dropoffAddress, setDropoffAddress] = useState("");
   const [dropoffCoords, setDropoffCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [homeAddress, setHomeAddress] = useState("");
+  const [extraStops, setExtraStops] = useState<string[]>([]);
   const [itemDescription, setItemDescription] = useState("");
-  const [preferredTime, setPreferredTime] = useState("");
+  const [preferredTime, setPreferredTime] = useState<Date | null>(null);
   const [distanceKm, setDistanceKm] = useState(10);
   const [loading, setLoading] = useState(false);
   const [calculating, setCalculating] = useState(false);
@@ -43,6 +47,16 @@ export default function PostJobScreen() {
   const [error, setError] = useState<string | null>(null);
   const [customerPriceInput, setCustomerPriceInput] = useState("");
   const [priceError, setPriceError] = useState<string | null>(null);
+  // Logistics details
+  const [floorNumber, setFloorNumber] = useState("");
+  const [hasElevator, setHasElevator] = useState<boolean | null>(null);
+  const [helpersNeeded, setHelpersNeeded] = useState("");
+  const [estimatedWeight, setEstimatedWeight] = useState("");
+  // Promo code
+  const [promoCode, setPromoCode] = useState("");
+  const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const pricing = calculatePrice(jobType, distanceKm);
   const suggestedPrice = pricing.priceTotal;
@@ -120,25 +134,46 @@ export default function PostJobScreen() {
     setDropoffCoords(result.lat != null && result.lng != null ? { lat: result.lat, lng: result.lng } : null);
   }
 
+  async function applyPromo() {
+    if (!promoCode.trim()) return;
+    setPromoLoading(true);
+    setPromoError(null);
+    setPromoDiscount(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/promos/validate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ code: promoCode.trim() }),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) { setPromoError(t("promoInvalid")); return; }
+      setPromoDiscount(data.discountAmount);
+    } catch {
+      setPromoError(t("promoInvalid"));
+    } finally {
+      setPromoLoading(false);
+    }
+  }
+
   async function handlePost() {
     if (!itemDescription.trim()) {
-      setError("Please describe the items.");
+      setError(t("pleaseDescribeItems"));
       return;
     }
-    if (!preferredTime.trim()) {
-      setError("Please enter a preferred time.");
+    if (!preferredTime) {
+      setError(t("pleaseEnterTime"));
       return;
     }
     if (isFurniture && (!pickupAddress.trim() || !dropoffAddress.trim())) {
-      setError("Please enter pickup and drop-off addresses.");
+      setError(t("pleaseEnterAddresses"));
       return;
     }
     if (!isFurniture && !homeAddress.trim()) {
-      setError("Please enter your home address.");
+      setError(t("pleaseEnterHome"));
       return;
     }
     if (!agreedToOwnership) {
-      setError("Please confirm that you own or have permission to move the items.");
+      setError(t("pleaseConfirmOwnership"));
       return;
     }
 
@@ -168,8 +203,9 @@ export default function PostJobScreen() {
           pickupAddress: isFurniture ? pickupAddress : null,
           dropoffAddress: isFurniture ? dropoffAddress : null,
           homeAddress: !isFurniture ? homeAddress : null,
+          extraStops: extraStops.filter(Boolean),
           itemDescription: itemDescription.trim(),
-          preferredTime,
+          preferredTime: preferredTime ? preferredTime.toISOString() : null,
           distanceKm,
           priceTotal,
           driverPayout,
@@ -177,6 +213,12 @@ export default function PostJobScreen() {
           customerPrice: resolvedCustomerPrice,
           city: user?.city,
           customerPhotos,
+          floorNumber: floorNumber ? parseInt(floorNumber, 10) : null,
+          hasElevator: hasElevator,
+          helpersNeeded: helpersNeeded ? parseInt(helpersNeeded, 10) : 0,
+          estimatedWeightKg: estimatedWeight ? parseFloat(estimatedWeight) : null,
+          promoCode: promoCode.trim() || null,
+          discountAmount: promoDiscount,
         }),
       });
       const data = await safeJson(res);
@@ -201,7 +243,7 @@ export default function PostJobScreen() {
             size={18}
             color={Colors.gold}
           />
-          <Text style={styles.headerTitle}>Post a Job</Text>
+          <Text style={styles.headerTitle}>{t("postAJob")}</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
@@ -218,44 +260,81 @@ export default function PostJobScreen() {
             color={Colors.gold}
           />
           <Text style={styles.jobTypeLabel}>
-            {isFurniture ? "Furniture Transport" : "Junk & Trash Pickup"}
+            {isFurniture ? t("furnitureTransport") : t("junkTrashPickup")}
           </Text>
         </View>
 
         {isFurniture ? (
           <>
-            <FormField label="Pickup Address" icon="map-pin">
+            <FormField label={t("pickupAddress")} icon="map-pin">
               <PlacesAutocomplete
                 value={pickupAddress}
                 onSelect={handlePickupSelect}
-                placeholder="Search pickup address..."
+                placeholder={t("searchPickup")}
                 token={token}
               />
             </FormField>
-            <FormField label="Drop-off Address" icon="flag">
+            <FormField label={t("dropoffAddress")} icon="flag">
               <PlacesAutocomplete
                 value={dropoffAddress}
                 onSelect={handleDropoffSelect}
-                placeholder="Search drop-off address..."
+                placeholder={t("searchDropoff")}
                 token={token}
               />
             </FormField>
+
+            {/* Extra stops */}
+            <FormField label={t("extraStops")} icon="git-branch">
+              <View style={{ gap: 8 }}>
+                {extraStops.map((stop, i) => (
+                  <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                    <TextInput
+                      style={[styles.input, { flex: 1 }]}
+                      placeholder={`${t("stop")} ${i + 1}`}
+                      placeholderTextColor={Colors.textMuted}
+                      value={stop}
+                      onChangeText={(v) => {
+                        const updated = [...extraStops];
+                        updated[i] = v;
+                        setExtraStops(updated);
+                      }}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setExtraStops(extraStops.filter((_, j) => j !== i))}
+                      style={{ padding: 8 }}
+                    >
+                      <Feather name="x" size={16} color={Colors.textMuted} />
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {extraStops.length < 3 && (
+                  <TouchableOpacity
+                    onPress={() => setExtraStops([...extraStops, ""])}
+                    style={styles.addStopBtn}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="plus" size={14} color={Colors.gold} />
+                    <Text style={styles.addStopText}>{t("addStop")}</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </FormField>
           </>
         ) : (
-          <FormField label="Home Address" icon="home">
+          <FormField label={t("homeAddress")} icon="home">
             <PlacesAutocomplete
               value={homeAddress}
               onSelect={(r) => setHomeAddress(r.address)}
-              placeholder="Search your home address..."
+              placeholder={t("searchHome")}
               token={token}
             />
           </FormField>
         )}
 
-        <FormField label="Item Description" icon="package">
+        <FormField label={t("itemDescription")} icon="package">
           <TextInput
             style={[styles.input, styles.multiline]}
-            placeholder="Describe the items (e.g. 3-seater sofa, dining table, 4 chairs)"
+            placeholder={t("itemDescriptionPlaceholder")}
             placeholderTextColor={Colors.textMuted}
             value={itemDescription}
             onChangeText={setItemDescription}
@@ -265,27 +344,81 @@ export default function PostJobScreen() {
           />
         </FormField>
 
+        {/* Logistics details */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionBlockHeader}>
+            <Feather name="layers" size={14} color={Colors.gold} />
+            <Text style={styles.sectionBlockTitle}>{t("logisticsDetails")}</Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 12 }}>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={styles.miniLabel}>{t("floorNumber")}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t("floorPlaceholder")}
+                placeholderTextColor={Colors.textMuted}
+                value={floorNumber}
+                onChangeText={setFloorNumber}
+                keyboardType="number-pad"
+              />
+            </View>
+            <View style={{ flex: 1, gap: 6 }}>
+              <Text style={styles.miniLabel}>{t("helpersNeeded")}</Text>
+              <TextInput
+                style={styles.input}
+                placeholder={t("helpersPlaceholder")}
+                placeholderTextColor={Colors.textMuted}
+                value={helpersNeeded}
+                onChangeText={setHelpersNeeded}
+                keyboardType="number-pad"
+              />
+            </View>
+          </View>
+          <View style={{ gap: 6, marginTop: 8 }}>
+            <Text style={styles.miniLabel}>{t("estimatedWeight")}</Text>
+            <TextInput
+              style={styles.input}
+              placeholder={t("weightPlaceholder")}
+              placeholderTextColor={Colors.textMuted}
+              value={estimatedWeight}
+              onChangeText={setEstimatedWeight}
+              keyboardType="decimal-pad"
+            />
+          </View>
+          <View style={{ marginTop: 8, gap: 6 }}>
+            <Text style={styles.miniLabel}>{t("elevatorAvailable")}</Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {([true, false] as const).map((v) => (
+                <TouchableOpacity
+                  key={String(v)}
+                  style={[styles.boolBtn, hasElevator === v && styles.boolBtnActive]}
+                  onPress={() => setHasElevator(hasElevator === v ? null : v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.boolBtnText, hasElevator === v && styles.boolBtnTextActive]}>
+                    {v ? t("yes") : t("no")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        </View>
+
         <View style={styles.prohibitedCard}>
           <View style={styles.prohibitedHeader}>
             <Feather name="alert-triangle" size={14} color={Colors.gold} />
-            <Text style={styles.prohibitedTitle}>Prohibited Items</Text>
+            <Text style={styles.prohibitedTitle}>{t("prohibitedItems")}</Text>
           </View>
-          <Text style={styles.prohibitedText}>
-            Weapons · Illegal substances · Stolen goods · Hazardous materials · Live animals
-          </Text>
-          <Text style={styles.prohibitedSubtext}>
-            Transporting prohibited items may result in account suspension and legal action.
-          </Text>
+          <Text style={styles.prohibitedText}>{t("prohibitedList")}</Text>
+          <Text style={styles.prohibitedSubtext}>{t("prohibitedNote")}</Text>
         </View>
 
         <View style={styles.photoSection}>
           <View style={styles.photoSectionHeader}>
             <Feather name="camera" size={13} color={Colors.textMuted} />
-            <Text style={styles.photoSectionTitle}>Item Photos (Optional)</Text>
+            <Text style={styles.photoSectionTitle}>{t("itemPhotos")}</Text>
           </View>
-          <Text style={styles.photoSectionHint}>
-            Photos help drivers prepare the right equipment and improve your quote accuracy.
-          </Text>
+          <Text style={styles.photoSectionHint}>{t("photosHint")}</Text>
           <PhotoPicker
             photos={customerPhotos}
             onChange={setCustomerPhotos}
@@ -294,31 +427,69 @@ export default function PostJobScreen() {
           />
         </View>
 
-        <FormField label="Preferred Time" icon="clock">
-          <TextInput
-            style={styles.input}
-            placeholder="e.g. Tomorrow at 14:00, or Saturday morning"
-            placeholderTextColor={Colors.textMuted}
+        <FormField label={t("preferredTime")} icon="clock">
+          <BaraDateTimePicker
             value={preferredTime}
-            onChangeText={setPreferredTime}
+            onChange={setPreferredTime}
+            minimumDate={new Date(Date.now() + 2 * 60 * 60 * 1000)}
+            placeholder={t("selectDateTimePlaceholder")}
           />
         </FormField>
 
         {calculating && (
           <View style={styles.calculatingRow}>
             <ActivityIndicator size="small" color={Colors.gold} />
-            <Text style={styles.calculatingText}>Estimating distance...</Text>
+            <Text style={styles.calculatingText}>{t("estimatingDistance")}</Text>
           </View>
         )}
 
+        {/* Promo code */}
+        <View style={styles.sectionBlock}>
+          <View style={styles.sectionBlockHeader}>
+            <Feather name="tag" size={14} color={Colors.gold} />
+            <Text style={styles.sectionBlockTitle}>{t("promoCode")}</Text>
+          </View>
+          <View style={{ flexDirection: "row", gap: 10 }}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              placeholder={t("promoPlaceholder")}
+              placeholderTextColor={Colors.textMuted}
+              value={promoCode}
+              onChangeText={(v) => { setPromoCode(v.toUpperCase()); setPromoDiscount(null); setPromoError(null); }}
+              autoCapitalize="characters"
+            />
+            <TouchableOpacity
+              style={[styles.applyBtn, promoLoading && styles.disabled]}
+              onPress={applyPromo}
+              disabled={promoLoading || !promoCode.trim()}
+              activeOpacity={0.8}
+            >
+              {promoLoading ? (
+                <ActivityIndicator size="small" color={Colors.navy} />
+              ) : (
+                <Text style={styles.applyBtnText}>{t("applyCode")}</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          {promoDiscount != null && (
+            <View style={styles.promoSuccessRow}>
+              <Feather name="check-circle" size={13} color={Colors.success} />
+              <Text style={styles.promoSuccessText}>{t("promoApplied")} −{formatSEK(promoDiscount)}</Text>
+            </View>
+          )}
+          {promoError && (
+            <Text style={styles.promoErrorText}>{promoError}</Text>
+          )}
+        </View>
+
         <View style={styles.priceCard}>
-          <Text style={styles.priceCardTitle}>Your Offer to Driver</Text>
+          <Text style={styles.priceCardTitle}>{t("yourOfferToDriver")}</Text>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Suggested price</Text>
+            <Text style={styles.priceLabel}>{t("suggestedPrice")}</Text>
             <Text style={styles.priceValue}>{formatSEK(suggestedPrice)}</Text>
           </View>
           <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>Allowed range</Text>
+            <Text style={styles.priceLabel}>{t("allowedRange")}</Text>
             <Text style={styles.priceValue}>{formatSEK(minPrice)} – {formatSEK(maxPrice)}</Text>
           </View>
           <View style={styles.priceInputRow}>
@@ -342,14 +513,14 @@ export default function PostJobScreen() {
             <Text style={styles.priceErrorText}>{priceError}</Text>
           )}
           <Text style={styles.priceHint}>
-            Leave blank to use the suggested price. Drivers see your offered price before accepting.
+            {t("leaveBlankPrice")}
           </Text>
         </View>
 
         <View style={styles.freeLaunchNote}>
           <Feather name="gift" size={14} color={Colors.success} />
           <Text style={styles.freeLaunchNoteText}>
-            This service is completely free during our launch period — Helt gratis under lanseringen
+            {t("freeLaunchNote")}
           </Text>
         </View>
 
@@ -362,7 +533,7 @@ export default function PostJobScreen() {
             {agreedToOwnership && <Feather name="check" size={12} color={Colors.navy} />}
           </View>
           <Text style={styles.ownershipText}>
-            I confirm these items are legally owned by me and are not prohibited items (weapons, illegal substances, stolen goods, hazardous materials, or live animals)
+            {t("ownershipConfirm")}
           </Text>
         </TouchableOpacity>
 
@@ -376,7 +547,7 @@ export default function PostJobScreen() {
             <ActivityIndicator color={Colors.navy} />
           ) : (
             <>
-              <Text style={styles.postBtnText}>Post Job — it's free!</Text>
+              <Text style={styles.postBtnText}>{t("postJobBtn")}</Text>
               <Feather name="arrow-right" size={16} color={Colors.navy} />
             </>
           )}
@@ -658,5 +829,91 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     color: Colors.success,
     lineHeight: 18,
+  },
+  sectionBlock: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 10,
+  },
+  sectionBlockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 2,
+  },
+  sectionBlockTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  miniLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+  },
+  boolBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.navy,
+  },
+  boolBtnActive: {
+    borderColor: Colors.gold,
+    backgroundColor: `${Colors.gold}18`,
+  },
+  boolBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  boolBtnTextActive: {
+    color: Colors.gold,
+    fontFamily: "Inter_600SemiBold",
+  },
+  addStopBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 8,
+  },
+  addStopText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.gold,
+  },
+  applyBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 10,
+    paddingHorizontal: 16,
+    justifyContent: "center",
+    alignItems: "center",
+    height: 48,
+  },
+  applyBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
+  },
+  promoSuccessRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  promoSuccessText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.success,
+  },
+  promoErrorText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.error,
   },
 });

@@ -15,19 +15,15 @@ import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { SWEDISH_CITIES } from "@/constants/config";
 
 type Role = "customer" | "driver" | "both";
 
-const ROLES: { id: Role; label: string; icon: string }[] = [
-  { id: "customer", label: "Customer", icon: "account" },
-  { id: "driver", label: "Driver", icon: "truck" },
-  { id: "both", label: "Both", icon: "account-switch" },
-];
-
 export default function RegisterScreen() {
   const { register } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [role, setRole] = useState<Role>("customer");
   const [fullName, setFullName] = useState("");
@@ -40,13 +36,19 @@ export default function RegisterScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const ROLES: { id: Role; label: string; icon: string }[] = [
+    { id: "customer", label: t("customer"), icon: "account" },
+    { id: "driver", label: t("driver"), icon: "truck" },
+    { id: "both", label: t("both"), icon: "account-switch" },
+  ];
+
   async function handleRegister() {
     if (!fullName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert("Missing Fields", "Please fill in all required fields.");
+      Alert.alert(t("missingFields"), t("pleaseFillAll"));
       return;
     }
     if (!agreedToTerms) {
-      Alert.alert("Terms Required", "Please agree to the Terms of Service.");
+      Alert.alert(t("termsRequired"), t("pleaseAgreeTerms"));
       return;
     }
     setLoading(true);
@@ -60,7 +62,7 @@ export default function RegisterScreen() {
         vehicleDescription: vehicleDescription.trim() || undefined,
       });
     } catch (e: any) {
-      Alert.alert("Registration Failed", e.message || "Something went wrong.");
+      Alert.alert(t("registrationFailed"), e.message || t("somethingWentWrong"));
     } finally {
       setLoading(false);
     }
@@ -89,8 +91,8 @@ export default function RegisterScreen() {
           <View style={styles.logoSmall}>
             <MaterialCommunityIcons name="truck-delivery" size={28} color={Colors.gold} />
           </View>
-          <Text style={styles.title}>Create account</Text>
-          <Text style={styles.subtitle}>Join Bära today</Text>
+          <Text style={styles.title}>{t("createAccount")}</Text>
+          <Text style={styles.subtitle}>{t("joinBara")}</Text>
         </View>
 
         <View style={styles.rolePicker}>
@@ -113,28 +115,26 @@ export default function RegisterScreen() {
         {role === "both" && (
           <View style={styles.bothHint}>
             <Feather name="info" size={13} color={Colors.gold} />
-            <Text style={styles.bothHintText}>
-              You can post jobs as a customer and accept jobs as a driver
-            </Text>
+            <Text style={styles.bothHintText}>{t("bothHint")}</Text>
           </View>
         )}
 
         <View style={styles.form}>
-          <InputField label="Full Name" icon="user" value={fullName} onChangeText={setFullName} placeholder="Your full name" />
-          <InputField label="Email" icon="mail" value={email} onChangeText={setEmail} placeholder="your@email.com" keyboardType="email-address" autoCapitalize="none" />
+          <InputField label={t("fullName")} icon="user" value={fullName} onChangeText={setFullName} placeholder={t("yourFullName")} />
+          <InputField label={t("email")} icon="mail" value={email} onChangeText={setEmail} placeholder="your@email.com" keyboardType="email-address" autoCapitalize="none" />
           <InputField
-            label="Password"
+            label={t("password")}
             icon="lock"
             value={password}
             onChangeText={setPassword}
-            placeholder="Minimum 6 characters"
+            placeholder={t("minimumChars")}
             secureTextEntry={!showPassword}
             rightIcon={showPassword ? "eye-off" : "eye"}
             onRightIconPress={() => setShowPassword(!showPassword)}
           />
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>City</Text>
+            <Text style={styles.label}>{t("city")}</Text>
             <TouchableOpacity
               style={styles.inputWrapper}
               onPress={() => setShowCityPicker(!showCityPicker)}
@@ -163,11 +163,11 @@ export default function RegisterScreen() {
 
           {showVehicle && (
             <InputField
-              label="Vehicle Description"
+              label={t("vehicleDescription")}
               icon="truck"
               value={vehicleDescription}
               onChangeText={setVehicleDescription}
-              placeholder="e.g. White Volvo V90, large van"
+              placeholder={t("vehiclePlaceholder")}
             />
           )}
 
@@ -180,8 +180,8 @@ export default function RegisterScreen() {
               {agreedToTerms && <Feather name="check" size={12} color={Colors.navy} />}
             </View>
             <Text style={styles.termsText}>
-              I agree to the{" "}
-              <Text style={styles.termsLink} onPress={() => router.push("/terms")}>Terms of Service</Text>
+              {t("agreeToTerms")}
+              <Text style={styles.termsLink} onPress={() => router.push("/terms")}>{t("termsOfService")}</Text>
             </Text>
           </TouchableOpacity>
 
@@ -194,15 +194,15 @@ export default function RegisterScreen() {
             {loading ? (
               <ActivityIndicator color={Colors.navy} />
             ) : (
-              <Text style={styles.registerBtnText}>Create Account</Text>
+              <Text style={styles.registerBtnText}>{t("createAccountBtn")}</Text>
             )}
           </TouchableOpacity>
         </View>
 
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Already have an account? </Text>
+          <Text style={styles.footerText}>{t("alreadyHaveAccount")}</Text>
           <TouchableOpacity onPress={() => router.replace("/login")}>
-            <Text style={styles.footerLink}>Log In</Text>
+            <Text style={styles.footerLink}>{t("logIn")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

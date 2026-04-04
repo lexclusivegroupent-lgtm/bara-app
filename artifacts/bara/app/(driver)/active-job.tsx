@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL, formatSEK, formatDate, CANCELLATION_FEE } from "@/constants/config";
 import { safeJson } from "@/utils/api";
@@ -25,12 +26,15 @@ import { PhotoPicker } from "@/components/PhotoPicker";
 export default function DriverActiveJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
   const [pickupPhotos, setPickupPhotos] = useState<string[]>([]);
   const [dropoffPhotos, setDropoffPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["activeJob", id],
@@ -53,6 +57,25 @@ export default function DriverActiveJobScreen() {
     }
   }, [job?.id]);
 
+  async function handleCancelJob() {
+    if (!job) return;
+    setCancelling(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/cancel`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to cancel");
+      router.replace("/(driver)/map");
+    } catch (e: any) {
+      setCompleteError(e.message || "Failed to cancel. Please try again.");
+    } finally {
+      setCancelling(false);
+      setShowCancelConfirm(false);
+    }
+  }
+
   function handleNavigate() {
     if (!job) return;
     const address = job.pickupAddress || job.homeAddress;
@@ -71,11 +94,11 @@ export default function DriverActiveJobScreen() {
     setCompleteError(null);
 
     if (pickupPhotos.length === 0) {
-      setCompleteError("Please add at least one pickup photo before completing.");
+      setCompleteError(t("atLeastOnePickup"));
       return;
     }
     if (dropoffPhotos.length === 0) {
-      setCompleteError("Please add at least one drop-off photo before completing.");
+      setCompleteError(t("atLeastOneDropoff"));
       return;
     }
 
@@ -121,7 +144,7 @@ export default function DriverActiveJobScreen() {
       <View style={[styles.container, { backgroundColor: Colors.navy }]}>
         <View style={styles.loadingState}>
           <ActivityIndicator color={Colors.gold} />
-          <Text style={styles.loadingText}>Loading job...</Text>
+          <Text style={styles.loadingText}>{t("loading")}</Text>
         </View>
         <BottomNav />
       </View>
@@ -133,8 +156,8 @@ export default function DriverActiveJobScreen() {
       <View style={[styles.container, { backgroundColor: Colors.navy }]}>
         <View style={styles.loadingState}>
           <MaterialCommunityIcons name="clipboard-text-outline" size={40} color={Colors.textMuted} />
-          <Text style={styles.emptyText}>No active job</Text>
-          <Text style={styles.emptySubtext}>Accept a job from the Map tab</Text>
+          <Text style={styles.emptyText}>{t("noActiveJobFound")}</Text>
+          <Text style={styles.emptySubtext}>{t("goToMap")}</Text>
         </View>
         <BottomNav />
       </View>
@@ -348,6 +371,50 @@ export default function DriverActiveJobScreen() {
           <Text style={styles.completeHint}>
             Add before & after photos to complete this job
           </Text>
+        )}
+
+        {/* Chat with customer */}
+        <TouchableOpacity
+          style={styles.chatBtn}
+          onPress={() => router.push({ pathname: "/chat", params: { jobId: String(job.id) } })}
+          activeOpacity={0.85}
+        >
+          <Feather name="message-circle" size={16} color={Colors.gold} />
+          <Text style={styles.chatBtnText}>{t("chat")}</Text>
+        </TouchableOpacity>
+
+        {/* Driver cancel */}
+        {!showCancelConfirm ? (
+          <TouchableOpacity
+            style={styles.cancelJobBtn}
+            onPress={() => setShowCancelConfirm(true)}
+            activeOpacity={0.85}
+          >
+            <Feather name="x-circle" size={15} color={Colors.error} />
+            <Text style={styles.cancelJobBtnText}>{t("cancelJob")}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.cancelConfirmCard}>
+            <Feather name="alert-triangle" size={18} color={Colors.error} />
+            <Text style={styles.cancelConfirmText}>{t("cancelJobConfirm")}</Text>
+            <View style={styles.cancelConfirmBtns}>
+              <TouchableOpacity style={styles.cancelConfirmNo} onPress={() => setShowCancelConfirm(false)}>
+                <Text style={styles.cancelConfirmNoText}>{t("cancel")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelConfirmYes, cancelling && styles.disabled]}
+                onPress={handleCancelJob}
+                disabled={cancelling}
+                activeOpacity={0.85}
+              >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color={Colors.text} />
+                ) : (
+                  <Text style={styles.cancelConfirmYesText}>{t("cancelJob")}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
         )}
 
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 16 }} />
@@ -636,4 +703,84 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.navy,
   },
+  chatBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  chatBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+  },
+  cancelJobBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderRadius: 12,
+    paddingVertical: 12,
+    justifyContent: "center",
+    marginTop: 4,
+  },
+  cancelJobBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
+  },
+  cancelConfirmCard: {
+    backgroundColor: `${Colors.error}12`,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: `${Colors.error}30`,
+    gap: 12,
+    alignItems: "center",
+    marginTop: 8,
+  },
+  cancelConfirmText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+    textAlign: "center",
+    lineHeight: 20,
+  },
+  cancelConfirmBtns: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+  },
+  cancelConfirmNo: {
+    flex: 1,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingVertical: 11,
+    alignItems: "center",
+  },
+  cancelConfirmNoText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  cancelConfirmYes: {
+    flex: 1,
+    borderRadius: 10,
+    backgroundColor: Colors.error,
+    paddingVertical: 11,
+    alignItems: "center",
+  },
+  cancelConfirmYesText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  disabled: { opacity: 0.7 },
 });

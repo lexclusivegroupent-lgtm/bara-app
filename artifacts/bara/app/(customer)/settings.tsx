@@ -17,6 +17,7 @@ import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
@@ -26,18 +27,48 @@ type CarrierType = "vehicle" | "walker";
 
 export default function SettingsScreen() {
   const { user, token, logout, setActiveMode, updateUser } = useAuth();
+  const { t, lang, setLang } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [vehicleDescription, setVehicleDescription] = useState("");
   const [carrierType, setCarrierType] = useState<CarrierType>("vehicle");
   const [upgradeLoading, setUpgradeLoading] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
+  async function handleDeleteAccount() {
+    Alert.alert(t("deleteAccountTitle"), t("deleteAccountConfirm"), [
+      { text: t("cancel"), style: "cancel" },
+      {
+        text: t("deleteAccountBtn"),
+        style: "destructive",
+        onPress: async () => {
+          setDeletingAccount(true);
+          try {
+            const res = await fetch(`${BASE_URL}/api/users/account`, {
+              method: "DELETE",
+              headers: { Authorization: `Bearer ${token}` },
+            });
+            const data = await safeJson(res);
+            if (!res.ok) throw new Error(data.error || "Failed to delete");
+            await logout();
+            Alert.alert(t("accountDeleted"), t("accountDeletedMsg"));
+            router.replace("/");
+          } catch (e: any) {
+            Alert.alert("Error", e.message || "Failed to delete account.");
+          } finally {
+            setDeletingAccount(false);
+          }
+        },
+      },
+    ]);
+  }
 
   async function handleLogout() {
-    Alert.alert("Log Out", "Are you sure you want to log out?", [
-      { text: "Cancel", style: "cancel" },
+    Alert.alert(t("logOutTitle"), t("logOutConfirm"), [
+      { text: t("cancel"), style: "cancel" },
       {
-        text: "Log Out",
+        text: t("logOut"),
         style: "destructive",
         onPress: async () => {
           await logout();
@@ -54,7 +85,7 @@ export default function SettingsScreen() {
 
   async function handleUpgradeToDriver() {
     if (carrierType === "vehicle" && !vehicleDescription.trim()) {
-      Alert.alert("Missing Info", "Please describe your vehicle.");
+      Alert.alert(t("missingInfo"), t("pleaseDescribeVehicle"));
       return;
     }
     setUpgradeLoading(true);
@@ -70,7 +101,7 @@ export default function SettingsScreen() {
       if (!res.ok) throw new Error(data.error || "Upgrade failed");
       updateUser(data);
       setShowUpgradeModal(false);
-      Alert.alert("You're now a Driver!", "You can now switch between Customer and Driver mode.");
+      Alert.alert(t("nowDriver"), t("canNowSwitch"));
     } catch (e: any) {
       Alert.alert("Error", e.message || "Could not upgrade account.");
     } finally {
@@ -81,7 +112,7 @@ export default function SettingsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>{t("settingsTitle")}</Text>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
@@ -94,7 +125,7 @@ export default function SettingsScreen() {
             <Text style={styles.profileEmail}>{user?.email}</Text>
             <View style={styles.profileBadge}>
               <Text style={styles.profileBadgeText}>
-                {user?.city} • {user?.role === "both" ? "Customer Mode" : "Customer"}
+                {user?.city} • {user?.role === "both" ? t("customerModeBadge") : t("customer")}
               </Text>
             </View>
           </View>
@@ -107,8 +138,8 @@ export default function SettingsScreen() {
                 <Feather name="truck" size={18} color={Colors.gold} />
               </View>
               <View>
-                <Text style={styles.switchModeTitle}>Switch to Driver Mode</Text>
-                <Text style={styles.switchModeSubtext}>Accept and complete jobs</Text>
+                <Text style={styles.switchModeTitle}>{t("switchToDriver")}</Text>
+                <Text style={styles.switchModeSubtext}>{t("switchToDriverSub")}</Text>
               </View>
             </View>
             <Feather name="arrow-right" size={16} color={Colors.gold} />
@@ -116,15 +147,15 @@ export default function SettingsScreen() {
         )}
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Account Type</Text>
+          <Text style={styles.sectionLabel}>{t("accountType")}</Text>
           {user?.role === "both" ? (
             <View style={styles.accountTypeRow}>
               <View style={styles.accountTypeIconWrap}>
                 <Feather name="check-circle" size={18} color={Colors.success} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.accountTypeTitle}>Customer and Driver</Text>
-                <Text style={styles.accountTypeSubtext}>You can post jobs and earn money carrying items</Text>
+                <Text style={styles.accountTypeTitle}>{t("customerAndDriver")}</Text>
+                <Text style={styles.accountTypeSubtext}>{t("customerAndDriverSub")}</Text>
               </View>
             </View>
           ) : (
@@ -133,8 +164,8 @@ export default function SettingsScreen() {
                 <Feather name="truck" size={18} color={Colors.gold} />
               </View>
               <View style={{ flex: 1 }}>
-                <Text style={styles.upgradeTitle}>Become a Driver too</Text>
-                <Text style={styles.upgradeSubtext}>Earn money by carrying items for others</Text>
+                <Text style={styles.upgradeTitle}>{t("becomeDriver")}</Text>
+                <Text style={styles.upgradeSubtext}>{t("becomeDriverSub")}</Text>
               </View>
               <Feather name="chevron-right" size={16} color={Colors.textMuted} />
             </TouchableOpacity>
@@ -142,43 +173,60 @@ export default function SettingsScreen() {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Account</Text>
-          <SettingsRow icon="edit-2" label="Edit Profile" onPress={() => router.push("/(customer)/edit-profile")} />
-          <SettingsRow icon="bell" label="Notifications" onPress={() => router.push("/notifications")} />
+          <Text style={styles.sectionLabel}>{t("account")}</Text>
+          <SettingsRow icon="edit-2" label={t("editProfile")} onPress={() => router.push("/(customer)/edit-profile")} />
+          <SettingsRow icon="bell" label={t("notifications")} onPress={() => router.push("/notifications")} />
+        </View>
+
+        {/* Language toggle */}
+        <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{t("language")}</Text>
+          <View style={styles.langRow}>
+            <TouchableOpacity
+              style={[styles.langBtn, lang === "sv" && styles.langBtnActive]}
+              onPress={() => setLang("sv")}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.langBtnText, lang === "sv" && styles.langBtnTextActive]}>Svenska</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.langBtn, lang === "en" && styles.langBtnActive]}
+              onPress={() => setLang("en")}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.langBtnText, lang === "en" && styles.langBtnTextActive]}>English</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.aboutSection}>
           <View style={styles.aboutHeader}>
             <MaterialCommunityIcons name="information-outline" size={16} color={Colors.gold} />
-            <Text style={styles.aboutTitle}>About Bära</Text>
+            <Text style={styles.aboutTitle}>{t("aboutBara")}</Text>
           </View>
-          <Text style={styles.aboutText}>
-            Bära connects customers in Sweden with trusted drivers for furniture transport and junk pickup — on-demand, fast, and simple.
-          </Text>
-          <Text style={styles.aboutTextSV}>
-            Bära kopplar ihop kunder i Sverige med pålitliga förare för möbeltransport och skräphämtning — on-demand, snabbt och enkelt.
-          </Text>
+          <Text style={styles.aboutText}>{t("aboutTextSV")}</Text>
           <View style={styles.aboutFreeBadge}>
             <Feather name="gift" size={12} color={Colors.success} />
-            <Text style={styles.aboutFreeBadgeText}>100% free during our launch period · Helt gratis under lansering</Text>
+            <Text style={styles.aboutFreeBadgeText}>{t("freeLaunchBadge")}</Text>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Legal</Text>
-          <SettingsRow icon="file-text" label="Terms of Service" onPress={() => router.push("/terms")} />
-          <SettingsRow icon="shield" label="Privacy Policy" onPress={() => router.push("/privacy")} />
-          <SettingsRow icon="truck" label="Driver Terms" onPress={() => router.push("/driver-terms")} />
+          <Text style={styles.sectionLabel}>{t("legal")}</Text>
+          <SettingsRow icon="file-text" label={t("termsOfServiceRow")} onPress={() => router.push("/terms")} />
+          <SettingsRow icon="shield" label={t("privacyPolicy")} onPress={() => router.push("/privacy")} />
+          <SettingsRow icon="truck" label={t("driverTerms")} onPress={() => router.push("/driver-terms")} />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionLabel}>Privacy & Data</Text>
-          <SettingsRow icon="download" label="Request Data Export" onPress={() => router.push("/privacy")} />
-          <SettingsRow icon="trash-2" label="Request Account Deletion" onPress={() => router.push("/privacy")} danger />
+          <Text style={styles.sectionLabel}>{t("privacyData")}</Text>
+          <SettingsRow icon="headphones" label={t("contactSupport")} onPress={() => router.push("/support")} />
+          <SettingsRow icon="download" label={t("requestDataExport")} onPress={() => router.push("/privacy")} />
+          <SettingsRow icon="trash-2" label={t("deleteAccount")} onPress={handleDeleteAccount} danger />
         </View>
 
         <View style={styles.section}>
-          <SettingsRow icon="log-out" label="Log Out" onPress={handleLogout} danger />
+          <SettingsRow icon="log-out" label={t("logOut")} onPress={handleLogout} danger />
         </View>
 
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 16 }} />
@@ -191,18 +239,16 @@ export default function SettingsScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Become a Driver</Text>
+              <Text style={styles.modalTitle}>{t("becomeDriverModal")}</Text>
               <TouchableOpacity onPress={() => setShowUpgradeModal(false)} style={styles.modalClose}>
                 <Feather name="x" size={20} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>
-              Add your details to start accepting jobs and earning money.
-            </Text>
+            <Text style={styles.modalSubtitle}>{t("becomeDriverModalSub")}</Text>
 
-            <Text style={styles.fieldLabel}>How will you carry items?</Text>
+            <Text style={styles.fieldLabel}>{t("howCarry")}</Text>
             <View style={styles.carrierRow}>
-              {([["vehicle", "truck", "With a Vehicle"], ["walker", "user", "On Foot / Walker"]] as const).map(([type, icon, label]) => (
+              {([["vehicle", "truck", t("withVehicle")], ["walker", "user", t("onFoot")]] as const).map(([type, icon, label]) => (
                 <TouchableOpacity
                   key={type}
                   style={[styles.carrierOption, carrierType === type && styles.carrierOptionActive]}
@@ -216,7 +262,7 @@ export default function SettingsScreen() {
             </View>
 
             <Text style={styles.fieldLabel}>
-              {carrierType === "vehicle" ? "Vehicle Description *" : "Additional Info (optional)"}
+              {carrierType === "vehicle" ? t("vehicleDescRequired") : t("additionalInfo")}
             </Text>
             <TextInput
               style={styles.modalInput}
@@ -234,7 +280,7 @@ export default function SettingsScreen() {
             >
               {upgradeLoading
                 ? <ActivityIndicator color={Colors.navy} />
-                : <Text style={styles.upgradeBtnText}>Start Driving</Text>
+                : <Text style={styles.upgradeBtnText}>{t("startDriving")}</Text>
               }
             </TouchableOpacity>
           </View>
@@ -319,6 +365,35 @@ const styles = StyleSheet.create({
   },
   switchModeTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.text },
   switchModeSubtext: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 1 },
+  langRow: {
+    flexDirection: "row",
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  langBtn: {
+    flex: 1,
+    alignItems: "center",
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.navy,
+  },
+  langBtnActive: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  langBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textMuted,
+  },
+  langBtnTextActive: {
+    color: Colors.navy,
+  },
   aboutSection: {
     backgroundColor: Colors.surface,
     borderRadius: 14,
@@ -343,13 +418,6 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.text,
     lineHeight: 20,
-  },
-  aboutTextSV: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    fontStyle: "italic",
-    lineHeight: 17,
   },
   aboutFreeBadge: {
     flexDirection: "row",

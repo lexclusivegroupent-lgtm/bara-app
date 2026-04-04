@@ -15,6 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL, formatSEK, getStatusColor, getStatusLabel, formatDate } from "@/constants/config";
 import { safeJson } from "@/utils/api";
@@ -23,6 +24,7 @@ import { JobCard, Job } from "@/components/JobCard";
 
 export default function CustomerHome() {
   const { user, token, activeMode, setActiveMode } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const { data: jobs, isLoading, refetch, isRefetching } = useQuery<Job[]>({
@@ -42,9 +44,7 @@ export default function CustomerHome() {
   const firstName = user?.fullName?.split(" ")[0] || "there";
 
   const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  const greetingSV = hour < 12 ? "God morgon" : hour < 18 ? "God eftermiddag" : "God kväll";
-
+  const greeting = hour < 12 ? t("goodMorning") : hour < 18 ? t("goodAfternoon") : t("goodEvening");
 
   function handleSwitchMode(mode: "customer" | "driver") {
     setActiveMode(mode);
@@ -56,7 +56,6 @@ export default function CustomerHome() {
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
         <View>
           <Text style={styles.greeting}>{greeting}, {firstName}</Text>
-          <Text style={styles.greetingSV}>{greetingSV}</Text>
         </View>
         <View style={styles.headerRight}>
           {user?.role === "both" && (
@@ -65,13 +64,13 @@ export default function CustomerHome() {
                 style={[styles.modeBtn, activeMode === "customer" && styles.modeBtnActive]}
                 onPress={() => handleSwitchMode("customer")}
               >
-                <Text style={[styles.modeBtnText, activeMode === "customer" && styles.modeBtnTextActive]}>Customer</Text>
+                <Text style={[styles.modeBtnText, activeMode === "customer" && styles.modeBtnTextActive]}>{t("customerMode")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modeBtn, activeMode === "driver" && styles.modeBtnActive]}
                 onPress={() => handleSwitchMode("driver")}
               >
-                <Text style={[styles.modeBtnText, activeMode === "driver" && styles.modeBtnTextActive]}>Driver</Text>
+                <Text style={[styles.modeBtnText, activeMode === "driver" && styles.modeBtnTextActive]}>{t("driverMode")}</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -92,36 +91,35 @@ export default function CustomerHome() {
         <View style={styles.freeBanner}>
           <Feather name="gift" size={14} color={Colors.success} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.freeBannerText}>Bära is free during our launch period — no fees, no charges</Text>
-            <Text style={styles.freeBannerSV}>Bära är gratis under vår lansering — inga avgifter</Text>
+            <Text style={styles.freeBannerText}>{t("freeBanner")}</Text>
           </View>
         </View>
 
-        <Text style={styles.sectionTitle}>New Job</Text>
+        <Text style={styles.sectionTitle}>{t("newJob")}</Text>
         <View style={styles.serviceCards}>
           <ServiceCard
             icon="sofa"
-            title="Furniture Transport"
-            subtitle="Pickup & drop-off"
+            title={t("furnitureTransport")}
+            subtitle={t("pickupDropoff")}
             onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "furniture_transport" } })}
           />
           <ServiceCard
             icon="package-variant"
-            title="Bulky Delivery"
-            subtitle="Large items"
+            title={t("bulkyDelivery")}
+            subtitle={t("largeItems")}
             onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "bulky_delivery" } })}
           />
           <ServiceCard
             icon="delete-sweep"
-            title="Junk & Trash"
-            subtitle="Home pickup"
+            title={t("junkTrash")}
+            subtitle={t("homePickup")}
             onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "junk_pickup" } })}
           />
         </View>
 
         {activeJobs.length > 0 && (
           <>
-            <Text style={styles.sectionTitle}>Active Jobs</Text>
+            <Text style={styles.sectionTitle}>{t("activeJobs")}</Text>
             <View style={styles.jobsList}>
               {activeJobs.map((job, index) => (
                 <Animated.View key={job.id} entering={FadeInDown.delay(index * 80)}>
@@ -137,15 +135,15 @@ export default function CustomerHome() {
 
         {isLoading && (
           <View style={styles.loadingCard}>
-            <Text style={styles.loadingText}>Loading jobs...</Text>
+            <Text style={styles.loadingText}>{t("loadingJobs")}</Text>
           </View>
         )}
 
         {!isLoading && activeJobs.length === 0 && (
           <View style={styles.emptyCard}>
             <MaterialCommunityIcons name="truck-outline" size={36} color={Colors.textMuted} />
-            <Text style={styles.emptyText}>No active jobs</Text>
-            <Text style={styles.emptySubtext}>Post your first job above to get started</Text>
+            <Text style={styles.emptyText}>{t("noActiveJobs")}</Text>
+            <Text style={styles.emptySubtext}>{t("postFirstJob")}</Text>
           </View>
         )}
 
@@ -185,12 +183,6 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
-  },
-  greetingSV: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    fontStyle: "italic",
   },
   headerRight: {
     flexDirection: "row",
@@ -313,12 +305,5 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.success,
     lineHeight: 18,
-  },
-  freeBannerSV: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: `${Colors.success}CC`,
-    fontStyle: "italic",
-    marginTop: 2,
   },
 });

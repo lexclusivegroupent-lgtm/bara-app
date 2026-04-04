@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
@@ -21,6 +22,7 @@ import { JobCard, Job } from "@/components/JobCard";
 
 export default function MyJobsScreen() {
   const { user, token } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
 
   const { data: jobs, isLoading, refetch, isRefetching } = useQuery<Job[]>({
@@ -38,8 +40,8 @@ export default function MyJobsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <Text style={styles.title}>My Jobs</Text>
-        <Text style={styles.subtitle}>{jobs?.length || 0} total</Text>
+        <Text style={styles.title}>{t("myJobsTitle")}</Text>
+        <Text style={styles.subtitle}>{jobs?.length || 0} {t("total")}</Text>
       </View>
 
       <FlatList
@@ -65,13 +67,13 @@ export default function MyJobsScreen() {
         ListEmptyComponent={
           isLoading ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyText}>Loading...</Text>
+              <Text style={styles.emptyText}>{t("loading")}</Text>
             </View>
           ) : (
             <View style={styles.empty}>
               <MaterialCommunityIcons name="clipboard-text-outline" size={48} color={Colors.textMuted} />
-              <Text style={styles.emptyText}>No jobs yet</Text>
-              <Text style={styles.emptySubtext}>Post your first job from the Home screen</Text>
+              <Text style={styles.emptyText}>{t("noJobsYet")}</Text>
+              <Text style={styles.emptySubtext}>{t("postFromHome")}</Text>
             </View>
           )
         }

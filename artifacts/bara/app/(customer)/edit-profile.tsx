@@ -16,23 +16,31 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL, SWEDISH_CITIES } from "@/constants/config";
 import { safeJson } from "@/utils/api";
+import { VehicleTypePicker, type VehicleType } from "@/components/VehicleTypePicker";
 
 export default function EditProfileScreen() {
   const { user, token, updateUser } = useAuth();
+  const { t, lang } = useLanguage();
   const insets = useSafeAreaInsets();
   const [fullName, setFullName] = useState(user?.fullName || "");
   const [city, setCity] = useState(user?.city || "Stockholm");
+  const [vehicleType, setVehicleType] = useState<VehicleType | null>(
+    (user?.vehicleType as VehicleType | null) ?? null
+  );
   const [vehicleDescription, setVehicleDescription] = useState(user?.vehicleDescription || "");
   const [isAvailable, setIsAvailable] = useState(user?.isAvailable ?? true);
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const isDriver = user?.role === "driver" || user?.role === "both";
+
   async function handleSave() {
     if (!fullName.trim()) {
-      Alert.alert("Missing Info", "Please enter your full name.");
+      Alert.alert(t("missingInfo"), t("pleaseDescribeItems"));
       return;
     }
     setLoading(true);
@@ -46,8 +54,9 @@ export default function EditProfileScreen() {
         body: JSON.stringify({
           fullName: fullName.trim(),
           city,
-          vehicleDescription: vehicleDescription.trim() || null,
-          isAvailable,
+          vehicleType: isDriver ? vehicleType : undefined,
+          vehicleDescription: isDriver ? (vehicleDescription.trim() || null) : undefined,
+          isAvailable: isDriver ? isAvailable : undefined,
         }),
       });
       const data = await safeJson(res);
@@ -67,37 +76,43 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerTitle}>{t("editProfileTitle")}</Text>
         <TouchableOpacity onPress={handleSave} style={styles.saveBtn} disabled={loading}>
           {loading ? (
             <ActivityIndicator size="small" color={Colors.gold} />
           ) : (
-            <Text style={styles.saveText}>Save</Text>
+            <Text style={styles.saveText}>{t("saveChanges")}</Text>
           )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.avatarSection}>
           <View style={styles.avatar}>
             <Feather name="user" size={36} color={Colors.gold} />
           </View>
         </View>
 
-        <FormField label="Full Name" icon="user">
+        {/* Full name */}
+        <FormField label={t("fullName")} icon="user">
           <TextInput
             style={styles.input}
             value={fullName}
             onChangeText={setFullName}
-            placeholder="Your full name"
+            placeholder={t("yourFullName")}
             placeholderTextColor={Colors.textMuted}
           />
         </FormField>
 
+        {/* City */}
         <View style={styles.field}>
           <View style={styles.fieldLabel}>
             <Feather name="map-pin" size={13} color={Colors.textMuted} />
-            <Text style={styles.fieldLabelText}>City</Text>
+            <Text style={styles.fieldLabelText}>{t("city")}</Text>
           </View>
           <TouchableOpacity
             style={styles.fieldInput}
@@ -124,21 +139,49 @@ export default function EditProfileScreen() {
           )}
         </View>
 
-        {(user?.role === "driver" || user?.role === "both") && (
+        {/* Driver-only section */}
+        {isDriver && (
           <>
-            <FormField label="Vehicle Description" icon="truck">
+            {/* Vehicle type picker */}
+            <View style={styles.field}>
+              <View style={styles.fieldLabel}>
+                <Feather name="truck" size={13} color={Colors.textMuted} />
+                <Text style={styles.fieldLabelText}>
+                  {lang === "sv" ? "Fordonstyp" : "Vehicle Type"}
+                </Text>
+              </View>
+              <VehicleTypePicker
+                value={vehicleType}
+                onChange={setVehicleType}
+                lang={lang}
+              />
+            </View>
+
+            {/* Vehicle notes / registration */}
+            <FormField
+              label={lang === "sv" ? "Fordonsbeskrivning (valfritt)" : "Vehicle Notes (optional)"}
+              icon="info"
+            >
               <TextInput
                 style={styles.input}
                 value={vehicleDescription}
                 onChangeText={setVehicleDescription}
-                placeholder="e.g. White Volvo V90"
+                placeholder={lang === "sv" ? "t.ex. Vit Volvo V90, reg. ABC123" : "e.g. White Volvo V90, reg. ABC123"}
                 placeholderTextColor={Colors.textMuted}
               />
             </FormField>
+
+            {/* Availability toggle */}
             <View style={styles.availabilityRow}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.availabilityLabel}>Available for Jobs</Text>
-                <Text style={styles.availabilitySubtext}>Toggle to accept or pause new jobs</Text>
+                <Text style={styles.availabilityLabel}>
+                  {lang === "sv" ? "Tillgänglig för jobb" : "Available for Jobs"}
+                </Text>
+                <Text style={styles.availabilitySubtext}>
+                  {lang === "sv"
+                    ? "Aktivera eller pausa nya jobb"
+                    : "Toggle to accept or pause new jobs"}
+                </Text>
               </View>
               <Switch
                 value={isAvailable}

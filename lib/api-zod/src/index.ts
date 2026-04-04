@@ -1,7 +1,2 @@
-import { z } from "zod";
-
-export const HealthCheckResponse = z.object({
-  status: z.string(),
-});
-
-export type HealthCheckResponseType = z.infer<typeof HealthCheckResponse>;
+export * from "./generated/api";
+export * from "./generated/types";

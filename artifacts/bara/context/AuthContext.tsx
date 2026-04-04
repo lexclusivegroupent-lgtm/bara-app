@@ -16,6 +16,7 @@ export interface User {
   isAvailable: boolean;
   rating?: number | null;
   totalJobs: number;
+  vehicleType?: string | null;
   vehicleDescription?: string | null;
   createdAt: string;
 }

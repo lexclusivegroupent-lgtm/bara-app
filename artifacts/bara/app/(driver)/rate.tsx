@@ -14,20 +14,24 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL } from "@/constants/config";
 
 export default function DriverRateScreen() {
   const { jobId, userId } = useLocalSearchParams<{ jobId: string; userId: string }>();
   const { token, activeMode } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const ratingLabels = [t("poor"), t("fair"), t("good"), t("great"), t("excellent")];
+
   async function handleSubmit() {
     if (rating === 0) {
-      Alert.alert("Select Rating", "Please select a star rating.");
+      Alert.alert(t("selectRating"), t("pleaseSelectStar"));
       return;
     }
     setLoading(true);
@@ -62,8 +66,7 @@ export default function DriverRateScreen() {
         <View style={styles.avatar}>
           <Feather name="user" size={36} color={Colors.gold} />
         </View>
-        <Text style={styles.title}>Rate the Customer</Text>
-        <Text style={styles.subtitle}>Hur var din upplevelse?</Text>
+        <Text style={styles.title}>{t("howWasExperience")}</Text>
 
         <View style={styles.stars}>
           {[1, 2, 3, 4, 5].map((star) => (
@@ -74,15 +77,13 @@ export default function DriverRateScreen() {
         </View>
 
         {rating > 0 && (
-          <Text style={styles.ratingLabel}>
-            {rating === 1 ? "Poor" : rating === 2 ? "Fair" : rating === 3 ? "Good" : rating === 4 ? "Great" : "Excellent"}
-          </Text>
+          <Text style={styles.ratingLabel}>{ratingLabels[rating - 1]}</Text>
         )}
 
         <View style={styles.commentBox}>
           <TextInput
             style={styles.commentInput}
-            placeholder="Leave a comment (optional)"
+            placeholder={t("leaveComment")}
             placeholderTextColor={Colors.textMuted}
             value={comment}
             onChangeText={setComment}
@@ -98,11 +99,11 @@ export default function DriverRateScreen() {
           disabled={loading}
           activeOpacity={0.85}
         >
-          {loading ? <ActivityIndicator color={Colors.navy} /> : <Text style={styles.submitBtnText}>Submit Rating</Text>}
+          {loading ? <ActivityIndicator color={Colors.navy} /> : <Text style={styles.submitBtnText}>{t("submitRating")}</Text>}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.7}>
-          <Text style={styles.skipBtnText}>Skip</Text>
+          <Text style={styles.skipBtnText}>{t("skip")}</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -130,7 +131,6 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" },
-  subtitle: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, fontStyle: "italic", marginTop: -10 },
   stars: { flexDirection: "row", gap: 8, marginVertical: 8 },
   starBtn: { padding: 4 },
   ratingLabel: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.gold, marginTop: -8 },

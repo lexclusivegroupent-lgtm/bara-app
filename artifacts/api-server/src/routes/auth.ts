@@ -226,6 +226,7 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     isAvailable: user.isAvailable,
     rating: user.rating ? parseFloat(user.rating) : null,
     totalJobs: user.totalJobs,
+    vehicleType: user.vehicleType,
     vehicleDescription: user.vehicleDescription,
     createdAt: user.createdAt.toISOString(),
   };

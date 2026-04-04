@@ -4,14 +4,16 @@ import { fileURLToPath } from "node:url";
 import { build as esbuild } from "esbuild";
 import esbuildPluginPino from "esbuild-plugin-pino";
 import { rm } from "node:fs/promises";
+
 // Plugins (e.g. 'esbuild-plugin-pino') may use `require` to resolve dependencies
 globalThis.require = createRequire(import.meta.url);
+
 const artifactDir = path.dirname(fileURLToPath(import.meta.url));
-const nodeModulesDir = path.resolve(artifactDir, "node_modules");
-const rootNodeModulesDir = path.resolve(artifactDir, "../../node_modules");
+
 async function buildAll() {
   const distDir = path.resolve(artifactDir, "dist");
   await rm(distDir, { recursive: true, force: true });
+
   await esbuild({
     entryPoints: [path.resolve(artifactDir, "src/index.ts")],
     platform: "node",
@@ -20,9 +22,11 @@ async function buildAll() {
     outdir: distDir,
     outExtension: { ".js": ".mjs" },
     logLevel: "info",
-    nodePaths: [nodeModulesDir, rootNodeModulesDir],
-    // Some packages may not be bundleable, so we externalize them.
-    // express-rate-limit and resend are pure JS and ARE bundleable - do not externalize them.
+    // Some packages may not be bundleable, so we externalize them, we can add more here as needed.
+    // Some of the packages below may not be imported or installed, but we're adding them in case they are in the future.
+    // Examples of unbundleable packages:
+    // - uses native modules and loads them dynamically (e.g. sharp)
+    // - use path traversal to read files (e.g. @google-cloud/secret-manager loads sibling .proto files)
     external: [
       "*.node",
       "sharp",
@@ -107,13 +111,15 @@ async function buildAll() {
       js: `import { createRequire as __bannerCrReq } from 'node:module';
 import __bannerPath from 'node:path';
 import __bannerUrl from 'node:url';
+
 globalThis.require = __bannerCrReq(import.meta.url);
 globalThis.__filename = __bannerUrl.fileURLToPath(import.meta.url);
 globalThis.__dirname = __bannerPath.dirname(globalThis.__filename);
-`,
+    `,
     },
   });
 }
+
 buildAll().catch((err) => {
   console.error(err);
   process.exit(1);

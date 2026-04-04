@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { jobsTable, usersTable, ratingsTable } from "@workspace/db";
+import { jobsTable, usersTable, ratingsTable, messagesTable, promoCodesTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { authenticate, AuthenticatedRequest } from "../middlewares/auth";
 import { formatUser } from "./auth";
@@ -19,6 +19,7 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     pickupAddress: job.pickupAddress,
     dropoffAddress: job.dropoffAddress,
     homeAddress: job.homeAddress,
+    extraStops: job.extraStops || [],
     itemDescription: job.itemDescription,
     preferredTime: job.preferredTime,
     distanceKm: job.distanceKm ? parseFloat(job.distanceKm) : null,
@@ -35,11 +36,20 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     photosDropoff: job.photosDropoff || [],
     disputed: job.disputed,
     disputeReason: job.disputeReason,
+    // Logistics
+    floorNumber: job.floorNumber,
+    hasElevator: job.hasElevator,
+    helpersNeeded: job.helpersNeeded,
+    estimatedWeightKg: job.estimatedWeightKg,
+    // Promo
+    promoCode: job.promoCode,
+    discountAmount: job.discountAmount ? parseFloat(job.discountAmount) : null,
     createdAt: job.createdAt.toISOString(),
     acceptedAt: job.acceptedAt?.toISOString() || null,
     arrivedAt: job.arrivedAt?.toISOString() || null,
     completedAt: job.completedAt?.toISOString() || null,
     disputedAt: job.disputedAt?.toISOString() || null,
+    cancelledByDriverAt: job.cancelledByDriverAt?.toISOString() || null,
     customer: customer ? formatUser(customer) : null,
     driver: driver ? formatUser(driver) : null,
   };
@@ -102,9 +112,11 @@ router.get("/:id", authenticate, async (req: AuthenticatedRequest, res) => {
 
 router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
   const {
-    jobType, pickupAddress, dropoffAddress, homeAddress,
+    jobType, pickupAddress, dropoffAddress, homeAddress, extraStops,
     itemDescription, preferredTime, distanceKm, priceTotal,
     driverPayout, platformFee, city, customerPhotos, customerPrice,
+    floorNumber, hasElevator, helpersNeeded, estimatedWeightKg,
+    promoCode,
   } = req.body;
 
   if (!jobType || !itemDescription || !preferredTime || !city || priceTotal == null) {
@@ -133,6 +145,26 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     resolvedCustomerPrice = Math.round(cp);
   }
 
+  // Validate and apply promo code
+  let discountAmount: number | null = null;
+  let appliedPromoCode: string | null = null;
+  if (promoCode && promoCode.trim()) {
+    try {
+      const [promo] = await db.select().from(promoCodesTable)
+        .where(eq(promoCodesTable.code, promoCode.trim().toUpperCase()))
+        .limit(1);
+      if (promo && promo.active &&
+        (!promo.expiresAt || promo.expiresAt > new Date()) &&
+        (!promo.maxUses || promo.usedCount < promo.maxUses)) {
+        discountAmount = parseFloat(promo.discountAmount);
+        appliedPromoCode = promo.code;
+        await db.update(promoCodesTable).set({
+          usedCount: sql`${promoCodesTable.usedCount} + 1`,
+        }).where(eq(promoCodesTable.id, promo.id));
+      }
+    } catch {}
+  }
+
   try {
     const [job] = await db.insert(jobsTable).values({
       customerId: req.userId!,
@@ -141,6 +173,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       pickupAddress: pickupAddress || null,
       dropoffAddress: dropoffAddress || null,
       homeAddress: homeAddress || null,
+      extraStops: Array.isArray(extraStops) && extraStops.length > 0 ? extraStops : null,
       itemDescription: itemDescription.trim(),
       preferredTime,
       distanceKm: distanceKm?.toString() || null,
@@ -151,6 +184,12 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       paymentStatus: "unpaid",
       city,
       photosCustomer: Array.isArray(customerPhotos) ? customerPhotos : [],
+      floorNumber: floorNumber != null ? parseInt(floorNumber) : null,
+      hasElevator: hasElevator != null ? Boolean(hasElevator) : null,
+      helpersNeeded: helpersNeeded != null ? parseInt(helpersNeeded) : null,
+      estimatedWeightKg: estimatedWeightKg != null ? parseInt(estimatedWeightKg) : null,
+      promoCode: appliedPromoCode,
+      discountAmount: discountAmount != null ? discountAmount.toString() : null,
     }).returning();
 
     const enriched = await getJobWithUsers(job.id);
@@ -246,7 +285,6 @@ router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res)
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
 
-    // Notify customer that driver has arrived
     const [arrivedCustomer] = await db.select({ pushToken: usersTable.pushToken })
       .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
     sendPushToUser(
@@ -327,7 +365,6 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
 
-    // Notify both customer and driver that job is complete
     const [completedCustomer] = await db.select({ pushToken: usersTable.pushToken })
       .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
     const [completedDriver] = await db.select({ pushToken: usersTable.pushToken })
@@ -349,7 +386,6 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
       },
     ]).catch(() => {});
 
-    // Send receipt email to customer (fire-and-forget — never blocks job completion)
     if (enriched?.customer?.email) {
       const finalPrice = enriched.customerPrice ?? enriched.priceTotal;
       sendReceiptEmail({
@@ -473,8 +509,54 @@ router.post("/:id/rate", authenticate, async (req: AuthenticatedRequest, res) =>
   }
 });
 
-// Cancellation fee applied when customer cancels AFTER a driver has accepted.
-// Default: 150 kr fixed fee. Update this constant to change the policy.
+// Reschedule a job (customer only, ≥1 hour in the future)
+router.post("/:id/reschedule", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  const { preferredTime } = req.body;
+  if (!preferredTime) { res.status(400).json({ error: "preferredTime is required" }); return; }
+
+  const newDate = new Date(preferredTime);
+  if (isNaN(newDate.getTime())) { res.status(400).json({ error: "Invalid date format" }); return; }
+
+  // Enforce at least 1 hour from now
+  const oneHourFromNow = new Date(Date.now() + 60 * 60 * 1000);
+  if (newDate < oneHourFromNow) {
+    res.status(400).json({ error: "New time must be at least 1 hour in the future" });
+    return;
+  }
+
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
+    if (existing.customerId !== req.userId) { res.status(403).json({ error: "Only the customer can reschedule" }); return; }
+    if (!["pending", "accepted"].includes(existing.status)) {
+      res.status(400).json({ error: "Job can only be rescheduled when pending or accepted" });
+      return;
+    }
+
+    await db.update(jobsTable).set({ preferredTime: newDate.toISOString() }).where(eq(jobsTable.id, jobId));
+
+    // Notify driver if assigned
+    if (existing.driverId) {
+      const [driver] = await db.select({ pushToken: usersTable.pushToken })
+        .from(usersTable).where(eq(usersTable.id, existing.driverId)).limit(1).catch(() => []);
+      sendPushToUser(
+        driver?.pushToken,
+        "Job rescheduled",
+        `The customer has changed the job time to ${newDate.toLocaleString("sv-SE", { dateStyle: "medium", timeStyle: "short" })}.`,
+        { screen: "driver-job", jobId }
+      ).catch(() => {});
+    }
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+  } catch (err) {
+    req.log?.error(err, "Reschedule error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 const CANCELLATION_FEE_AFTER_ACCEPTANCE = 150;
 
 router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) => {
@@ -490,7 +572,7 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
       res.status(403).json({ error: "You are not authorized to cancel this job" });
       return;
     }
-    if (["completed", "cancelled", "cancelled_by_customer"].includes(existing.status)) {
+    if (["completed", "cancelled", "cancelled_by_customer", "cancelled_by_driver"].includes(existing.status)) {
       res.status(400).json({ error: "Job cannot be cancelled in its current state" });
       return;
     }
@@ -500,16 +582,13 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
 
     if (isCustomer) {
       if (!driverAssigned) {
-        // Before acceptance — free cancellation, job simply disappears
         await db.update(jobsTable).set({ status: "cancelled" }).where(eq(jobsTable.id, jobId));
       } else {
-        // After acceptance — cancellation fee applies
         await db.update(jobsTable).set({
           status: "cancelled_by_customer",
           cancellationFee: CANCELLATION_FEE_AFTER_ACCEPTANCE.toString(),
         }).where(eq(jobsTable.id, jobId));
 
-        // Notify driver they've been cancelled on and will receive compensation
         if (existing.driverId) {
           const [cancelledDriver] = await db.select({ pushToken: usersTable.pushToken })
             .from(usersTable).where(eq(usersTable.id, existing.driverId)).limit(1).catch(() => []);
@@ -522,17 +601,17 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
         }
       }
     } else {
-      // Driver cancels their accepted job — no fee to customer, but driver gets a strike
+      // Driver cancels — job goes back to pending pool, driver gets a cancellation strike
       await db.update(jobsTable).set({
-        status: "cancelled",
+        status: "cancelled_by_driver",
         driverId: null,
+        cancelledByDriverAt: new Date(),
       }).where(eq(jobsTable.id, jobId));
 
       await db.update(usersTable).set({
         cancellationsCount: sql`${usersTable.cancellationsCount} + 1`,
       }).where(eq(usersTable.id, req.userId!));
 
-      // Notify customer their driver cancelled
       const [cancelledCustomer] = await db.select({ pushToken: usersTable.pushToken })
         .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
       sendPushToUser(
@@ -547,6 +626,90 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
     res.json(enriched);
   } catch (err) {
     req.log?.error(err, "Cancel job error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// In-app chat messages for a job
+router.get("/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+    if (job.customerId !== req.userId && job.driverId !== req.userId) {
+      res.status(403).json({ error: "You are not part of this job" });
+      return;
+    }
+
+    const msgs = await db.select({
+      id: messagesTable.id,
+      jobId: messagesTable.jobId,
+      senderId: messagesTable.senderId,
+      text: messagesTable.text,
+      createdAt: messagesTable.createdAt,
+      senderName: usersTable.fullName,
+    })
+      .from(messagesTable)
+      .innerJoin(usersTable, eq(messagesTable.senderId, usersTable.id))
+      .where(eq(messagesTable.jobId, jobId))
+      .orderBy(messagesTable.createdAt);
+
+    res.json(msgs.map((m) => ({
+      ...m,
+      createdAt: m.createdAt.toISOString(),
+    })));
+  } catch (err) {
+    req.log?.error(err, "Get messages error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  const { text } = req.body;
+  if (!text || !text.trim()) {
+    res.status(400).json({ error: "text is required" });
+    return;
+  }
+  try {
+    const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+    if (job.customerId !== req.userId && job.driverId !== req.userId) {
+      res.status(403).json({ error: "You are not part of this job" });
+      return;
+    }
+
+    const [msg] = await db.insert(messagesTable).values({
+      jobId,
+      senderId: req.userId!,
+      text: text.trim(),
+    }).returning();
+
+    const [sender] = await db.select({ fullName: usersTable.fullName })
+      .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+
+    res.status(201).json({
+      ...msg,
+      createdAt: msg.createdAt.toISOString(),
+      senderName: sender?.fullName ?? "Unknown",
+    });
+
+    // Push notification to the other party
+    const otherUserId = job.customerId === req.userId ? job.driverId : job.customerId;
+    if (otherUserId) {
+      const [other] = await db.select({ pushToken: usersTable.pushToken })
+        .from(usersTable).where(eq(usersTable.id, otherUserId)).limit(1).catch(() => []);
+      sendPushToUser(
+        other?.pushToken,
+        `Message from ${sender?.fullName ?? "someone"}`,
+        text.trim().slice(0, 100),
+        { screen: "chat", jobId }
+      ).catch(() => {});
+    }
+  } catch (err) {
+    req.log?.error(err, "Send message error");
     res.status(500).json({ error: "Internal server error" });
   }
 });

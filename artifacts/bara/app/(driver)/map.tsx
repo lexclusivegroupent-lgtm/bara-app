@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
@@ -24,6 +25,7 @@ import { DriverMapView } from "@/components/DriverMapView";
 
 export default function DriverMapScreen() {
   const { user, token, updateUser, activeMode, setActiveMode } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [accepting, setAccepting] = useState<number | null>(null);
@@ -98,19 +100,19 @@ export default function DriverMapScreen() {
                 style={[styles.modeBtn, activeMode === "customer" && styles.modeBtnActive]}
                 onPress={() => handleSwitchMode("customer")}
               >
-                <Text style={[styles.modeBtnText, activeMode === "customer" && styles.modeBtnTextActive]}>Customer</Text>
+                <Text style={[styles.modeBtnText, activeMode === "customer" && styles.modeBtnTextActive]}>{t("customerMode")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modeBtn, activeMode === "driver" && styles.modeBtnActive]}
                 onPress={() => handleSwitchMode("driver")}
               >
-                <Text style={[styles.modeBtnText, activeMode === "driver" && styles.modeBtnTextActive]}>Driver</Text>
+                <Text style={[styles.modeBtnText, activeMode === "driver" && styles.modeBtnTextActive]}>{t("driverMode")}</Text>
               </TouchableOpacity>
             </View>
           )}
           <View style={styles.availabilityToggle}>
             <Text style={[styles.availabilityText, user?.isAvailable && styles.availabilityTextActive]}>
-              {user?.isAvailable ? "Online" : "Offline"}
+              {user?.isAvailable ? t("availableStatus") : t("offlineStatus")}
             </Text>
             <Switch
               value={!!user?.isAvailable}
@@ -132,7 +134,7 @@ export default function DriverMapScreen() {
 
       <View style={styles.jobsSection}>
         <View style={styles.jobsHeader}>
-          <Text style={styles.jobsTitle}>Available Jobs</Text>
+          <Text style={styles.jobsTitle}>{t("availableJobs")}</Text>
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{availableJobs.length}</Text>
           </View>
@@ -141,7 +143,7 @@ export default function DriverMapScreen() {
         <View style={styles.driverLaunchNote}>
           <Feather name="gift" size={12} color={Colors.gold} />
           <Text style={styles.driverLaunchNoteText}>
-            No platform fees during launch — you keep 100% of any tips or direct arrangements
+            {t("freeLaunchNote")}
           </Text>
         </View>
 
@@ -183,13 +185,13 @@ export default function DriverMapScreen() {
           ListEmptyComponent={
             isLoading ? (
               <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>Looking for jobs...</Text>
+                <Text style={styles.emptyText}>{t("loading")}</Text>
               </View>
             ) : (
               <View style={styles.emptyState}>
                 <MaterialCommunityIcons name="clipboard-search-outline" size={40} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>No jobs in {user?.city}</Text>
-                <Text style={styles.emptySubtext}>New jobs will appear here automatically</Text>
+                <Text style={styles.emptyText}>{t("noJobsArea")}</Text>
+                <Text style={styles.emptySubtext}>{t("jobsAppear")}</Text>
               </View>
             )
           }

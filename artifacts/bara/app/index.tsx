@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   Dimensions,
   Platform,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -21,12 +22,14 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 
 const { width, height } = Dimensions.get("window");
 
 export default function HomeScreen() {
   const { user, isLoading } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const logoScale = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
@@ -69,29 +72,32 @@ export default function HomeScreen() {
     >
       <View style={[styles.content, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20), paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 20) }]}>
         <Animated.View style={[styles.logoSection, logoStyle]}>
-          <View style={styles.logoImage}>
-            <MaterialCommunityIcons name="truck-fast" size={56} color={Colors.gold} />
-          </View>
+          <Image
+            source={require("../assets/images/logo.png")}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
           <Text style={styles.appName}>Bära</Text>
+          {/* Brand tagline stays bilingual always — part of brand identity */}
           <Text style={styles.taglineEN}>Carry anything, anywhere</Text>
           <Text style={styles.taglineSV}>Bär vad som helst, vart som helst</Text>
           <View style={styles.freeLaunchBadge}>
             <Feather name="gift" size={12} color={Colors.success} />
-            <Text style={styles.freeLaunchText}>Free to use during launch</Text>
+            <Text style={styles.freeLaunchText}>{t("freeDuringLaunch")}</Text>
           </View>
         </Animated.View>
 
         <Animated.View style={[styles.serviceCards, contentStyle]}>
           <ServiceCard
             icon="sofa"
-            title="Furniture Transport"
-            subtitle="Move sofas, tables & more"
+            title={t("furnitureTransport")}
+            subtitle={t("moveSofas")}
             delay={0}
           />
           <ServiceCard
             icon="delete-sweep"
-            title="Junk & Trash Pickup"
-            subtitle="Clear out unwanted items"
+            title={t("junkTrash")}
+            subtitle={t("clearOut")}
             delay={100}
           />
         </Animated.View>
@@ -102,7 +108,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/register")}
             activeOpacity={0.85}
           >
-            <Text style={styles.getStartedText}>Get Started</Text>
+            <Text style={styles.getStartedText}>{t("getStarted")}</Text>
             <Feather name="arrow-right" size={18} color={Colors.navy} />
           </TouchableOpacity>
 
@@ -111,7 +117,7 @@ export default function HomeScreen() {
             onPress={() => router.push("/login")}
             activeOpacity={0.85}
           >
-            <Text style={styles.loginText}>Log In</Text>
+            <Text style={styles.loginText}>{t("logIn")}</Text>
           </TouchableOpacity>
         </Animated.View>
       </View>
@@ -154,11 +160,6 @@ const styles = StyleSheet.create({
     height: 120,
     marginBottom: 16,
     borderRadius: 26,
-    backgroundColor: `${Colors.gold}18`,
-    borderWidth: 1.5,
-    borderColor: `${Colors.gold}50`,
-    alignItems: "center",
-    justifyContent: "center",
   },
   appName: {
     fontSize: 48,
