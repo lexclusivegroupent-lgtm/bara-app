@@ -12,24 +12,38 @@ On-demand furniture transport and junk pickup for Sweden. Navy (#1B2A4A) + Gold 
 - Expo React Native with file-based routing (expo-router)
 - Customer + Driver dual roles (+ "both" role)
 - 3 job types: furniture_transport, bulky_delivery, junk_pickup
-- Full job lifecycle: pending → accepted → arrived → in_progress → completed (+ cancelled/disputed)
+- Full job lifecycle: pending → accepted → arrived → in_progress → completed (+ cancelled/disputed/cancelled_by_driver)
 - Auth: JWT stored in AsyncStorage ("bara_token"), forgot/reset password flow
 - Forgot password: `POST /api/auth/forgot-password` → returns devToken in non-prod, logs to console
 - Reset password: `POST /api/auth/reset-password` → validates SHA-256 hashed token with expiry
+- Full Swedish/English translation toggle (`bara_language` key, `useLanguage()` hook)
+- 160+ Swedish cities across all 21 counties
 
 ### API Server (`artifacts/api-server/`)
 - Express 5 + PostgreSQL + Drizzle ORM
 - Railway deployment: startCommand = `node artifacts/api-server/dist/index.mjs`
 - Health check: `GET /api/healthz`
-- Admin stats: `GET /api/admin/stats?key=bara-admin-2025`
+- Admin stats: `GET /api/admin/dashboard?key=<BARA_ADMIN_KEY>`
+- Jobs: `GET/POST /api/jobs`, `GET /api/jobs/:id`, `POST /api/jobs/:id/cancel`, `POST /api/jobs/:id/complete`, `POST /api/jobs/:id/photos`, `POST /api/jobs/:id/reschedule` (≥1h from now, notifies driver), `GET/POST /api/jobs/:id/messages` (in-app chat)
+- Users: `PUT /api/users/profile` (accepts vehicleType, vehicleDescription, isAvailable, city, fullName), `PUT /api/users/push-token`, `DELETE /api/users/account` (GDPR soft-delete)
+- Addresses: `GET/POST/DELETE /api/addresses` (saved addresses per user, max 10)
+- Promos: `POST /api/promos/validate` (promo code validation)
+- Support: `POST /api/support/contact` (sends email via Resend to support inbox)
+- Places: `GET /api/places/autocomplete` (Google Places proxy)
 
 ### Key Config
-- Admin key: `ADMIN_STATS_KEY` env var (default: "bara-admin-2025")
-- JWT secret: `JWT_SECRET` env var
-- Google Maps: `EXPO_PUBLIC_GOOGLE_MAPS_KEY` env var
-- SMTP (optional): `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` for real email sending
-- Without SMTP: devToken is returned in API response (NODE_ENV !== "production")
-- See `.env.example` for all env vars
+- **JWT_SECRET**: Required in production — server refuses to start if missing or insecure
+- **ADMIN_STATS_KEY**: Required in production — endpoint returns 403 if missing or default value
+- **CORS_ORIGIN**: Comma-separated allowed origins (logs warning in prod if not set, defaults to *)
+- **GOOGLE_MAPS_KEY**: Server-side key for geocoding/distance — returns 503 if not set (no random fallback)
+- **RESEND_API_KEY**: For real password reset emails (free tier, resend.com)
+- **RESEND_FROM_EMAIL**: Sender address (default: Bära <noreply@bara.app>)
+- **APP_BASE_URL**: Base URL used in password reset email links
+- **EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME**: Cloudinary account name (unsigned uploads)
+- **EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET**: Unsigned upload preset name
+- Without Resend: devToken returned in API response only in dev (NODE_ENV !== "production")
+- Rate limiting: 10 req/15min on /api/auth/login, /register, /forgot-password (prod only)
+- See `.env.example` for all env vars with setup instructions
 
 ## Stack
 
@@ -126,19 +140,23 @@ Expo React Native mobile app — **Bära**, an on-demand furniture transport and
 - Two user roles: Customer and Driver
 - Routing: `app/(customer)/*` and `app/(driver)/*` route groups with custom `BottomNav` component
 - Auth: JWT stored in AsyncStorage via `AuthContext`, redirects to role-specific home on login
-- Key screens (Customer): `home`, `post-job`, `my-jobs`, `job-status`, `rate`, `settings`, `edit-profile`
-- Key screens (Driver): `map` (available jobs feed + online toggle), `active-job`, `rate`, `settings`, `edit-profile`
+- Key screens (Customer): `home`, `post-job` (with logistics fields, extra stops, promo code), `my-jobs`, `job-status` (with chat button), `rate`, `settings`, `edit-profile`, `support`, `chat`
+- Key screens (Driver): `map` (available jobs feed + online toggle), `active-job` (cancel + chat), `earnings`, `rate`, `settings`, `edit-profile`, `support`, `chat`
 - Pricing: furniture_transport base 299kr + 15kr/km, junk_pickup base 199kr + 10kr/km, min 349kr
 - Driver payout: 75%, platform: 25%
 - `constants/config.ts` — pricing calc, Swedish cities list, formatters, `BASE_URL`
 - `constants/colors.ts` — Navy+Gold color theme
+- `constants/translations.ts` — full EN + SV translations for all screens
 - `components/JobCard.tsx` — shared job card used by both customer and driver screens
 - `components/BottomNav.tsx` — tab navigation component
-- `components/PhotoPicker.tsx` — reusable photo capture/view component using expo-image-picker; supports camera + library, base64 storage, full-screen preview, edit/view modes
+- `components/PhotoPicker.tsx` — reusable photo capture/view component
 - `context/AuthContext.tsx` — auth state management with AsyncStorage persistence
-- Photo documentation: customer can attach up to 3 optional photos when posting a job (`photosCustomer`); driver must add ≥1 "before loading" photo and ≥1 "after delivery" photo before completing (`photosPickup`, `photosDropoff`); all three sets viewable on customer job-status screen
-- DB columns: `jobs.photos_customer`, `jobs.photos_pickup`, `jobs.photos_dropoff` (TEXT[] storing base64 data URIs)
-- API endpoint `POST /api/jobs/:id/photos` — driver uploads pickup/dropoff photo arrays; `POST /api/jobs/:id/complete` enforces photo presence server-side
+- Post-job form fields: jobType, addresses, extraStops, itemDescription, preferredTime, floorNumber, hasElevator, helpersNeeded, estimatedWeightKg, promoCode, customerPrice, photos
+- Driver cancellation: `POST /api/jobs/:id/cancel` (driver role) → sets `cancelled_by_driver`, returns job to pending pool, increments driver cancellationsCount
+- GDPR deletion: `DELETE /api/users/account` → anonymises PII, keeps job records for accounting
+- In-app chat: `GET/POST /api/jobs/:id/messages` → stored in `messages` table, push notification sent to other party
+- Promo codes: `promo_codes` table; `POST /api/promos/validate` validates code; applied discount stored on job
+- Saved addresses: `saved_addresses` table; max 10 per user; `GET/POST/DELETE /api/addresses`
 
 ### `scripts` (`@workspace/scripts`)
 
