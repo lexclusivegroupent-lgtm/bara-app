@@ -81,8 +81,9 @@ app.use("/api/auth/forgot-password", authLimiter);
 app.use("/api", router);
 
 // Serve the Expo web static build at the root URL.
-// Path resolves to artifacts/bara/static-build/ relative to the monorepo root.
-const staticBuildPath = path.resolve(__dirname, "../../../artifacts/bara/static-build");
+// Built by `expo export --output-dir ../api-server/static-build` during Railway build.
+// __dirname at runtime = artifacts/api-server/dist/ → static-build is one level up.
+const staticBuildPath = path.resolve(__dirname, "../static-build");
 
 if (fs.existsSync(staticBuildPath)) {
   logger.info({ staticBuildPath }, "Serving Expo web build from static-build/");
