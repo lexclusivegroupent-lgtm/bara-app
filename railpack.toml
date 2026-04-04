@@ -1,0 +1,2 @@
+[install]
+installCommand = "pnpm install --no-frozen-lockfile"
