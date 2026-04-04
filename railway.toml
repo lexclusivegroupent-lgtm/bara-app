@@ -1,6 +1,6 @@
 [build]
 builder = "NIXPACKS"
-buildCommand = "npm install -g pnpm@9 && pnpm install --frozen-lockfile && cd artifacts/bara && npx expo export --platform web --output-dir ../api-server/static-build && cd ../../ && pnpm --filter @workspace/api-server run build"
+buildCommand = "npm install -g pnpm@9 && pnpm install --no-frozen-lockfile && cd artifacts/bara && npx expo export --platform web --output-dir ../api-server/static-build && cd ../../ && pnpm --filter @workspace/api-server run build"
 
 [deploy]
 startCommand = "node artifacts/api-server/dist/index.mjs"

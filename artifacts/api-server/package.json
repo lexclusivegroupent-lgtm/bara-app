@@ -13,16 +13,16 @@
     "@workspace/api-zod": "file:../../lib/api-zod",
     "@workspace/db": "file:../../lib/db",
     "bcryptjs": "^3.0.3",
-    "zod": "^3.25.76",
     "cookie-parser": "^1.4.7",
     "cors": "^2",
     "drizzle-orm": "^0.45.1",
     "express": "^5",
-    "express-rate-limit": "^7",
+    "express-rate-limit": "^8.3.1",
     "jsonwebtoken": "^9.0.3",
     "pino": "^9",
     "pino-http": "^10",
-    "resend": "^4"
+    "resend": "^6.9.4",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/bcryptjs": "^3.0.0",

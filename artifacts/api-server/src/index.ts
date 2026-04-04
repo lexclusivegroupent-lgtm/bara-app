@@ -1,22 +1,14 @@
-// Builfixed start command path in root railway.toml
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import app from "./app";
 import { logger } from "./lib/logger";
 
-const rawPort = process.env["PORT"];
-
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
-
-const port = Number(rawPort);
+// Railway sets PORT automatically. Fall back to 3000 for local dev.
+const port = Number(process.env["PORT"] ?? 3000);
 
 if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
+  logger.error(`Invalid PORT value: "${process.env["PORT"]}" — defaulting to 3000`);
 }
 
 // Run DB schema push on startup so the Railway DB always has the latest tables.
@@ -24,8 +16,6 @@ if (Number.isNaN(port) || port <= 0) {
 if (process.env.DATABASE_URL) {
   try {
     logger.info("Running database schema migration...");
-    // dist/index.mjs is at <root>/artifacts/api-server/dist/index.mjs
-    // lib/db is at <root>/lib/db
     const __filename = fileURLToPath(import.meta.url);
     const __dirname = path.dirname(__filename);
     const dbDir = path.resolve(__dirname, "../../../lib/db");
@@ -40,11 +30,7 @@ if (process.env.DATABASE_URL) {
   }
 }
 
-app.listen(port, (err) => {
-  if (err) {
-    logger.error({ err }, "Error listening on port");
-    process.exit(1);
-  }
-
-  logger.info({ port }, "Server listening");
+// Bind to 0.0.0.0 so Railway (and other container platforms) can reach the server.
+app.listen(port, "0.0.0.0", () => {
+  logger.info({ port }, "Server listening on 0.0.0.0");
 });
