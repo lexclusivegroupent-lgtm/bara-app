@@ -26,13 +26,13 @@ import { PhotoPicker } from "@/components/PhotoPicker";
 import { BaraDateTimePicker } from "@/components/BaraDateTimePicker";
 import { VehicleBadge } from "@/components/VehicleTypePicker";
 
-const STEPS = [
-  { key: "pending", label: "Job Posted", icon: "clipboard-check" },
-  { key: "accepted", label: "Driver Assigned", icon: "account-check" },
-  { key: "arrived", label: "Driver Arrived", icon: "map-marker-check" },
-  { key: "in_progress", label: "En Route", icon: "truck-fast" },
-  { key: "completed", label: "Completed", icon: "check-circle" },
-];
+const STEP_KEYS = [
+  { key: "pending", tKey: "stepJobPosted", icon: "clipboard-check" },
+  { key: "accepted", tKey: "stepDriverAssigned", icon: "account-check" },
+  { key: "arrived", tKey: "stepDriverArrived", icon: "map-marker-check" },
+  { key: "in_progress", tKey: "stepEnRoute", icon: "truck-fast" },
+  { key: "completed", tKey: "stepCompleted", icon: "check-circle" },
+] as const;
 
 function getStepIndex(status: string) {
   const map: Record<string, number> = { pending: 0, accepted: 1, arrived: 2, in_progress: 3, completed: 4 };
@@ -42,7 +42,7 @@ function getStepIndex(status: string) {
 export default function JobStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState(false);
@@ -73,7 +73,7 @@ export default function JobStatusScreen() {
     return (
       <View style={[styles.container, { backgroundColor: Colors.navy }]}>
         <View style={styles.loadingContainer}>
-          <Text style={styles.loadingText}>Loading...</Text>
+          <Text style={styles.loadingText}>{t("loading")}</Text>
         </View>
       </View>
     );
@@ -153,13 +153,13 @@ export default function JobStatusScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Job Status</Text>
+        <Text style={styles.headerTitle}>{t("jobStatus")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.statusTracker}>
-          {STEPS.map((step, idx) => {
+          {STEP_KEYS.map((step, idx) => {
             const isComplete = idx < currentStep;
             const isActive = idx === currentStep;
             const isPast = idx <= currentStep;
@@ -181,12 +181,12 @@ export default function JobStatusScreen() {
                       />
                     )}
                   </View>
-                  {idx < STEPS.length - 1 && (
+                  {idx < STEP_KEYS.length - 1 && (
                     <View style={[styles.stepLine, isPast && idx < currentStep && styles.stepLineActive]} />
                   )}
                 </View>
                 <Text style={[styles.stepLabel, isPast && styles.stepLabelActive, isActive && styles.stepLabelCurrent]}>
-                  {step.label}
+                  {t(step.tKey)}
                 </Text>
               </View>
             );
@@ -194,30 +194,30 @@ export default function JobStatusScreen() {
         </View>
 
         <View style={styles.detailCard}>
-          <Text style={styles.cardTitle}>Job Details</Text>
+          <Text style={styles.cardTitle}>{t("jobDetails")}</Text>
           {isFurniture ? (
             <>
-              <DetailRow icon="map-pin" label="Pickup" value={job.pickupAddress || "N/A"} />
-              <DetailRow icon="flag" label="Drop-off" value={job.dropoffAddress || "N/A"} />
+              <DetailRow icon="map-pin" label={t("pickup")} value={job.pickupAddress || "N/A"} />
+              <DetailRow icon="flag" label={t("dropoff")} value={job.dropoffAddress || "N/A"} />
             </>
           ) : (
-            <DetailRow icon="home" label="Address" value={job.homeAddress || "N/A"} />
+            <DetailRow icon="home" label={t("address")} value={job.homeAddress || "N/A"} />
           )}
-          <DetailRow icon="package" label="Items" value={job.itemDescription} />
-          <DetailRow icon="clock" label="Time" value={formatDate(job.preferredTime)} />
+          <DetailRow icon="package" label={t("items")} value={job.itemDescription} />
+          <DetailRow icon="clock" label={t("time")} value={formatDate(job.preferredTime)} />
         </View>
 
         <View style={styles.freeLaunchCard}>
           <Feather name="gift" size={14} color={Colors.success} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.freeLaunchText}>Free during launch period</Text>
-            <Text style={styles.freeLaunchSubtext}>No fees, no charges — Inga avgifter under lanseringen</Text>
+            <Text style={styles.freeLaunchText}>{t("freeDuringLaunch")}</Text>
+            <Text style={styles.freeLaunchSubtext}>{t("noFeesLaunch")}</Text>
           </View>
         </View>
 
         {job.driver && (
           <View style={styles.detailCard}>
-            <Text style={styles.cardTitle}>Your Driver</Text>
+            <Text style={styles.cardTitle}>{t("yourDriver")}</Text>
             <View style={styles.driverInfo}>
               <View style={styles.driverAvatar}>
                 <Feather name="user" size={22} color={Colors.gold} />
@@ -225,7 +225,7 @@ export default function JobStatusScreen() {
               <View style={styles.driverDetails}>
                 <Text style={styles.driverName}>{job.driver.fullName}</Text>
                 {job.driver.vehicleType && (
-                  <VehicleBadge vehicleType={job.driver.vehicleType} lang="en" />
+                  <VehicleBadge vehicleType={job.driver.vehicleType} lang={lang} />
                 )}
                 {job.driver.rating && (
                   <View style={styles.ratingRow}>
@@ -245,22 +245,22 @@ export default function JobStatusScreen() {
           (job.photosPickup && job.photosPickup.length > 0) ||
           (job.photosDropoff && job.photosDropoff.length > 0)) && (
           <View style={styles.detailCard}>
-            <Text style={styles.cardTitle}>Job Photos</Text>
+            <Text style={styles.cardTitle}>{t("jobPhotos")}</Text>
             {job.photosCustomer && job.photosCustomer.length > 0 && (
               <View style={styles.photoGroup}>
-                <Text style={styles.photoGroupLabel}>Your Photos</Text>
+                <Text style={styles.photoGroupLabel}>{t("yourPhotos")}</Text>
                 <PhotoPicker photos={job.photosCustomer} editable={false} />
               </View>
             )}
             {job.photosPickup && job.photosPickup.length > 0 && (
               <View style={styles.photoGroup}>
-                <Text style={styles.photoGroupLabel}>Before Loading</Text>
+                <Text style={styles.photoGroupLabel}>{t("photosBefore")}</Text>
                 <PhotoPicker photos={job.photosPickup} editable={false} />
               </View>
             )}
             {job.photosDropoff && job.photosDropoff.length > 0 && (
               <View style={styles.photoGroup}>
-                <Text style={styles.photoGroupLabel}>After Delivery</Text>
+                <Text style={styles.photoGroupLabel}>{t("photosAfter")}</Text>
                 <PhotoPicker photos={job.photosDropoff} editable={false} />
               </View>
             )}
@@ -274,14 +274,14 @@ export default function JobStatusScreen() {
             activeOpacity={0.85}
           >
             <Feather name="star" size={16} color={Colors.navy} />
-            <Text style={styles.rateBtnText}>Rate Your Driver</Text>
+            <Text style={styles.rateBtnText}>{t("rateYourDriver")}</Text>
           </TouchableOpacity>
         )}
 
         {job.status === "completed" && job.rating && (
           <View style={styles.ratedCard}>
             <Feather name="check-circle" size={16} color={Colors.success} />
-            <Text style={styles.ratedText}>You rated this job {job.rating} stars</Text>
+            <Text style={styles.ratedText}>{job.rating} ★</Text>
           </View>
         )}
 
@@ -340,7 +340,7 @@ export default function JobStatusScreen() {
               ) : (
                 <>
                   <Feather name="x-circle" size={16} color={Colors.error} />
-                  <Text style={styles.cancelBtnText}>Cancel Job — Free</Text>
+                  <Text style={styles.cancelBtnText}>{t("cancelJobFree")}</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -354,7 +354,7 @@ export default function JobStatusScreen() {
             activeOpacity={0.85}
           >
             <Feather name="message-circle" size={16} color={Colors.gold} />
-            <Text style={styles.chatBtnText}>Chat with Driver</Text>
+            <Text style={styles.chatBtnText}>{t("chatWithDriver")}</Text>
           </TouchableOpacity>
         )}
 
@@ -373,9 +373,9 @@ export default function JobStatusScreen() {
               activeOpacity={0.85}
             >
               <Feather name="x-circle" size={15} color={Colors.error} />
-              <Text style={styles.cancelWithFeeBtnText}>Cancel Job</Text>
+              <Text style={styles.cancelWithFeeBtnText}>{t("cancelJob")}</Text>
               <View style={styles.feePill}>
-                <Text style={styles.feePillText}>{CANCELLATION_FEE} kr fee</Text>
+                <Text style={styles.feePillText}>{CANCELLATION_FEE} kr</Text>
               </View>
             </TouchableOpacity>
           </>
@@ -385,12 +385,12 @@ export default function JobStatusScreen() {
           <View style={styles.cancelledWithFeeCard}>
             <View style={styles.cancelledWithFeeHeader}>
               <Feather name="x-circle" size={16} color={Colors.error} />
-              <Text style={styles.cancelledWithFeeTitle}>Job Cancelled</Text>
+              <Text style={styles.cancelledWithFeeTitle}>{t("jobCancelled")}</Text>
             </View>
             <Text style={styles.cancelledWithFeeText}>
-              You cancelled after a driver had accepted this job. A cancellation fee of{" "}
+              {t("cancelledAfterAccepted")}{" "}
               <Text style={{ fontFamily: "Inter_700Bold" }}>{formatSEK(job.cancellationFee ?? CANCELLATION_FEE)}</Text>{" "}
-              applies to compensate the driver for their time.
+              {t("cancellationFeeApplies")}
             </Text>
           </View>
         )}
@@ -399,11 +399,11 @@ export default function JobStatusScreen() {
           <View style={styles.disputedCard}>
             <Feather name="alert-triangle" size={14} color={Colors.gold} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.disputedTitle}>Dispute Reported</Text>
+              <Text style={styles.disputedTitle}>{t("disputeReported")}</Text>
               {job.disputeReason && (
                 <Text style={styles.disputedReason}>"{job.disputeReason}"</Text>
               )}
-              <Text style={styles.disputedSubtext}>Our team will review this within 24 hours.</Text>
+              <Text style={styles.disputedSubtext}>{t("disputeReview")}</Text>
             </View>
           </View>
         ) : (job.status !== "pending" && job.status !== "cancelled") && (
@@ -413,7 +413,7 @@ export default function JobStatusScreen() {
             activeOpacity={0.8}
           >
             <Feather name="flag" size={14} color={Colors.textMuted} />
-            <Text style={styles.disputeBtnText}>Report an Issue</Text>
+            <Text style={styles.disputeBtnText}>{t("reportIssue")}</Text>
           </TouchableOpacity>
         )}
 
@@ -427,31 +427,29 @@ export default function JobStatusScreen() {
             <View style={styles.feeModalIcon}>
               <Feather name="alert-triangle" size={28} color={Colors.error} />
             </View>
-            <Text style={styles.feeModalTitle}>Cancellation Fee</Text>
+            <Text style={styles.feeModalTitle}>{t("cancellationFeeTitle")}</Text>
             <Text style={styles.feeModalBody}>
-              A driver has already accepted this job and may be on their way. Cancelling now will charge a{" "}
-              <Text style={styles.feeModalAmount}>{formatSEK(CANCELLATION_FEE)}</Text> fee to compensate the driver for their time.
+              {t("cancelledAfterAccepted")}{" "}
+              <Text style={styles.feeModalAmount}>{formatSEK(CANCELLATION_FEE)}</Text>
             </Text>
             <View style={styles.feeBreakdown}>
               <View style={styles.feeBreakdownRow}>
-                <Text style={styles.feeBreakdownLabel}>Cancellation fee</Text>
+                <Text style={styles.feeBreakdownLabel}>{t("cancellationFeeRow")}</Text>
                 <Text style={styles.feeBreakdownValue}>{formatSEK(CANCELLATION_FEE)}</Text>
               </View>
               <View style={styles.feeBreakdownRow}>
-                <Text style={styles.feeBreakdownLabel}>Driver receives</Text>
+                <Text style={styles.feeBreakdownLabel}>{t("driverReceives")}</Text>
                 <Text style={[styles.feeBreakdownValue, { color: Colors.success }]}>{formatSEK(CANCELLATION_FEE)}</Text>
               </View>
             </View>
-            <Text style={styles.feeModalHint}>
-              If the driver cancels or doesn't show up, you won't be charged.
-            </Text>
+            <Text style={styles.feeModalHint}>{t("youWontBeCharged")}</Text>
             <View style={styles.feeModalActions}>
               <TouchableOpacity
                 style={styles.feeModalKeepBtn}
                 onPress={() => setShowCancelFeeModal(false)}
                 activeOpacity={0.85}
               >
-                <Text style={styles.feeModalKeepText}>Keep Job</Text>
+                <Text style={styles.feeModalKeepText}>{t("keepJob")}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.feeModalConfirmBtn, cancelling && styles.cancelBtnDisabled]}
@@ -462,7 +460,7 @@ export default function JobStatusScreen() {
                 {cancelling ? (
                   <ActivityIndicator size="small" color="#fff" />
                 ) : (
-                  <Text style={styles.feeModalConfirmText}>Cancel & Pay Fee</Text>
+                  <Text style={styles.feeModalConfirmText}>{t("cancelAndPay")}</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -475,17 +473,15 @@ export default function JobStatusScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Report an Issue</Text>
+              <Text style={styles.modalTitle}>{t("reportIssue")}</Text>
               <TouchableOpacity onPress={() => { setShowDisputeModal(false); setDisputeError(null); }} style={styles.modalClose}>
                 <Feather name="x" size={20} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalSubtitle}>
-              Describe the problem. Our team will review your report within 24 hours.
-            </Text>
+            <Text style={styles.modalSubtitle}>{t("disputeReview")}</Text>
             <TextInput
               style={styles.modalInput}
-              placeholder="e.g. Driver didn't arrive, item was damaged..."
+              placeholder={t("messagePlaceholder")}
               placeholderTextColor={Colors.textMuted}
               value={disputeReason}
               onChangeText={setDisputeReason}
@@ -507,7 +503,7 @@ export default function JobStatusScreen() {
             >
               {disputing
                 ? <ActivityIndicator color={Colors.navy} />
-                : <Text style={styles.submitDisputeBtnText}>Submit Report</Text>
+                : <Text style={styles.submitDisputeBtnText}>{t("sendMessage")}</Text>
               }
             </TouchableOpacity>
           </View>
