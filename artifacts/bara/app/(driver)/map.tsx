@@ -90,7 +90,7 @@ export default function DriverMapScreen() {
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
         <View>
-          <Text style={styles.greeting}>Hello, {firstName}</Text>
+          <Text style={styles.greeting}>{t("hello")}, {firstName}</Text>
           <Text style={styles.city}>{user?.city}</Text>
         </View>
         <View style={styles.headerRight}>
