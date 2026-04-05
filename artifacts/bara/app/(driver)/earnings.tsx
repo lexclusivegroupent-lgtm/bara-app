@@ -16,6 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
+import { StarRating } from "@/components/StarRating";
 import { BASE_URL, formatSEK, formatDate } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { Job } from "@/components/JobCard";
@@ -66,6 +67,25 @@ export default function EarningsScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* Driver rating card */}
+          <View style={styles.ratingCard}>
+            <View style={styles.ratingCardLeft}>
+              <Feather name="award" size={18} color={Colors.gold} />
+              <View>
+                <Text style={styles.ratingCardLabel}>{t("yourRating")}</Text>
+                {user?.rating ? (
+                  <StarRating rating={Number(user.rating)} totalJobs={user.totalJobs} size={16} showNew showCount />
+                ) : (
+                  <Text style={styles.ratingCardNew}>{t("noRatingsYet")}</Text>
+                )}
+              </View>
+            </View>
+            <View style={styles.ratingCardRight}>
+              <Text style={styles.ratingJobCount}>{stats.count}</Text>
+              <Text style={styles.ratingJobLabel}>{t("jobsDone")}</Text>
+            </View>
+          </View>
+
           {/* Summary cards */}
           <View style={styles.statsGrid}>
             <StatCard
@@ -162,6 +182,47 @@ const styles = StyleSheet.create({
   title: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   content: { padding: 20, gap: 14 },
+  ratingCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    borderWidth: 1,
+    borderColor: `${Colors.gold}40`,
+  },
+  ratingCardLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  ratingCardLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  ratingCardNew: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  ratingCardRight: {
+    alignItems: "flex-end",
+  },
+  ratingJobCount: {
+    fontSize: 24,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  ratingJobLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
   statsGrid: { flexDirection: "row", gap: 12 },
   statCard: {
     flex: 1,
