@@ -1,0 +1,71 @@
+I want you to make the cheapest safe MVP fixes for this app TODAY.
+
+Important:
+- Make code changes directly in the repo
+- Keep monthly cost as close to zero as possible
+- Do not redesign the app
+- Do not refactor unrelated code
+- Focus only on the smallest safe implementation for launch-readiness
+
+Priority tasks for today:
+
+1. Move photo storage out of PostgreSQL
+- Right now photos are stored as base64 text in the database
+- Replace that with Cloudinary free tier
+- Upload images to Cloudinary and store only the returned URL(s) in the database
+- Update both customer and driver photo flows
+- Keep the UI behavior as similar as possible
+- Add any required env vars and document them clearly
+
+2. Fix password reset email flow
+- Integrate Resend for transactional email
+- Stop returning or exposing password reset tokens in API responses in production
+- Send reset links by email instead
+- Keep dev behavior safe and clearly separated from production
+- Add required env vars and document them clearly
+
+3. Fix distance/pricing realism
+- Remove the random distance fallback for production use
+- Integrate a real geocoding/distance provider with near-zero monthly cost
+- Prefer Google Maps only if implementation is already easy and still free at MVP scale; otherwise suggest HERE if simpler/cheaper
+- Use env vars for the API key
+- Make sure the pricing calculation uses real distance when configured
+- If no key is configured, fail gracefully with a clear message instead of random pricing
+
+4. Security/config cleanup related to launch
+- Ensure NODE_ENV=production behavior is respected
+- Require a real JWT_SECRET in production and remove insecure fallback behavior
+- Ensure ADMIN_STATS_KEY does not default to a public guessable value in production
+- Restrict CORS to configured allowed origins
+- Add simple rate limiting to auth endpoints: login, register, forgot-password
+
+Constraints:
+- Keep the stack cheap:
+  - Cloudinary free tier for images
+  - Resend free tier for email
+  - low-cost/free maps setup
+- Do not migrate hosting today
+- Do not add payments today
+- Do not add push notifications today
+- Do not build extra admin dashboards
+
+What I want from you:
+1. First, inspect the codebase and identify all files that need to change.
+2. Then implement the smallest safe version of all four tasks above.
+3. Add/update environment variable examples.
+4. Give me a final checklist of exactly what I need to configure manually after the code changes:
+   - Cloudinary keys
+   - Resend key/domain
+   - Maps key
+   - JWT secret
+   - allowed CORS origin
+   - admin stats key
+5. Explain any database/schema changes before applying them.
+6. Keep everything production-practical, simple, and cheap.
+
+Success criteria:
+- Photos no longer stored as base64 in Postgres
+- Password reset works via email
+- Pricing is not based on random distance
+- Production config is no longer insecure
+- Monthly cost stays as close to zero as possible
