@@ -8,7 +8,6 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
-  Modal,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -35,10 +34,7 @@ export default function DriverActiveJobScreen() {
   const [dropoffPhotos, setDropoffPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState<string | null>(null);
-  const [markingArrived, setMarkingArrived] = useState(false);
-  const [startingJob, setStartingJob] = useState(false);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["activeJob", id],
@@ -61,50 +57,13 @@ export default function DriverActiveJobScreen() {
     }
   }, [job?.id]);
 
-  async function handleMarkArrived() {
-    if (!job) return;
-    setMarkingArrived(true);
-    setCompleteError(null);
-    try {
-      const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/arrived`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await safeJson(res);
-      if (!res.ok) throw new Error(data.error || "Failed to mark arrived");
-    } catch (e: any) {
-      setCompleteError(e.message || "Failed to mark arrived. Please try again.");
-    } finally {
-      setMarkingArrived(false);
-    }
-  }
-
-  async function handleStartJob() {
-    if (!job) return;
-    setStartingJob(true);
-    setCompleteError(null);
-    try {
-      const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/start`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await safeJson(res);
-      if (!res.ok) throw new Error(data.error || "Failed to start job");
-    } catch (e: any) {
-      setCompleteError(e.message || "Failed to start job. Please try again.");
-    } finally {
-      setStartingJob(false);
-    }
-  }
-
-  async function handleCancelJob(reason?: string) {
+  async function handleCancelJob() {
     if (!job) return;
     setCancelling(true);
     try {
       const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/cancel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ reason: reason || null }),
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to cancel");
@@ -113,7 +72,7 @@ export default function DriverActiveJobScreen() {
       setCompleteError(e.message || "Failed to cancel. Please try again.");
     } finally {
       setCancelling(false);
-      setShowCancelReasonModal(false);
+      setShowCancelConfirm(false);
     }
   }
 
@@ -210,18 +169,20 @@ export default function DriverActiveJobScreen() {
     return (
       <View style={[styles.container, { backgroundColor: Colors.navy }]}>
         <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-          <Text style={styles.headerTitle}>{t("jobCancelledDriver")}</Text>
+          <Text style={styles.headerTitle}>Job Cancelled</Text>
         </View>
         <View style={styles.loadingState}>
           <View style={styles.cancelledIcon}>
             <Feather name="x-circle" size={36} color={Colors.error} />
           </View>
-          <Text style={styles.cancelledTitle}>{t("customerCancelled")}</Text>
-          <Text style={styles.cancelledSubtext}>{t("customerCancelledMsg")}</Text>
+          <Text style={styles.cancelledTitle}>Customer Cancelled</Text>
+          <Text style={styles.cancelledSubtext}>
+            The customer cancelled this job after you had accepted it.
+          </Text>
           <View style={styles.compensationCard}>
             <View style={styles.compensationCardHeader}>
               <Feather name="shield" size={16} color={Colors.success} />
-              <Text style={styles.compensationCardTitle}>{t("youreProtected")}</Text>
+              <Text style={styles.compensationCardTitle}>You're Protected</Text>
             </View>
             <Text style={styles.compensationCardBody}>
               A cancellation fee of{" "}
@@ -229,7 +190,7 @@ export default function DriverActiveJobScreen() {
               has been charged to the customer as compensation for your time.
             </Text>
             <View style={styles.compensationRow}>
-              <Text style={styles.compensationLabel}>{t("yourCompensation")}</Text>
+              <Text style={styles.compensationLabel}>Your compensation</Text>
               <Text style={styles.compensationAmount}>{formatSEK(fee)}</Text>
             </View>
           </View>
@@ -239,7 +200,7 @@ export default function DriverActiveJobScreen() {
             activeOpacity={0.85}
           >
             <Feather name="map" size={15} color={Colors.navy} />
-            <Text style={styles.backToMapText}>{t("findAnotherJob")}</Text>
+            <Text style={styles.backToMapText}>Find Another Job</Text>
           </TouchableOpacity>
         </View>
         <BottomNav />
@@ -247,36 +208,37 @@ export default function DriverActiveJobScreen() {
     );
   }
 
-  const isFurniture = job.jobType === "furniture_transport" || job.jobType === "bulky_delivery";
+  const isFurniture = job.jobType === "furniture_transport";
   const canComplete = pickupPhotos.length > 0 && dropoffPhotos.length > 0;
-  const jobTypeLabel = job.jobType === "furniture_transport" ? t("furnitureTransport") : job.jobType === "bulky_delivery" ? t("bulkyDelivery") : t("junkTrash");
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <Text style={styles.headerTitle}>{t("activeJob")}</Text>
+        <Text style={styles.headerTitle}>Active Job</Text>
         <View style={styles.jobTypeBadge}>
           <MaterialCommunityIcons
-            name={job.jobType === "furniture_transport" ? "sofa" : job.jobType === "bulky_delivery" ? "package-variant" : "delete-sweep"}
+            name={isFurniture ? "sofa" : "delete-sweep"}
             size={14}
             color={Colors.gold}
           />
-          <Text style={styles.jobTypeBadgeText}>{jobTypeLabel}</Text>
+          <Text style={styles.jobTypeBadgeText}>
+            {isFurniture ? "Furniture" : "Junk Pickup"}
+          </Text>
         </View>
       </View>
 
       <View style={styles.mapPlaceholder}>
         <MaterialCommunityIcons name="map-marker-path" size={28} color={Colors.textMuted} />
-        <Text style={styles.mapText}>{t("routeToPickup")}</Text>
+        <Text style={styles.mapText}>Route to pickup</Text>
         <TouchableOpacity style={styles.navigationBtn} activeOpacity={0.85} onPress={handleNavigate}>
           <Feather name="navigation" size={14} color={Colors.navy} />
-          <Text style={styles.navigationBtnText}>{t("navigateTo")}</Text>
+          <Text style={styles.navigationBtnText}>Navigate</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("customer")}</Text>
+          <Text style={styles.cardTitle}>Customer</Text>
           <View style={styles.customerRow}>
             <View style={styles.customerAvatar}>
               <Feather name="user" size={18} color={Colors.gold} />
@@ -286,38 +248,40 @@ export default function DriverActiveJobScreen() {
           {job.photosCustomer && job.photosCustomer.length > 0 && (
             <View style={styles.customerPhotosRow}>
               <Feather name="image" size={12} color={Colors.textMuted} />
-              <Text style={styles.customerPhotosLabel}>{t("customerPhotosAttached")}</Text>
+              <Text style={styles.customerPhotosLabel}>Customer photos attached</Text>
             </View>
           )}
           {job.photosCustomer && job.photosCustomer.length > 0 && (
             <PhotoPicker
               photos={job.photosCustomer}
               editable={false}
-              label={t("customerPhotos")}
+              label="Customer's Photos"
             />
           )}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>{t("jobDetails")}</Text>
+          <Text style={styles.cardTitle}>Job Details</Text>
           {isFurniture ? (
             <>
-              <DetailRow icon="map-pin" label={t("pickup")} value={job.pickupAddress || "N/A"} />
-              <DetailRow icon="flag" label={t("dropoff")} value={job.dropoffAddress || "N/A"} />
+              <DetailRow icon="map-pin" label="Pickup" value={job.pickupAddress || "N/A"} />
+              <DetailRow icon="flag" label="Drop-off" value={job.dropoffAddress || "N/A"} />
             </>
           ) : (
-            <DetailRow icon="home" label={t("address")} value={job.homeAddress || "N/A"} />
+            <DetailRow icon="home" label="Address" value={job.homeAddress || "N/A"} />
           )}
-          <DetailRow icon="package" label={t("items")} value={job.itemDescription} />
-          <DetailRow icon="clock" label={t("time")} value={formatDate(job.preferredTime)} />
+          <DetailRow icon="package" label="Items" value={job.itemDescription} />
+          <DetailRow icon="clock" label="Time" value={formatDate(job.preferredTime)} />
         </View>
 
         <View style={styles.card}>
           <View style={styles.photoSectionHeader}>
             <Feather name="camera" size={14} color={Colors.gold} />
-            <Text style={styles.cardTitle}>{t("beforeLoading")}</Text>
+            <Text style={styles.cardTitle}>Before Loading (Required)</Text>
           </View>
-          <Text style={styles.photoHint}>{t("photoHintBefore")}</Text>
+          <Text style={styles.photoHint}>
+            Take at least 1 photo of the items before loading into the vehicle.
+          </Text>
           <PhotoPicker
             photos={pickupPhotos}
             onChange={setPickupPhotos}
@@ -327,7 +291,7 @@ export default function DriverActiveJobScreen() {
           {pickupPhotos.length === 0 && (
             <View style={styles.photoRequired}>
               <Feather name="alert-circle" size={12} color={Colors.orange} />
-              <Text style={styles.photoRequiredText}>{t("requiredPhoto")}</Text>
+              <Text style={styles.photoRequiredText}>Required to complete job</Text>
             </View>
           )}
         </View>
@@ -335,9 +299,11 @@ export default function DriverActiveJobScreen() {
         <View style={styles.card}>
           <View style={styles.photoSectionHeader}>
             <Feather name="camera" size={14} color={Colors.gold} />
-            <Text style={styles.cardTitle}>{t("afterDelivery")}</Text>
+            <Text style={styles.cardTitle}>After Delivery (Required)</Text>
           </View>
-          <Text style={styles.photoHint}>{t("photoHintAfter")}</Text>
+          <Text style={styles.photoHint}>
+            Take at least 1 photo after delivery to confirm completion.
+          </Text>
           <PhotoPicker
             photos={dropoffPhotos}
             onChange={setDropoffPhotos}
@@ -347,7 +313,7 @@ export default function DriverActiveJobScreen() {
           {dropoffPhotos.length === 0 && (
             <View style={styles.photoRequired}>
               <Feather name="alert-circle" size={12} color={Colors.orange} />
-              <Text style={styles.photoRequiredText}>{t("requiredPhoto")}</Text>
+              <Text style={styles.photoRequiredText}>Required to complete job</Text>
             </View>
           )}
         </View>
@@ -355,12 +321,12 @@ export default function DriverActiveJobScreen() {
         <View style={styles.earningsCard}>
           <View style={styles.earningsRow}>
             <View>
-              <Text style={styles.earningsLabel}>{t("jobValue")}</Text>
+              <Text style={styles.earningsLabel}>Job Value</Text>
               <Text style={styles.earningsTotal}>{formatSEK(job.priceTotal)}</Text>
             </View>
             <View style={styles.earningsDivider} />
             <View style={styles.earningsRight}>
-              <Text style={styles.earningsLabel}>{t("yourEarnings")}</Text>
+              <Text style={styles.earningsLabel}>Your Earnings</Text>
               <Text style={styles.earningsAmount}>{formatSEK(job.driverPayout)}</Text>
             </View>
           </View>
@@ -378,42 +344,6 @@ export default function DriverActiveJobScreen() {
           </TouchableOpacity>
         )}
 
-        {job.status === "accepted" && (
-          <TouchableOpacity
-            style={[styles.arrivedBtn, markingArrived && styles.disabled]}
-            onPress={handleMarkArrived}
-            disabled={markingArrived}
-            activeOpacity={0.85}
-          >
-            {markingArrived ? (
-              <ActivityIndicator color={Colors.navy} />
-            ) : (
-              <>
-                <Feather name="map-pin" size={16} color={Colors.navy} />
-                <Text style={styles.arrivedBtnText}>{t("arrivedAtPickup")}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-
-        {job.status === "arrived" && (
-          <TouchableOpacity
-            style={[styles.startJobBtn, startingJob && styles.disabled]}
-            onPress={handleStartJob}
-            disabled={startingJob}
-            activeOpacity={0.85}
-          >
-            {startingJob ? (
-              <ActivityIndicator color={Colors.navy} />
-            ) : (
-              <>
-                <Feather name="play" size={16} color={Colors.navy} />
-                <Text style={styles.startJobBtnText}>{t("startJob")}</Text>
-              </>
-            )}
-          </TouchableOpacity>
-        )}
-
         <TouchableOpacity
           style={[styles.completeBtn, (!canComplete || completing) && styles.disabled]}
           onPress={handleComplete}
@@ -424,14 +354,14 @@ export default function DriverActiveJobScreen() {
             <View style={styles.completingRow}>
               <ActivityIndicator color={Colors.navy} />
               <Text style={styles.completeBtnText}>
-                {uploadingPhotos ? t("uploadingPhotos") : t("completing")}
+                {uploadingPhotos ? "Uploading photos..." : "Completing..."}
               </Text>
             </View>
           ) : (
             <>
               <Feather name="check-circle" size={18} color={canComplete ? Colors.navy : Colors.textMuted} />
               <Text style={[styles.completeBtnText, !canComplete && styles.completeBtnTextDisabled]}>
-                {t("completeJob")}
+                Complete Job
               </Text>
             </>
           )}
@@ -439,7 +369,7 @@ export default function DriverActiveJobScreen() {
 
         {!canComplete && (
           <Text style={styles.completeHint}>
-            {t("addPhotosHint")}
+            Add before & after photos to complete this job
           </Text>
         )}
 
@@ -454,60 +384,41 @@ export default function DriverActiveJobScreen() {
         </TouchableOpacity>
 
         {/* Driver cancel */}
-        <TouchableOpacity
-          style={styles.cancelJobBtn}
-          onPress={() => { setCancelReason(null); setShowCancelReasonModal(true); }}
-          activeOpacity={0.85}
-        >
-          <Feather name="x-circle" size={15} color={Colors.error} />
-          <Text style={styles.cancelJobBtnText}>{t("cancelJob")}</Text>
-        </TouchableOpacity>
+        {!showCancelConfirm ? (
+          <TouchableOpacity
+            style={styles.cancelJobBtn}
+            onPress={() => setShowCancelConfirm(true)}
+            activeOpacity={0.85}
+          >
+            <Feather name="x-circle" size={15} color={Colors.error} />
+            <Text style={styles.cancelJobBtnText}>{t("cancelJob")}</Text>
+          </TouchableOpacity>
+        ) : (
+          <View style={styles.cancelConfirmCard}>
+            <Feather name="alert-triangle" size={18} color={Colors.error} />
+            <Text style={styles.cancelConfirmText}>{t("cancelJobConfirm")}</Text>
+            <View style={styles.cancelConfirmBtns}>
+              <TouchableOpacity style={styles.cancelConfirmNo} onPress={() => setShowCancelConfirm(false)}>
+                <Text style={styles.cancelConfirmNoText}>{t("cancel")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.cancelConfirmYes, cancelling && styles.disabled]}
+                onPress={handleCancelJob}
+                disabled={cancelling}
+                activeOpacity={0.85}
+              >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color={Colors.text} />
+                ) : (
+                  <Text style={styles.cancelConfirmYesText}>{t("cancelJob")}</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
 
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 16 }} />
       </ScrollView>
-
-      <Modal visible={showCancelReasonModal} animationType="slide" transparent presentationStyle="overFullScreen">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>{t("whyCancelling")}</Text>
-              <TouchableOpacity onPress={() => setShowCancelReasonModal(false)} style={styles.modalClose}>
-                <Feather name="x" size={20} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            {[
-              { key: t("cancelReasonCannotMakeIt"), value: "Cannot make it" },
-              { key: t("cancelReasonVehicleIssue"), value: "Vehicle issue" },
-              { key: t("cancelReasonJobTooLarge"), value: "Job too large" },
-              { key: t("cancelReasonOther"), value: "Other" },
-            ].map(({ key, value }) => (
-              <TouchableOpacity
-                key={value}
-                style={[styles.reasonOption, cancelReason === value && styles.reasonOptionSelected]}
-                onPress={() => setCancelReason(value)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.reasonRadio, cancelReason === value && styles.reasonRadioSelected]}>
-                  {cancelReason === value && <View style={styles.reasonRadioDot} />}
-                </View>
-                <Text style={[styles.reasonOptionText, cancelReason === value && styles.reasonOptionTextSelected]}>{key}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.cancelConfirmYes, (!cancelReason || cancelling) && styles.disabled]}
-              onPress={() => handleCancelJob(cancelReason!)}
-              disabled={!cancelReason || cancelling}
-              activeOpacity={0.85}
-            >
-              {cancelling
-                ? <ActivityIndicator color={Colors.text} />
-                : <Text style={styles.cancelConfirmYesText}>{t("confirmCancellation")}</Text>
-              }
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
 
       <BottomNav />
     </View>
@@ -687,20 +598,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.error,
-  },
-  arrivedBtn: {
-    backgroundColor: Colors.success,
-    borderRadius: 14,
-    paddingVertical: 14,
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    gap: 8,
-  },
-  arrivedBtnText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.navy,
   },
   completeBtn: {
     backgroundColor: Colors.gold,
@@ -885,89 +782,5 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
   },
-  startJobBtn: {
-    backgroundColor: Colors.success,
-    borderRadius: 14,
-    paddingVertical: 14,
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-    gap: 8,
-  },
-  startJobBtnText: {
-    fontSize: 15,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.navy,
-  },
-  modalOverlay: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.6)",
-  },
-  modalSheet: {
-    backgroundColor: Colors.surface,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    paddingBottom: 40,
-    gap: 14,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: Colors.border,
-    alignSelf: "center" as const,
-    marginBottom: 4,
-  },
-  modalHeader: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    justifyContent: "space-between" as const,
-  },
-  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
-  modalClose: { padding: 4 },
-  reasonOption: {
-    flexDirection: "row" as const,
-    alignItems: "center" as const,
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.navy,
-  },
-  reasonOptionSelected: {
-    borderColor: Colors.gold,
-    backgroundColor: `${Colors.gold}12`,
-  },
-  reasonRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: "center" as const,
-    justifyContent: "center" as const,
-  },
-  reasonRadioSelected: { borderColor: Colors.gold },
-  reasonRadioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.gold,
-  },
-  reasonOptionText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  reasonOptionTextSelected: {
-    color: Colors.text,
-    fontFamily: "Inter_500Medium",
-  },
+  disabled: { opacity: 0.7 },
 });
-
