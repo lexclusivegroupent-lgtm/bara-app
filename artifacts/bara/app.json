@@ -48,7 +48,7 @@
       [
         "expo-router",
         {
-          "origin": "https://replit.com/"
+          "origin": "https://baraapp.se"
         }
       ],
       "expo-font",
