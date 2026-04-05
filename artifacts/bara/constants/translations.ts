@@ -379,6 +379,18 @@ const translations = {
 
     // Map greeting
     hello: "Hello",
+
+    // Ratings
+    newDriver: "New",
+    yourRating: "Your Rating",
+    noRatingsYet: "No ratings yet",
+    jobsCompleted: "jobs",
+
+    // In-progress transition
+    startTransport: "Start Transport",
+    starting: "Starting...",
+    markArrived: "Mark Arrived",
+    markingArrived: "Marking...",
   },
 
   sv: {
@@ -759,6 +771,18 @@ const translations = {
 
     // Map greeting
     hello: "Hej",
+
+    // Ratings
+    newDriver: "Ny",
+    yourRating: "Ditt betyg",
+    noRatingsYet: "Inga betyg ännu",
+    jobsCompleted: "jobb",
+
+    // In-progress transition
+    startTransport: "Starta transport",
+    starting: "Startar...",
+    markArrived: "Markera anlänt",
+    markingArrived: "Markerar...",
   },
 } as const;
 
