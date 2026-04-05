@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "rea
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { formatSEK, formatDate, getStatusColor, getStatusLabel } from "@/constants/config";
+import { StarRating } from "@/components/StarRating";
 
 export interface Job {
   id: number;
@@ -70,6 +71,20 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
           <Text style={[styles.statusText, { color: statusColor }]}>{getStatusLabel(job.status)}</Text>
         </View>
       </View>
+
+      {job.driver && (
+        <View style={styles.driverRow}>
+          <Feather name="user" size={12} color={Colors.textMuted} />
+          <Text style={styles.driverName} numberOfLines={1}>{job.driver.fullName}</Text>
+          <StarRating
+            rating={job.driver.rating ? Number(job.driver.rating) : null}
+            totalJobs={job.driver.totalJobs}
+            size={12}
+            showNew
+            showCount={false}
+          />
+        </View>
+      )}
 
       <View style={styles.cardDivider} />
 
@@ -188,6 +203,17 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
+  },
+  driverRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  driverName: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
   },
   cardDivider: {
     height: 1,
