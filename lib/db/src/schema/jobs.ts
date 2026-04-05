@@ -45,7 +45,6 @@ export const jobsTable = pgTable("jobs", {
   completedAt: timestamp("completed_at"),
   disputedAt: timestamp("disputed_at"),
   cancelledByDriverAt: timestamp("cancelled_by_driver_at"),
-  cancellationReason: text("cancellation_reason"),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });
