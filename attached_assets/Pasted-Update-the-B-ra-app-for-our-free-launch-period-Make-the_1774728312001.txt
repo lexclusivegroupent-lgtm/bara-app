@@ -1,0 +1,18 @@
+Update the Bära app for our free launch period. Make these changes throughout the entire app:
+Remove all pricing and fee references from customer facing screens
+On the job posting forms remove the price estimate card completely. Customers should not see any price during the free launch period. Remove the “Estimated price: kr X” display from both PostFurnitureJob and PostJunkJob screens.
+Update job completion flow
+When a job is marked complete by the driver show a simple success screen with a congratulations message. Do not show any payment screen or Swish instructions. Mark all jobs as payment status free automatically.
+Add free launch messaging throughout the app
+On the customer home screen add a banner at the top that says “Bära is free during our launch period — no fees, no charges” in both English and Swedish: “Bära är gratis under vår lansering — inga avgifter”
+On the landing screen below the tagline add a small badge or label that says “Free to use during launch”
+On the job posting confirmation screen add a note that says “This service is completely free during our launch period”
+On the driver map screen add a note for drivers that says “No platform fees during launch — you keep 100% of any tips or arrangements made directly”
+Update the about or settings section
+Add a section in Settings called “About Bära” that explains: “Bära is currently in its free launch phase. We are building Sweden’s first on-demand carrying and transport platform. During this period all services are completely free for both customers and drivers. We are supported by the Swedish startup ecosystem and are applying for growth grants to expand across all Swedish cities. Thank you for being an early user of Bära.”
+In Swedish: “Bära är för närvarande i sin gratis lanseringsfas. Vi bygger Sveriges första plattform för transport och bärhjälp på begäran. Under denna period är alla tjänster helt gratis för både kunder och förare. Vi stöds av det svenska startup-ekosystemet och ansöker om tillväxtbidrag för att expandera till alla svenska städer. Tack för att du är en tidig användare av Bära.”
+Keep all data collection intact
+Make sure all job data, user data, distance calculations, city data, and completion data is still being saved to the database exactly as before. We need this data to show grant committees proof of real usage and traction. Track number of completed jobs per city, number of registered users per city, and number of active drivers per city.
+Add a simple stats display for internal use
+Add a hidden admin stats endpoint at /api/admin/stats that returns: total registered users, total completed jobs, jobs per city breakdown, active drivers per city, average jobs per day. This is for grant application reporting only and should require a special admin password to access.
+After all changes confirm the app shows free launch messaging correctly and that all job data is still being saved to the database. Report back with a summary of changes made.
