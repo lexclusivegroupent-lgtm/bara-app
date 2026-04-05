@@ -15,12 +15,14 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { BASE_URL, SWEDISH_CITIES } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 
 export default function DriverEditProfileScreen() {
   const { user, token, updateUser } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [fullName, setFullName] = useState(user?.fullName || "");
   const [city, setCity] = useState(user?.city || "Stockholm");
@@ -30,7 +32,7 @@ export default function DriverEditProfileScreen() {
 
   async function handleSave() {
     if (!fullName.trim()) {
-      Alert.alert("Missing Info", "Please enter your full name.");
+      Alert.alert(t("missingInfo"), t("enterFullName"));
       return;
     }
     setLoading(true);
@@ -48,7 +50,7 @@ export default function DriverEditProfileScreen() {
       updateUser(data);
       router.back();
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to save profile.");
+      Alert.alert(t("error"), e.message || "Failed to save profile.");
     } finally {
       setLoading(false);
     }
@@ -60,12 +62,12 @@ export default function DriverEditProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <Text style={styles.headerTitle}>{t("editProfileTitle")}</Text>
         <TouchableOpacity onPress={handleSave} style={styles.saveBtn} disabled={loading}>
           {loading ? (
             <ActivityIndicator size="small" color={Colors.gold} />
           ) : (
-            <Text style={styles.saveText}>Save</Text>
+            <Text style={styles.saveText}>{t("saveChanges")}</Text>
           )}
         </TouchableOpacity>
       </View>
@@ -78,20 +80,20 @@ export default function DriverEditProfileScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Full Name</Text>
+          <Text style={styles.label}>{t("fullName")}</Text>
           <View style={styles.inputWrap}>
             <TextInput
               style={styles.input}
               value={fullName}
               onChangeText={setFullName}
-              placeholder="Your full name"
+              placeholder={t("yourFullName")}
               placeholderTextColor={Colors.textMuted}
             />
           </View>
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>City</Text>
+          <Text style={styles.label}>{t("city")}</Text>
           <TouchableOpacity
             style={[styles.inputWrap, { flexDirection: "row", justifyContent: "space-between", alignItems: "center" }]}
             onPress={() => setShowCityPicker(!showCityPicker)}
@@ -118,13 +120,13 @@ export default function DriverEditProfileScreen() {
         </View>
 
         <View style={styles.field}>
-          <Text style={styles.label}>Vehicle Description</Text>
+          <Text style={styles.label}>{t("vehicleDescription")}</Text>
           <View style={styles.inputWrap}>
             <TextInput
               style={styles.input}
               value={vehicleDescription}
               onChangeText={setVehicleDescription}
-              placeholder="e.g. White Volvo V90, cargo van"
+              placeholder={t("vehiclePlaceholder")}
               placeholderTextColor={Colors.textMuted}
             />
           </View>
