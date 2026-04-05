@@ -10,48 +10,40 @@ jobs:
   build-static:
     runs-on: ubuntu-latest
 
-    permissions:
-      contents: write
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          persist-credentials: true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Install pnpm
-        run: npm install -g pnpm@latest
+      # Use the versioned action instead of `npm install -g pnpm@latest`
+      # so the version is pinned and reproducible.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
 
+      # Install from the WORKSPACE ROOT so that catalog: and workspace:*
+      # references in artifacts/bara/package.json resolve correctly.
+      # Running `pnpm install` inside a sub-package in isolation breaks
+      # those protocols.
       - name: Install dependencies
-        working-directory: artifacts/bara
         run: pnpm install --no-frozen-lockfile
 
-      - name: Create placeholder logo if missing
-        working-directory: artifacts/bara
-        run: |
-          mkdir -p assets/images
-          if [ ! -f assets/images/logo.png ]; then
-            node -e "
-            const fs = require('fs');
-            // Minimal 1x1 transparent PNG (67 bytes)
-            const png = Buffer.from(
-              '89504e470d0a1a0a0000000d49484452000000010000000108060000001f15c489000000'
-              + '0a49444154789c6260000000020001e221bc330000000049454e44ae426082', 'hex');
-            fs.writeFileSync('assets/images/logo.png', png);
-            console.log('Created placeholder assets/images/logo.png');
-            "
-          fi
-
-      - name: Build static Expo bundle
+      # The build script now calls `expo export --platform web` — a single
+      # headless command that finishes and exits. No Metro dev server needed.
+      - name: Build Expo web export
         working-directory: artifacts/bara
         env:
+          # Expo Router uses this as the server origin for links/deep-links.
+          # Set to your production domain or leave as a placeholder for now.
           EXPO_PUBLIC_DOMAIN: app.baraapp.se
+          NODE_ENV: production
           CI: true
         run: node scripts/build.js
 
@@ -59,7 +51,8 @@ jobs:
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
           git add artifacts/bara/static-build/
-          git diff --staged --quiet && echo "No changes to commit" || git commit -m "chore: rebuild Expo static bundle [skip ci]"
+          git diff --staged --quiet \
+            && echo "No changes to commit" \
+            || git commit -m "chore: rebuild Expo static bundle [skip ci]"
           git push
