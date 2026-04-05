@@ -312,6 +312,31 @@ const translations = {
     deletingAccount: "Deleting account...",
     accountDeleted: "Account Deleted",
     accountDeletedMsg: "Your account has been deleted. We're sorry to see you go.",
+
+    // Job status — in progress
+    statusInProgress: "In Progress",
+    statusArrived: "Driver Arrived",
+    statusCancelledByDriver: "Cancelled by Driver",
+
+    // Cancellation reason
+    whyCancelling: "Why are you cancelling?",
+    cancelReasonChangedMind: "Changed my mind",
+    cancelReasonFoundSolution: "Found another solution",
+    cancelReasonDriverLate: "Driver was late",
+    cancelReasonCannotMakeIt: "Cannot make it",
+    cancelReasonVehicleIssue: "Vehicle issue",
+    cancelReasonJobTooLarge: "Job too large",
+    cancelReasonOther: "Other",
+    confirmCancellation: "Confirm Cancellation",
+
+    // Start job
+    startJob: "Start Job",
+    jobStarted: "Job started",
+    jobStartedBody: "Your driver has started the job and is on the move.",
+
+    // Driver rating display
+    jobsPosted: "jobs posted",
+    driverRating: "Driver rating",
   },
 
   sv: {
@@ -625,6 +650,31 @@ const translations = {
     deletingAccount: "Raderar konto...",
     accountDeleted: "Konto raderat",
     accountDeletedMsg: "Ditt konto har raderats. Vi är ledsna att se dig gå.",
+
+    // Job status — in progress
+    statusInProgress: "Pågår",
+    statusArrived: "Föraren har anlänt",
+    statusCancelledByDriver: "Avbokat av förare",
+
+    // Cancellation reason
+    whyCancelling: "Varför avbokar du?",
+    cancelReasonChangedMind: "Ändrade mig",
+    cancelReasonFoundSolution: "Hittade en annan lösning",
+    cancelReasonDriverLate: "Föraren var sen",
+    cancelReasonCannotMakeIt: "Kan inte komma",
+    cancelReasonVehicleIssue: "Fordonsfel",
+    cancelReasonJobTooLarge: "Jobbet är för stort",
+    cancelReasonOther: "Annat",
+    confirmCancellation: "Bekräfta avbokning",
+
+    // Start job
+    startJob: "Starta jobbet",
+    jobStarted: "Jobbet startat",
+    jobStartedBody: "Din förare har startat jobbet och är på väg.",
+
+    // Driver rating display
+    jobsPosted: "jobb publicerade",
+    driverRating: "Förarens betyg",
   },
 } as const;
 

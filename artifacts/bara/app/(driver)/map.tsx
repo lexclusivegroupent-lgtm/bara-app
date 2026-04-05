@@ -79,6 +79,8 @@ export default function DriverMapScreen() {
 
 
   const firstName = user?.fullName?.split(" ")[0] || "Driver";
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? t("goodMorning") : hour < 18 ? t("goodAfternoon") : t("goodEvening");
   const availableJobs = (jobs || []).filter(j => j.customerId !== user?.id);
 
   function handleSwitchMode(mode: "customer" | "driver") {
@@ -90,7 +92,7 @@ export default function DriverMapScreen() {
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
         <View>
-          <Text style={styles.greeting}>Hello, {firstName}</Text>
+          <Text style={styles.greeting}>{greeting}, {firstName}</Text>
           <Text style={styles.city}>{user?.city}</Text>
         </View>
         <View style={styles.headerRight}>
