@@ -1,0 +1,249 @@
+Build a complete mobile-first web application called Bära — a two-sided gig marketplace for on-demand furniture transport and junk pickup in Sweden. Build this as a Progressive Web App (PWA) using React for the frontend, Node.js with Express for the backend, and PostgreSQL for the database. The app should work perfectly in a mobile browser and feel like a native app.
+
+TECH STACK
+	∙	Frontend: React with Tailwind CSS
+	∙	Backend: Node.js with Express
+	∙	Database: PostgreSQL
+	∙	Authentication: JWT tokens + Google OAuth
+	∙	Maps: Google Maps JavaScript API + Distance Matrix API
+	∙	Payments: Stripe (SEK currency)
+	∙	Real-time: Socket.io for live job updates
+	∙	Push notifications: Web Push API
+	∙	Hosting: Replit
+
+BRAND IDENTITY
+	∙	App name: Bära
+	∙	Tagline: “Carry anything, anywhere” / “Bär vad som helst, vart som helst”
+	∙	Primary color: Navy #1B2A4A
+	∙	Accent color: Gold/Orange #C9A84C
+	∙	Font: Inter
+	∙	Logo: Delivery truck icon in gold on navy background
+
+USER TYPES
+Two user types — Customer and Driver. Users select their role during signup. A user can only be one role.
+
+DATABASE SCHEMA
+Users table:
+	∙	id, email, password_hash, full_name, role (customer/driver), city, profile_photo, is_available, rating, total_jobs, vehicle_description, address, created_at
+Jobs table:
+	∙	id, customer_id, driver_id, job_type (furniture_transport/junk_pickup), status (pending/accepted/in_progress/completed/cancelled), pickup_address, dropoff_address, home_address, item_description, preferred_time, distance_km, price_total, driver_payout, platform_fee, rating, payment_status (unpaid/paid), city, photos_pickup, photos_dropoff, created_at, accepted_at, completed_at
+Ratings table:
+	∙	id, job_id, rater_id, rated_id, score, comment, created_at
+
+PRICING LOGIC
+	∙	Furniture Transport: base price 299 SEK + 15 SEK per km
+	∙	Junk and Trash Pickup: base price 199 SEK + 10 SEK per km
+	∙	Minimum price for any job: 349 SEK regardless of distance
+	∙	Formula: price_total = maximum of (349, base_price + (distance_km × rate_per_km))
+	∙	Driver receives 75% of price_total
+	∙	Platform keeps 25% of price_total
+	∙	Stripe processing fee approximately 1.4% + 1.80 SEK per transaction
+
+SWEDISH CITIES SUPPORTED
+Stockholm, Göteborg, Malmö, Uppsala, Västerås, Örebro, Linköping, Helsingborg, Jönköping, Norrköping, Lund, Umeå, Gävle, Borås, Södertälje, Eskilstuna, Karlstad, Täby, Växjö, Sundsvall
+
+SCREENS AND FEATURES
+1. Home Screen
+	∙	Dark navy background
+	∙	Bära logo centered
+	∙	Tagline in English and Swedish
+	∙	Two service cards: Furniture Transport (sofa icon) and Junk and Trash Pickup (trash icon)
+	∙	Get Started button (gold/orange)
+	∙	Log In button (dark outline)
+2. Sign Up Screen
+	∙	Role selector: Customer or Driver (toggle buttons)
+	∙	City dropdown with all 20 Swedish cities
+	∙	Full name input
+	∙	Email input
+	∙	Password input
+	∙	Vehicle description input (only visible when Driver role is selected)
+	∙	Continue with Google button (white background, grey border)
+	∙	Create Account button (gold/orange)
+	∙	Link to Log In page
+	∙	After signup: set user role and city in database, navigate to CustomerHome if customer or DriverMap if driver
+3. Log In Screen
+	∙	Continue with Google button
+	∙	Email input
+	∙	Password input
+	∙	Log In button
+	∙	After login: navigate to CustomerHome if customer role, DriverMap if driver role
+	∙	Link to Sign Up page
+4. Customer Home Screen
+	∙	Header: greeting with user first name, good day in English and Swedish
+	∙	Two large service cards: Furniture Transport and Junk and Trash Pickup
+	∙	Active Jobs section showing current jobs with status badges
+	∙	Bottom navigation: Home, My Jobs, Settings
+	∙	Each job card shows: job type, status badge, item description, date/time, price in SEK, Accept button for drivers
+5. Post Furniture Transport Job Screen
+	∙	Page title: Post a Job
+	∙	Pickup address input with Google Places autocomplete
+	∙	Dropoff address input with Google Places autocomplete
+	∙	Item description multiline input
+	∙	Preferred time date/time picker
+	∙	Price estimate card showing: estimated price in SEK calculated from distance, minimum 349 SEK shown
+	∙	Post Job button (gold/orange)
+	∙	After posting: save job to database with city from current user’s profile, calculate distance using Google Distance Matrix API, calculate and save price_total, driver_payout, platform_fee, navigate to My Jobs screen
+6. Post Junk and Trash Pickup Job Screen
+	∙	Page title: Post a Job
+	∙	Home address input with Google Places autocomplete
+	∙	Item description multiline input
+	∙	Preferred time date/time picker
+	∙	Price estimate card showing estimated price minimum 349 SEK
+	∙	Post Job button
+	∙	After posting: same flow as furniture job but use junk pricing formula
+7. My Jobs Screen (Customer)
+	∙	List of all jobs posted by current user
+	∙	Each card shows: job type icon, job type name, status badge with color coding, item description preview, date and time, price in SEK
+	∙	Status colors: Pending = grey, Accepted = blue, In Progress = orange, Completed = green, Cancelled = red
+	∙	Tap a job card to see full job details on Job Status screen
+	∙	Bottom navigation
+8. Job Status Screen
+	∙	Back button
+	∙	Job status progress tracker showing: Job Posted, Driver Assigned, En Route, Completed with checkmarks
+	∙	Job Details card showing: pickup address, dropoff address, item description, date and time
+	∙	Price breakdown card showing: job type, distance in km, base price, distance fee, total price in bold
+	∙	Driver info card (shown after job is accepted): driver name, driver rating, vehicle description
+	∙	Rate job button (shown after job is completed)
+9. Driver Map Screen
+	∙	Header showing driver online/offline toggle
+	∙	Google Map showing current driver location
+	∙	Available Jobs list below map filtered by driver’s city
+	∙	Each job card shows: job type icon, job type name, price in SEK and driver earnings, item description preview, date and time, Accept button (gold/orange)
+	∙	Only show jobs with status Pending in the driver’s city
+	∙	Real-time updates using Socket.io so new jobs appear instantly without refresh
+	∙	Bottom navigation: Map, Active Job, Settings
+10. Driver Active Job Screen
+	∙	Map showing route from driver location to pickup address
+	∙	Job details: customer name, pickup address, dropoff address, item description, preferred time
+	∙	Pricing row showing: Job value in SEK and Your earnings in SEK
+	∙	Navigation button to open Google Maps directions
+	∙	Complete Job button (gold/orange)
+	∙	After completing: update job status to Completed, navigate to Rate User screen
+11. Rate User Screen
+	∙	Profile avatar of the person being rated
+	∙	“How was your experience?” heading
+	∙	5 star buttons that highlight when tapped
+	∙	Comment multiline input (optional)
+	∙	Submit Rating button
+	∙	Skip Rating button
+	∙	After submitting: save rating to job record and ratings table, update user’s average rating, navigate to CustomerHome if customer or DriverMap if driver based on current user role
+12. Edit Profile Screen
+	∙	Profile photo (tappable to change)
+	∙	Full name input pre-populated with current user data
+	∙	City dropdown pre-populated with current user city
+	∙	Vehicle description input (drivers only)
+	∙	Is Available toggle (drivers only) — controls whether driver appears available for jobs
+	∙	Save Profile button always enabled
+	∙	After saving: update user record in database, navigate back
+
+WORKFLOWS AND BUSINESS LOGIC
+Job Posting Workflow
+	1.	Customer fills out job form and taps Post Job
+	2.	App calls Google Distance Matrix API with pickup and dropoff addresses
+	3.	Distance in meters is returned, divide by 1000 to get km, save to distance_km field
+	4.	Calculate price_total using formula: maximum of (349, base_price + distance_km × rate)
+	5.	Calculate driver_payout = price_total × 0.75
+	6.	Calculate platform_fee = price_total × 0.25
+	7.	Save job to database with status Pending and current user’s city
+	8.	Emit Socket.io event to notify nearby drivers of new job
+	9.	Navigate customer to My Jobs screen
+Job Acceptance Workflow
+	1.	Driver taps Accept on a job card
+	2.	Update job status to Accepted
+	3.	Set driver_id to current user id
+	4.	Set accepted_at timestamp
+	5.	Emit Socket.io event to notify customer their job was accepted
+	6.	Navigate driver to Driver Active Job screen with job data
+Job Completion Workflow
+	1.	Driver taps Complete Job
+	2.	Update job status to Completed
+	3.	Set completed_at timestamp
+	4.	Process Stripe payment — charge customer price_total in SEK
+	5.	Update payment_status to paid
+	6.	Navigate to Rate User screen
+Rating Workflow
+	1.	User taps star rating 1 through 5
+	2.	Selected rating is stored in component state
+	3.	User taps Submit Rating
+	4.	Save rating score and comment to ratings table
+	5.	Update the rated user’s average rating in users table
+	6.	Update job record with rating value
+	7.	Navigate to CustomerHome if customer or DriverMap if driver
+
+REAL-TIME FEATURES
+Use Socket.io for:
+	∙	New job posted → emit to all online drivers in same city
+	∙	Job accepted → emit to customer who posted the job
+	∙	Job completed → emit to both customer and driver
+	∙	Driver location update → emit every 10 seconds to customer viewing active job
+
+SAFETY AND LEGAL FEATURES
+Terms of Service screen
+	∙	Show on first signup before account creation
+	∙	User must check checkbox agreeing to terms before proceeding
+	∙	Terms must state: Bära is a technology platform only, drivers are independent contractors, Bära is not responsible for item damage, items transported at customer’s own risk, customer confirms they own items being transported
+Prohibited items declaration
+	∙	On job posting form add checkbox: I confirm these items are legally owned by me and are not prohibited items
+	∙	Prohibited items list: weapons, illegal substances, stolen goods, hazardous materials, live animals
+Photo documentation
+	∙	On Driver Active Job screen add: Take Photo at Pickup button and Take Photo at Dropoff button
+	∙	Photos are required before marking job complete
+	∙	Save photo URLs to job record fields photos_pickup and photos_dropoff
+Emergency button
+	∙	Visible on both Customer Home and Driver Active Job screens
+	∙	Small red button in corner
+	∙	Tapping opens confirmation dialog
+	∙	Confirmed tap calls Swedish emergency number 112 via tel link and sends job details to admin email
+
+AUTHENTICATION
+	∙	JWT tokens stored in localStorage
+	∙	Google OAuth using Google Sign-In JavaScript library
+	∙	After Google OAuth: check if user exists in database by email, if yes log them in, if no create account and prompt for role and city selection
+	∙	Token expiry: 7 days
+	∙	Refresh token on each app load
+
+API INTEGRATIONS
+Google Maps
+	∙	Maps JavaScript API for displaying maps on DriverMap and DriverJobActive screens
+	∙	Places API for address autocomplete on job posting forms
+	∙	Distance Matrix API for calculating distance between pickup and dropoff addresses
+	∙	Geocoding API for extracting city from address
+Stripe
+	∙	Create payment intent when job is completed
+	∙	Charge customer price_total in SEK (multiply by 100 for Stripe øre)
+	∙	Store payment intent ID on job record
+	∙	Webhook to confirm payment success and update payment_status
+
+MULTILINGUAL SUPPORT
+	∙	Default language: English
+	∙	Secondary language: Swedish
+	∙	Key UI strings should have both English and Swedish versions
+	∙	Language toggle in Settings screen
+	∙	Store language preference in user profile
+
+MOBILE PWA REQUIREMENTS
+	∙	Add manifest.json with app name Bära, icons, theme color navy #1B2A4A
+	∙	Add service worker for offline support and caching
+	∙	Enable Add to Home Screen prompt
+	∙	All screens must be mobile-first responsive
+	∙	Touch targets minimum 44px
+	∙	No horizontal scrolling on any screen
+	∙	Bottom navigation bar fixed to bottom of screen
+
+SETTINGS SCREEN
+	∙	Profile section: name, city, profile photo
+	∙	For drivers: availability toggle, vehicle description
+	∙	Language toggle: English / Swedish
+	∙	Notification preferences
+	∙	Terms of Service link
+	∙	Privacy Policy link
+	∙	Log Out button
+	∙	Delete Account option
+
+ADMIN REQUIREMENTS
+	∙	Track platform_fee on every completed job
+	∙	All fees accumulate as Bära revenue
+	∙	Driver payouts processed via Stripe Connect or manual bank transfer initially
+	∙	Store all job records permanently for tax reporting
+
+Build the complete application with all screens, all workflows, all API integrations, and all database tables. Make it production-ready, mobile-first, and fully functional. Use clean component architecture and include error handling on all API calls. The app should feel fast, modern, and professional — comparable to Uber’s user experience.
