@@ -277,7 +277,16 @@ export function getJobTypeLabel(jobType: string): string {
   }
 }
 
-export const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+function getBaseUrl(): string {
+  // On web, always use the current origin so it works on any domain without env vars
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  // On native, fall back to the configured domain
+  return `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "baraapp.se"}`;
+}
+
+export const BASE_URL = getBaseUrl();
 
 export const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || "";
 
