@@ -3,13 +3,12 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "rea
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { formatSEK, formatDate, getStatusColor, getStatusLabel } from "@/constants/config";
-import { useLanguage } from "@/context/LanguageContext";
 
 export interface Job {
   id: number;
   customerId: number;
   driverId?: number | null;
-  jobType: "furniture_transport" | "bulky_delivery" | "junk_pickup";
+  jobType: "furniture_transport" | "junk_pickup";
   status: "pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "disputed";
   pickupAddress?: string | null;
   dropoffAddress?: string | null;
@@ -22,10 +21,7 @@ export interface Job {
   platformFee: number;
   customerPrice?: number | null;
   cancellationFee?: number | null;
-  cancellationReason?: string | null;
   rating?: number | null;
-  disputed?: boolean | null;
-  disputeReason?: string | null;
   paymentStatus: "unpaid" | "paid";
   city: string;
   createdAt: string;
@@ -48,7 +44,6 @@ interface Props {
 }
 
 export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting, showDriverEarnings }: Props) {
-  const { t } = useLanguage();
   const statusColor = getStatusColor(job.status);
   const isFurniture = job.jobType === "furniture_transport";
 
@@ -67,7 +62,7 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
           />
         </View>
         <View style={styles.jobInfo}>
-          <Text style={styles.jobType}>{job.jobType === "furniture_transport" ? t("furnitureTransport") : job.jobType === "bulky_delivery" ? t("bulkyDelivery") : t("junkTrash")}</Text>
+          <Text style={styles.jobType}>{isFurniture ? "Furniture Transport" : "Junk & Trash Pickup"}</Text>
           <Text style={styles.itemDesc} numberOfLines={1}>{job.itemDescription}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: `${statusColor}22` }]}>
@@ -95,7 +90,7 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
               <Text style={styles.price}>
                 {formatSEK(job.customerPrice ?? job.priceTotal)}
               </Text>
-              <Text style={styles.earnings}>{t("youEarn")} {formatSEK(job.driverPayout)}</Text>
+              <Text style={styles.earnings}>You earn {formatSEK(job.driverPayout)}</Text>
               {job.customerPrice != null && job.customerPrice !== job.priceTotal && (
                 <Text style={styles.suggestedLabel}>
                   Suggested {formatSEK(job.priceTotal)}
@@ -117,26 +112,6 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
           <Text style={styles.compensationText}>
             Cancellation compensation: {formatSEK(job.cancellationFee)}
           </Text>
-        </View>
-      )}
-
-      {showAcceptButton && job.customer && (job.customer.rating != null || job.customer.totalJobs != null) && (
-        <View style={styles.customerRatingRow}>
-          <Feather name="user" size={11} color={Colors.textMuted} />
-          <Text style={styles.customerRatingText}>Customer</Text>
-          {job.customer.rating != null && (
-            <>
-              <Text style={styles.customerRatingDot}>·</Text>
-              <Feather name="star" size={11} color={Colors.gold} />
-              <Text style={styles.customerRatingText}>{Number(job.customer.rating).toFixed(1)}</Text>
-            </>
-          )}
-          {job.customer.totalJobs != null && (
-            <>
-              <Text style={styles.customerRatingDot}>·</Text>
-              <Text style={styles.customerRatingText}>{job.customer.totalJobs} {t("jobsPosted")}</Text>
-            </>
-          )}
         </View>
       )}
 
@@ -305,21 +280,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: Colors.navy,
-  },
-  customerRatingRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingTop: 2,
-    paddingBottom: 2,
-  },
-  customerRatingText: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  customerRatingDot: {
-    fontSize: 11,
-    color: Colors.border,
   },
 });
