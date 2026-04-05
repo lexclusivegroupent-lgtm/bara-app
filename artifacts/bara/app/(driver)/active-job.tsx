@@ -35,6 +35,8 @@ export default function DriverActiveJobScreen() {
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [arriving, setArriving] = useState(false);
+  const [starting, setStarting] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["activeJob", id],
@@ -56,6 +58,42 @@ export default function DriverActiveJobScreen() {
       setDropoffPhotos(job.photosDropoff);
     }
   }, [job?.id]);
+
+  async function handleArrive() {
+    if (!job) return;
+    setArriving(true);
+    setCompleteError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/arrived`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to mark arrived");
+    } catch (e: any) {
+      setCompleteError(e.message || "Failed to mark arrived. Please try again.");
+    } finally {
+      setArriving(false);
+    }
+  }
+
+  async function handleStart() {
+    if (!job) return;
+    setStarting(true);
+    setCompleteError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/start`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to start transport");
+    } catch (e: any) {
+      setCompleteError(e.message || "Failed to start transport. Please try again.");
+    } finally {
+      setStarting(false);
+    }
+  }
 
   async function handleCancelJob() {
     if (!job) return;
@@ -339,31 +377,76 @@ export default function DriverActiveJobScreen() {
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          style={[styles.completeBtn, (!canComplete || completing) && styles.disabled]}
-          onPress={handleComplete}
-          disabled={!canComplete || completing}
-          activeOpacity={0.85}
-        >
-          {completing ? (
-            <View style={styles.completingRow}>
-              <ActivityIndicator color={Colors.navy} />
-              <Text style={styles.completeBtnText}>
-                {uploadingPhotos ? t("uploadingPhotos") : t("completing")}
-              </Text>
-            </View>
-          ) : (
-            <>
-              <Feather name="check-circle" size={18} color={canComplete ? Colors.navy : Colors.textMuted} />
-              <Text style={[styles.completeBtnText, !canComplete && styles.completeBtnTextDisabled]}>
-                {t("completeJob")}
-              </Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {job.status === "accepted" && (
+          <TouchableOpacity
+            style={[styles.arriveBtn, arriving && styles.disabled]}
+            onPress={handleArrive}
+            disabled={arriving}
+            activeOpacity={0.85}
+          >
+            {arriving ? (
+              <View style={styles.completingRow}>
+                <ActivityIndicator color={Colors.text} />
+                <Text style={styles.arriveBtnText}>{t("markingArrived")}</Text>
+              </View>
+            ) : (
+              <>
+                <Feather name="map-pin" size={18} color={Colors.text} />
+                <Text style={styles.arriveBtnText}>{t("markArrived")}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
-        {!canComplete && (
-          <Text style={styles.completeHint}>{t("addPhotosHint")}</Text>
+        {job.status === "arrived" && (
+          <TouchableOpacity
+            style={[styles.startBtn, starting && styles.disabled]}
+            onPress={handleStart}
+            disabled={starting}
+            activeOpacity={0.85}
+          >
+            {starting ? (
+              <View style={styles.completingRow}>
+                <ActivityIndicator color={Colors.navy} />
+                <Text style={styles.completeBtnText}>{t("starting")}</Text>
+              </View>
+            ) : (
+              <>
+                <Feather name="truck" size={18} color={Colors.navy} />
+                <Text style={styles.completeBtnText}>{t("startTransport")}</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {job.status === "in_progress" && (
+          <>
+            <TouchableOpacity
+              style={[styles.completeBtn, (!canComplete || completing) && styles.disabled]}
+              onPress={handleComplete}
+              disabled={!canComplete || completing}
+              activeOpacity={0.85}
+            >
+              {completing ? (
+                <View style={styles.completingRow}>
+                  <ActivityIndicator color={Colors.navy} />
+                  <Text style={styles.completeBtnText}>
+                    {uploadingPhotos ? t("uploadingPhotos") : t("completing")}
+                  </Text>
+                </View>
+              ) : (
+                <>
+                  <Feather name="check-circle" size={18} color={canComplete ? Colors.navy : Colors.textMuted} />
+                  <Text style={[styles.completeBtnText, !canComplete && styles.completeBtnTextDisabled]}>
+                    {t("completeJob")}
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+            {!canComplete && (
+              <Text style={styles.completeHint}>{t("addPhotosHint")}</Text>
+            )}
+          </>
         )}
 
         {/* Chat with customer */}
@@ -591,6 +674,31 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.error,
+  },
+  arriveBtn: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    borderWidth: 1,
+    borderColor: Colors.gold,
+  },
+  arriveBtnText: {
+    fontSize: 17,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  startBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
+    paddingVertical: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   completeBtn: {
     backgroundColor: Colors.gold,
