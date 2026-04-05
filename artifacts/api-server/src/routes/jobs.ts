@@ -50,6 +50,7 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     completedAt: job.completedAt?.toISOString() || null,
     disputedAt: job.disputedAt?.toISOString() || null,
     cancelledByDriverAt: job.cancelledByDriverAt?.toISOString() || null,
+    cancellationReason: job.cancellationReason,
     customer: customer ? formatUser(customer) : null,
     driver: driver ? formatUser(driver) : null,
   };
@@ -79,13 +80,23 @@ router.get("/", authenticate, async (req: AuthenticatedRequest, res) => {
       .where(conditions.length > 0 ? and(...conditions) : undefined)
       .orderBy(sql`${jobsTable.createdAt} DESC`);
 
-    const enriched = await Promise.all(jobs.map(async (job) => {
-      const [customer] = await db.select().from(usersTable).where(eq(usersTable.id, job.customerId)).limit(1);
-      const driver = job.driverId
-        ? (await db.select().from(usersTable).where(eq(usersTable.id, job.driverId)).limit(1))[0]
-        : null;
-      return formatJob(job, customer, driver);
-    }));
+    if (jobs.length === 0) {
+      res.json([]);
+      return;
+    }
+
+    // Batch-load all users referenced by jobs to avoid N+1 queries
+    const userIds = [...new Set([
+      ...jobs.map((j) => j.customerId),
+      ...jobs.map((j) => j.driverId).filter((id): id is number => id != null),
+    ])];
+    const { inArray } = await import("drizzle-orm");
+    const users = await db.select().from(usersTable).where(inArray(usersTable.id, userIds));
+    const userMap = new Map(users.map((u) => [u.id, u]));
+
+    const enriched = jobs.map((job) =>
+      formatJob(job, userMap.get(job.customerId) ?? null, job.driverId ? (userMap.get(job.driverId) ?? null) : null)
+    );
 
     res.json(enriched);
   } catch (err) {
@@ -295,6 +306,40 @@ router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res)
     ).catch(() => {});
   } catch (err) {
     req.log?.error(err, "Arrived job error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/start", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
+    if (existing.driverId !== req.userId) {
+      res.status(403).json({ error: "Only the assigned driver can start this job" });
+      return;
+    }
+    if (existing.status !== "arrived") {
+      res.status(400).json({ error: "Job must be in arrived state to start" });
+      return;
+    }
+
+    await db.update(jobsTable).set({ status: "in_progress" }).where(eq(jobsTable.id, jobId));
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+
+    const [startCustomer] = await db.select({ pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+    sendPushToUser(
+      startCustomer?.pushToken,
+      "Job started! 🚛",
+      "Your driver has started the job and is on the move.",
+      { screen: "customer-job", jobId }
+    ).catch(() => {});
+  } catch (err) {
+    req.log?.error(err, "Start job error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -562,6 +607,7 @@ const CANCELLATION_FEE_AFTER_ACCEPTANCE = 150;
 router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  const { reason } = req.body;
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
     if (!existing) {
@@ -582,11 +628,12 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
 
     if (isCustomer) {
       if (!driverAssigned) {
-        await db.update(jobsTable).set({ status: "cancelled" }).where(eq(jobsTable.id, jobId));
+        await db.update(jobsTable).set({ status: "cancelled", cancellationReason: reason || null }).where(eq(jobsTable.id, jobId));
       } else {
         await db.update(jobsTable).set({
           status: "cancelled_by_customer",
           cancellationFee: CANCELLATION_FEE_AFTER_ACCEPTANCE.toString(),
+          cancellationReason: reason || null,
         }).where(eq(jobsTable.id, jobId));
 
         if (existing.driverId) {
@@ -606,6 +653,7 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
         status: "cancelled_by_driver",
         driverId: null,
         cancelledByDriverAt: new Date(),
+        cancellationReason: reason || null,
       }).where(eq(jobsTable.id, jobId));
 
       await db.update(usersTable).set({

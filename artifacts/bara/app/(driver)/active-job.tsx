@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  Modal,
 } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -34,7 +35,10 @@ export default function DriverActiveJobScreen() {
   const [dropoffPhotos, setDropoffPhotos] = useState<string[]>([]);
   const [uploadingPhotos, setUploadingPhotos] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
+  const [cancelReason, setCancelReason] = useState<string | null>(null);
+  const [markingArrived, setMarkingArrived] = useState(false);
+  const [startingJob, setStartingJob] = useState(false);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["activeJob", id],
@@ -57,13 +61,50 @@ export default function DriverActiveJobScreen() {
     }
   }, [job?.id]);
 
-  async function handleCancelJob() {
+  async function handleMarkArrived() {
+    if (!job) return;
+    setMarkingArrived(true);
+    setCompleteError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/arrived`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to mark arrived");
+    } catch (e: any) {
+      setCompleteError(e.message || "Failed to mark arrived. Please try again.");
+    } finally {
+      setMarkingArrived(false);
+    }
+  }
+
+  async function handleStartJob() {
+    if (!job) return;
+    setStartingJob(true);
+    setCompleteError(null);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/start`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to start job");
+    } catch (e: any) {
+      setCompleteError(e.message || "Failed to start job. Please try again.");
+    } finally {
+      setStartingJob(false);
+    }
+  }
+
+  async function handleCancelJob(reason?: string) {
     if (!job) return;
     setCancelling(true);
     try {
       const res = await fetch(`${BASE_URL}/api/jobs/${job.id}/cancel`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ reason: reason || null }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to cancel");
@@ -72,7 +113,7 @@ export default function DriverActiveJobScreen() {
       setCompleteError(e.message || "Failed to cancel. Please try again.");
     } finally {
       setCancelling(false);
-      setShowCancelConfirm(false);
+      setShowCancelReasonModal(false);
     }
   }
 
@@ -208,8 +249,9 @@ export default function DriverActiveJobScreen() {
     );
   }
 
-  const isFurniture = job.jobType === "furniture_transport";
+  const isFurniture = job.jobType === "furniture_transport" || job.jobType === "bulky_delivery";
   const canComplete = pickupPhotos.length > 0 && dropoffPhotos.length > 0;
+  const jobTypeLabel = job.jobType === "furniture_transport" ? "Furniture" : job.jobType === "bulky_delivery" ? "Bulky Delivery" : "Junk Pickup";
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
@@ -217,13 +259,11 @@ export default function DriverActiveJobScreen() {
         <Text style={styles.headerTitle}>Active Job</Text>
         <View style={styles.jobTypeBadge}>
           <MaterialCommunityIcons
-            name={isFurniture ? "sofa" : "delete-sweep"}
+            name={job.jobType === "furniture_transport" ? "sofa" : job.jobType === "bulky_delivery" ? "package-variant" : "delete-sweep"}
             size={14}
             color={Colors.gold}
           />
-          <Text style={styles.jobTypeBadgeText}>
-            {isFurniture ? "Furniture" : "Junk Pickup"}
-          </Text>
+          <Text style={styles.jobTypeBadgeText}>{jobTypeLabel}</Text>
         </View>
       </View>
 
@@ -344,6 +384,42 @@ export default function DriverActiveJobScreen() {
           </TouchableOpacity>
         )}
 
+        {job.status === "accepted" && (
+          <TouchableOpacity
+            style={[styles.arrivedBtn, markingArrived && styles.disabled]}
+            onPress={handleMarkArrived}
+            disabled={markingArrived}
+            activeOpacity={0.85}
+          >
+            {markingArrived ? (
+              <ActivityIndicator color={Colors.navy} />
+            ) : (
+              <>
+                <Feather name="map-pin" size={16} color={Colors.navy} />
+                <Text style={styles.arrivedBtnText}>I've Arrived at Pickup</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
+        {job.status === "arrived" && (
+          <TouchableOpacity
+            style={[styles.startJobBtn, startingJob && styles.disabled]}
+            onPress={handleStartJob}
+            disabled={startingJob}
+            activeOpacity={0.85}
+          >
+            {startingJob ? (
+              <ActivityIndicator color={Colors.navy} />
+            ) : (
+              <>
+                <Feather name="play" size={16} color={Colors.navy} />
+                <Text style={styles.startJobBtnText}>Start Job</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           style={[styles.completeBtn, (!canComplete || completing) && styles.disabled]}
           onPress={handleComplete}
@@ -384,41 +460,60 @@ export default function DriverActiveJobScreen() {
         </TouchableOpacity>
 
         {/* Driver cancel */}
-        {!showCancelConfirm ? (
-          <TouchableOpacity
-            style={styles.cancelJobBtn}
-            onPress={() => setShowCancelConfirm(true)}
-            activeOpacity={0.85}
-          >
-            <Feather name="x-circle" size={15} color={Colors.error} />
-            <Text style={styles.cancelJobBtnText}>{t("cancelJob")}</Text>
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.cancelConfirmCard}>
-            <Feather name="alert-triangle" size={18} color={Colors.error} />
-            <Text style={styles.cancelConfirmText}>{t("cancelJobConfirm")}</Text>
-            <View style={styles.cancelConfirmBtns}>
-              <TouchableOpacity style={styles.cancelConfirmNo} onPress={() => setShowCancelConfirm(false)}>
-                <Text style={styles.cancelConfirmNoText}>{t("cancel")}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.cancelConfirmYes, cancelling && styles.disabled]}
-                onPress={handleCancelJob}
-                disabled={cancelling}
-                activeOpacity={0.85}
-              >
-                {cancelling ? (
-                  <ActivityIndicator size="small" color={Colors.text} />
-                ) : (
-                  <Text style={styles.cancelConfirmYesText}>{t("cancelJob")}</Text>
-                )}
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+        <TouchableOpacity
+          style={styles.cancelJobBtn}
+          onPress={() => { setCancelReason(null); setShowCancelReasonModal(true); }}
+          activeOpacity={0.85}
+        >
+          <Feather name="x-circle" size={15} color={Colors.error} />
+          <Text style={styles.cancelJobBtnText}>{t("cancelJob")}</Text>
+        </TouchableOpacity>
 
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 16 }} />
       </ScrollView>
+
+      <Modal visible={showCancelReasonModal} animationType="slide" transparent presentationStyle="overFullScreen">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHandle} />
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Why are you cancelling?</Text>
+              <TouchableOpacity onPress={() => setShowCancelReasonModal(false)} style={styles.modalClose}>
+                <Feather name="x" size={20} color={Colors.textMuted} />
+              </TouchableOpacity>
+            </View>
+            {[
+              "Cannot make it",
+              "Vehicle issue",
+              "Job too large",
+              "Other",
+            ].map((reason) => (
+              <TouchableOpacity
+                key={reason}
+                style={[styles.reasonOption, cancelReason === reason && styles.reasonOptionSelected]}
+                onPress={() => setCancelReason(reason)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.reasonRadio, cancelReason === reason && styles.reasonRadioSelected]}>
+                  {cancelReason === reason && <View style={styles.reasonRadioDot} />}
+                </View>
+                <Text style={[styles.reasonOptionText, cancelReason === reason && styles.reasonOptionTextSelected]}>{reason}</Text>
+              </TouchableOpacity>
+            ))}
+            <TouchableOpacity
+              style={[styles.cancelConfirmYes, (!cancelReason || cancelling) && styles.disabled]}
+              onPress={() => handleCancelJob(cancelReason!)}
+              disabled={!cancelReason || cancelling}
+              activeOpacity={0.85}
+            >
+              {cancelling
+                ? <ActivityIndicator color={Colors.text} />
+                : <Text style={styles.cancelConfirmYesText}>Confirm Cancellation</Text>
+              }
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <BottomNav />
     </View>
@@ -598,6 +693,20 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.error,
+  },
+  arrivedBtn: {
+    backgroundColor: Colors.success,
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+  },
+  arrivedBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
   },
   completeBtn: {
     backgroundColor: Colors.gold,
@@ -782,5 +891,89 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
   },
-  disabled: { opacity: 0.7 },
+  startJobBtn: {
+    backgroundColor: Colors.success,
+    borderRadius: 14,
+    paddingVertical: 14,
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+    gap: 8,
+  },
+  startJobBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
+  },
+  modalOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.6)",
+  },
+  modalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 14,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: "center" as const,
+    marginBottom: 4,
+  },
+  modalHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  modalTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
+  modalClose: { padding: 4 },
+  reasonOption: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.navy,
+  },
+  reasonOptionSelected: {
+    borderColor: Colors.gold,
+    backgroundColor: `${Colors.gold}12`,
+  },
+  reasonRadio: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  reasonRadioSelected: { borderColor: Colors.gold },
+  reasonRadioDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: Colors.gold,
+  },
+  reasonOptionText: {
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  reasonOptionTextSelected: {
+    color: Colors.text,
+    fontFamily: "Inter_500Medium",
+  },
 });
+
