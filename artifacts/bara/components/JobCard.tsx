@@ -8,7 +8,7 @@ export interface Job {
   id: number;
   customerId: number;
   driverId?: number | null;
-  jobType: "furniture_transport" | "junk_pickup";
+  jobType: "furniture_transport" | "bulky_delivery" | "junk_pickup";
   status: "pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "disputed";
   pickupAddress?: string | null;
   dropoffAddress?: string | null;
@@ -21,7 +21,10 @@ export interface Job {
   platformFee: number;
   customerPrice?: number | null;
   cancellationFee?: number | null;
+  cancellationReason?: string | null;
   rating?: number | null;
+  disputed?: boolean | null;
+  disputeReason?: string | null;
   paymentStatus: "unpaid" | "paid";
   city: string;
   createdAt: string;
@@ -112,6 +115,26 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
           <Text style={styles.compensationText}>
             Cancellation compensation: {formatSEK(job.cancellationFee)}
           </Text>
+        </View>
+      )}
+
+      {showAcceptButton && job.customer && (job.customer.rating != null || job.customer.totalJobs != null) && (
+        <View style={styles.customerRatingRow}>
+          <Feather name="user" size={11} color={Colors.textMuted} />
+          <Text style={styles.customerRatingText}>Customer</Text>
+          {job.customer.rating != null && (
+            <>
+              <Text style={styles.customerRatingDot}>·</Text>
+              <Feather name="star" size={11} color={Colors.gold} />
+              <Text style={styles.customerRatingText}>{Number(job.customer.rating).toFixed(1)}</Text>
+            </>
+          )}
+          {job.customer.totalJobs != null && (
+            <>
+              <Text style={styles.customerRatingDot}>·</Text>
+              <Text style={styles.customerRatingText}>{job.customer.totalJobs} jobs posted</Text>
+            </>
+          )}
         </View>
       )}
 
@@ -280,5 +303,21 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: "Inter_600SemiBold",
     color: Colors.navy,
+  },
+  customerRatingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingTop: 2,
+    paddingBottom: 2,
+  },
+  customerRatingText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  customerRatingDot: {
+    fontSize: 11,
+    color: Colors.border,
   },
 });
