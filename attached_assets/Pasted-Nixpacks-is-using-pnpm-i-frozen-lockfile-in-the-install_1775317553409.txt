@@ -1,0 +1,141 @@
+Nixpacks is using pnpm i --frozen-lockfile in the install phase, but there's no pnpm-lock.yaml file. The issue is that Nixpacks detects a pnpm workspace and automatically uses --frozen-lockfile, but the lockfile doesn't exist.
+
+I need to create a .nixpacks.toml or .railpack.toml file to override Nixpacks' behavior and use --no-frozen-lockfile. Let me create a PR to add this:
+
+Created pull request
+Perfect! PR #16 created. Now let me trigger a new deployment:
+
+Deployed service
+@workspace/api-server
+6854942f
+Failed
+Searched build logs
+
+Hide result
+No logs found
+Deployment triggered. Let me wait and check the build logs:
+
+Searched build logs
+
+Hide result
+No logs found
+Still starting. Let me check the deployment status:
+
+Listed deployments
+Building. Let me check the build logs:
+
+Searched build logs
+
+Hide result
+17:27:16
+17:27:17
+Using Nixpacks
+17:27:17
+==============
+17:27:17
+[0m
+17:27:17
+╔══════════════════════════════ Nixpacks v1.38.0 ══════════════════════════════╗
+17:27:17
+║ setup │ nodejs_18, pnpm-9_x, openssl ║
+17:27:17
+║──────────────────────────────────────────────────────────────────────────────║
+17:27:17
+║──────────────────────────────────────────────────────────────────────────────║
+17:27:17
+║ build │ npm install -g pnpm@9 && pnpm install --no-frozen-lockfile && ║
+17:27:17
+║ │ cd artifacts/bara && npx expo export --platform web --output- ║
+...and 30 more logs
+Excellent! The build is progressing and I can see the install phase is now using pnpm install --no-frozen-lockfile (no more frozen-lockfile error). Let me wait for the build to complete:
+
+Searched build logs
+
+Hide result
+17:27:16
+17:27:17
+[35m[Region: us-west1][0m
+17:27:17
+[35m==============
+17:27:17
+Using Nixpacks
+17:27:17
+==============
+17:27:17
+[0m
+17:27:17
+context: 10lm-Aqg8
+17:27:17
+╔══════════════════════════════ Nixpacks v1.38.0 ══════════════════════════════╗
+17:27:17
+║ setup │ nodejs_18, pnpm-9_x, openssl ║
+17:27:17
+║──────────────────────────────────────────────────────────────────────────────║
+...and 40 more logs
+Good! The build is progressing. Let me wait and check again:
+
+Listed deployments
+Still building. Let me check the latest build logs to see progress:
+
+Searched build logs
+
+Hide result
+17:27:16
+17:27:17
+[35m[Region: us-west1][0m
+17:27:17
+[35m==============
+17:27:17
+Using Nixpacks
+17:27:17
+==============
+17:27:17
+[0m
+17:27:17
+context: 10lm-Aqg8
+17:27:17
+╔══════════════════════════════ Nixpacks v1.38.0 ══════════════════════════════╗
+17:27:17
+║ setup │ nodejs_18, pnpm-9_x, openssl ║
+17:27:17
+║──────────────────────────────────────────────────────────────────────────────║
+...and 40 more logs
+The build is still in progress (downloading nixpkgs). Let me wait a bit more and check for errors:
+
+Searched build logs: @level:error
+
+Hide result
+No logs found
+Good! No errors so far. Let me check the deployment status again:
+
+Listed deployments
+Still building. Let me check the latest build logs:
+
+Searched build logs
+
+Hide result
+17:27:16
+17:27:17
+[35m[Region: us-west1][0m
+17:27:17
+[35m==============
+17:27:17
+Using Nixpacks
+17:27:17
+==============
+17:27:17
+[0m
+17:27:17
+context: 10lm-Aqg8
+17:27:17
+╔══════════════════════════════ Nixpacks v1.38.0 ══════════════════════════════╗
+17:27:17
+║ setup │ nodejs_18, pnpm-9_x, openssl ║
+17:27:17
+║──────────────────────────────────────────────────────────────────────────────║
+...and 40 more logs
+The build is still downloading nixpkgs. This is a long process. Let me update your working memory with the current progress and then check back in a moment:
+
+Let me check the deployment status again:
+
+Listed deployments
