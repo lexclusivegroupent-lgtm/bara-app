@@ -1,0 +1,18 @@
+I need three fixes and one new feature added to the Bära app:
+Fix 1 — Logout button not working
+Find the logout button in the Settings screen for both customer and driver. The button exists but is not functioning. Fix the logout handler to: clear the JWT token from storage, clear all user state from the auth context, and navigate the user back to the Landing screen. Make sure it works for both customer and driver roles.
+Fix 2 — Notifications button not working
+Find the notifications bell icon or button in the app. It currently does nothing when tapped. For now implement a simple notifications screen that shows a list of job-related notifications. Add these notification types: “Your job was accepted by a driver”, “Your job has been completed”, “A new job is available in your city” for drivers. If there are no notifications show an empty state with text “No notifications yet”. Wire the notifications button to navigate to this screen.
+Fix 3 — Add dual role support
+This is the most important change. Users should be able to select one of three roles at signup: Customer, Driver, or Both.
+Make these changes:
+In the database users table change the role field to support a new value “both” in addition to “customer” and “driver”.
+On the Register screen change the role selector from two options to three options: Customer, Driver, and Both. When Both is selected show the vehicle description field just like the Driver option does.
+In the bottom navigation bar add role-aware switching. For users with role “both” show a mode toggle button in the header or settings that lets them switch between Customer Mode and Driver Mode. Store the current active mode in the app state.
+When a “both” user is in Customer Mode show them the customer bottom navigation: Home, My Jobs, Settings. When they are in Driver Mode show them the driver bottom navigation: Map, Active Job, Settings.
+Add a prominent mode switcher on the home screen for “both” users — a pill toggle or switch at the top that says “Customer” and “Driver” so they can switch instantly without going to settings.
+On the backend update the job posting endpoint to allow users with role “both” to post jobs. Update the job acceptance endpoint to allow users with role “both” to accept jobs as long as they are not accepting their own job.
+Add a validation: a user with role “both” cannot accept a job they posted themselves. Show an error message if they try.
+Fix 4 — Keep server awake
+The Replit development server keeps going to sleep and disconnecting Expo Go. Configure the server to stay running continuously and confirm the web preview URL stays accessible at all times.
+After all fixes confirm the logout works, notifications screen loads, and the role selector on signup shows all three options. Report back with screenshots if possible.
