@@ -342,6 +342,43 @@ const translations = {
     jobsPosted: "jobs posted",
     whyCancelling: "Why are you cancelling?",
     confirmCancellation: "Confirm Cancellation",
+
+    // Status tracker steps
+    stepJobPosted: "Job Posted",
+    stepDriverAssigned: "Driver Assigned",
+    stepDriverArrived: "Driver Arrived",
+    stepEnRoute: "En Route",
+    stepCompleted: "Completed",
+
+    // Job status page
+    yourDriver: "Your Driver",
+    jobPhotos: "Job Photos",
+    yourPhotos: "Your Photos",
+    photosBefore: "Before Loading",
+    photosAfter: "After Delivery",
+    rateYourDriver: "Rate Your Driver",
+    noFeesLaunch: "No fees, no charges",
+    cancelJobFree: "Cancel Job — Free",
+    chatWithDriver: "Chat with Driver",
+    keepJob: "Keep Job",
+    cancelAndPay: "Cancel & Pay Fee",
+    cancellationFeeTitle: "Cancellation Fee",
+    cancellationFeeRow: "Cancellation fee",
+    driverReceives: "Driver receives",
+    youWontBeCharged: "If the driver cancels or doesn't show up, you won't be charged.",
+    reportIssue: "Report an Issue",
+    disputeReported: "Dispute Reported",
+    disputeReview: "Our team will review this within 24 hours.",
+    jobCancelled: "Job Cancelled",
+    cancelledAfterAccepted: "You cancelled after a driver had accepted this job.",
+    cancellationFeeApplies: "A cancellation fee applies to compensate the driver for their time.",
+
+    // Edit profile (driver-specific)
+    enterFullName: "Please enter your full name.",
+    error: "Error",
+
+    // Map greeting
+    hello: "Hello",
   },
 
   sv: {
@@ -685,6 +722,43 @@ const translations = {
     jobsPosted: "jobb lagda",
     whyCancelling: "Varför avbokar du?",
     confirmCancellation: "Bekräfta avbokning",
+
+    // Status tracker steps
+    stepJobPosted: "Jobb upplagt",
+    stepDriverAssigned: "Förare tilldelad",
+    stepDriverArrived: "Förare anlänt",
+    stepEnRoute: "Under transport",
+    stepCompleted: "Slutfört",
+
+    // Job status page
+    yourDriver: "Din förare",
+    jobPhotos: "Jobbfoton",
+    yourPhotos: "Dina foton",
+    photosBefore: "Före lastning",
+    photosAfter: "Efter leverans",
+    rateYourDriver: "Betygsätt din förare",
+    noFeesLaunch: "Inga avgifter, inga kostnader",
+    cancelJobFree: "Avboka jobb — Gratis",
+    chatWithDriver: "Chatta med förare",
+    keepJob: "Behåll jobb",
+    cancelAndPay: "Avboka & betala avgift",
+    cancellationFeeTitle: "Avbokningsavgift",
+    cancellationFeeRow: "Avbokningsavgift",
+    driverReceives: "Föraren tar emot",
+    youWontBeCharged: "Om föraren avbokar eller inte dyker upp debiteras du inte.",
+    reportIssue: "Rapportera ett problem",
+    disputeReported: "Tvist rapporterad",
+    disputeReview: "Vårt team granskar detta inom 24 timmar.",
+    jobCancelled: "Jobb avbokat",
+    cancelledAfterAccepted: "Du avbokade efter att en förare hade accepterat jobbet.",
+    cancellationFeeApplies: "En avbokningsavgift tas ut för att ersätta föraren för deras tid.",
+
+    // Edit profile (driver-specific)
+    enterFullName: "Ange ditt fullständiga namn.",
+    error: "Fel",
+
+    // Map greeting
+    hello: "Hej",
   },
 } as const;
 
