@@ -1,0 +1,14 @@
+Add photo documentation functionality to the Bära app. This is required for both drivers and customers to document items before and after transport for safety and dispute resolution purposes.
+Feature 1 — Driver photo capture on Active Job screen
+On the DriverJobActive screen add two photo capture sections:
+First section appears when the driver arrives at pickup — label it “Document items at pickup”. Add a button that says “Take Photo at Pickup” with a camera icon. Tapping it opens a modal with two options: “Take Photo” which opens the device camera, and “Choose from Gallery” which opens the photo gallery. After a photo is taken or selected show a thumbnail preview of the photo in the screen. Allow up to 3 photos at pickup. The driver cannot mark the job complete without at least one pickup photo.
+Second section appears after pickup when heading to dropoff — label it “Document delivery at dropoff”. Add a button that says “Take Photo at Dropoff”. Same camera and gallery options. Allow up to 3 photos at dropoff. The driver cannot mark the job complete without at least one dropoff photo.
+Feature 2 — Customer photo upload on job posting
+On both PostFurnitureJob and PostJunkJob screens add an optional photo section labeled “Add photos of your items (optional)”. Add a button that says “Add Photos” with a camera icon. Tapping it opens a modal with two options: Take Photo or Choose from Gallery. Allow up to 5 photos. Show thumbnail previews of selected photos with an X button to remove each one. These photos help drivers understand what they are carrying before accepting the job.
+Feature 3 — Photo storage
+Use expo-image-picker for camera and gallery access. Convert photos to base64 or upload them to a storage solution. Save photo URLs or base64 strings to the job record in the database. Add photo fields to the jobs table: customer_photos (array), pickup_photos (array), dropoff_photos (array).
+Feature 4 — Photo viewing on Job Status screen
+On the JobStatus screen for customers add a Photos section that shows any photos attached to the job. Show customer uploaded photos, pickup photos taken by driver, and dropoff photos taken by driver in separate labeled sections. Each photo should be tappable to view full screen.
+Feature 5 — Permissions handling
+Request camera permission and photo library permission properly on both iOS and Android. Show a friendly explanation message before requesting permissions explaining why the app needs camera access. If permission is denied show a helpful message explaining how to enable it in device settings.
+After implementing confirm that a driver can take photos at pickup and dropoff and that those photos appear on the customer job status screen. Report back with a summary of all changes made.
