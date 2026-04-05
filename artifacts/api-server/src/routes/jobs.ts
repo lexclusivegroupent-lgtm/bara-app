@@ -47,6 +47,7 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     createdAt: job.createdAt.toISOString(),
     acceptedAt: job.acceptedAt?.toISOString() || null,
     arrivedAt: job.arrivedAt?.toISOString() || null,
+    startedAt: job.startedAt?.toISOString() || null,
     completedAt: job.completedAt?.toISOString() || null,
     disputedAt: job.disputedAt?.toISOString() || null,
     cancelledByDriverAt: job.cancelledByDriverAt?.toISOString() || null,
@@ -295,6 +296,43 @@ router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res)
     ).catch(() => {});
   } catch (err) {
     req.log?.error(err, "Arrived job error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:id/start", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
+    if (existing.driverId !== req.userId) {
+      res.status(403).json({ error: "Only the assigned driver can start transport" });
+      return;
+    }
+    if (existing.status !== "arrived") {
+      res.status(400).json({ error: "Job must be in arrived state to start transport" });
+      return;
+    }
+
+    await db.update(jobsTable).set({
+      status: "in_progress",
+      startedAt: new Date(),
+    }).where(eq(jobsTable.id, jobId));
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+
+    const [startCustomer] = await db.select({ pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+    sendPushToUser(
+      startCustomer?.pushToken,
+      "Din förare är på väg! 🚚",
+      "Din förare är på väg! Dina saker är nu på väg till leveransadressen.",
+      { screen: "customer-job", jobId }
+    ).catch(() => {});
+  } catch (err) {
+    req.log?.error(err, "Start transport error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
