@@ -1,0 +1,60 @@
+My GitHub Actions static build is now working, but in Railway I still see warning/error badges on some services even though they show as Online.
+
+Context:
+- App: Bära
+- Stack: React Native + Expo frontend, Node.js/Express backend, PostgreSQL
+- Railway services visible:
+  - @workspace/api-server
+  - @workspace/db
+  - @workspace/bara (app.baraapp.se)
+  - Postgres
+- In Railway, the services are online, but I still see yellow warning badges / failed history and I want to understand exactly why.
+
+What I need you to do:
+1. Audit the Railway setup for all services:
+   - api-server
+   - bara
+   - db / postgres
+2. Determine why Railway still shows warnings/errors even though services are online.
+3. Check for:
+   - failed historical deployments
+   - unhealthy health checks
+   - missing or incorrect environment variables
+   - wrong start commands
+   - old failed deploys still visible in history
+   - services depending on the wrong service
+   - exposed/unexposed port issues
+   - build warnings that do not actually break runtime
+4. Read the current deploy configuration files if they exist:
+   - railway.toml / railway.json
+   - package.json scripts
+   - any server entry files
+5. Verify each service has the correct:
+   - root directory
+   - build command
+   - start command
+   - health check path
+   - environment variables
+6. For the app service, verify that:
+   - it is serving the correct static build
+   - app.baraapp.se is pointing to the correct service
+   - no old Metro-related config is still present
+7. For the API service, verify that:
+   - it binds to Railway’s assigned PORT
+   - it has a working /health endpoint
+   - database connection is healthy
+8. For the database, verify that:
+   - app and API are using the right DATABASE_URL
+   - no stale internal connection settings remain
+
+Output I want:
+- a short diagnosis of what the warning badges actually mean
+- whether they are harmless historical failures or current real issues
+- the exact files/configs that need updating
+- minimal fixes only; do not rebuild the app
+- if a fix is needed, apply only the smallest safe change
+
+Important:
+- Do not redesign or refactor the app
+- Focus only on Railway deployment health, warnings, logs, and configuration
+- Start by auditing first before making any changes
