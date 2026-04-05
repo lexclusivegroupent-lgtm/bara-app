@@ -48,7 +48,7 @@
       [
         "expo-router",
         {
-          "origin": "https://baraapp.se"
+          "origin": "https://app.baraapp.se"
         }
       ],
       "expo-font",

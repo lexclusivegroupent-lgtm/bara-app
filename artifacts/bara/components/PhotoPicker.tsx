@@ -35,13 +35,11 @@ async function uploadPhoto(base64DataUri: string): Promise<string> {
     },
     body: JSON.stringify({ data: base64DataUri }),
   });
-
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
     throw new Error((err as any)?.error || "Upload failed. Please try again.");
   }
-
-  const result = await response.json() as { url: string };
+  const result = (await response.json()) as { url: string };
   return result.url;
 }
 

@@ -313,32 +313,7 @@ const translations = {
     accountDeleted: "Account Deleted",
     accountDeletedMsg: "Your account has been deleted. We're sorry to see you go.",
 
-    // Job status — in progress
-    statusInProgress: "In Progress",
-    statusArrived: "Driver Arrived",
-    statusCancelledByDriver: "Cancelled by Driver",
-
-    // Cancellation reason
-    whyCancelling: "Why are you cancelling?",
-    cancelReasonChangedMind: "Changed my mind",
-    cancelReasonFoundSolution: "Found another solution",
-    cancelReasonDriverLate: "Driver was late",
-    cancelReasonCannotMakeIt: "Cannot make it",
-    cancelReasonVehicleIssue: "Vehicle issue",
-    cancelReasonJobTooLarge: "Job too large",
-    cancelReasonOther: "Other",
-    confirmCancellation: "Confirm Cancellation",
-
-    // Start job
-    startJob: "Start Job",
-    jobStarted: "Job started",
-    jobStartedBody: "Your driver has started the job and is on the move.",
-
-    // Driver rating display
-    jobsPosted: "jobs posted",
-    driverRating: "Driver rating",
-
-    // Active job screen
+    // Driver active job
     arrivedAtPickup: "I've Arrived at Pickup",
     routeToPickup: "Route to pickup",
     jobDetails: "Job Details",
@@ -364,6 +339,9 @@ const translations = {
     yourCompensation: "Your compensation",
     findAnotherJob: "Find Another Job",
     youEarn: "You earn",
+    jobsPosted: "jobs posted",
+    whyCancelling: "Why are you cancelling?",
+    confirmCancellation: "Confirm Cancellation",
   },
 
   sv: {
@@ -678,57 +656,35 @@ const translations = {
     accountDeleted: "Konto raderat",
     accountDeletedMsg: "Ditt konto har raderats. Vi är ledsna att se dig gå.",
 
-    // Job status — in progress
-    statusInProgress: "Pågår",
-    statusArrived: "Föraren har anlänt",
-    statusCancelledByDriver: "Avbokat av förare",
-
-    // Cancellation reason
-    whyCancelling: "Varför avbokar du?",
-    cancelReasonChangedMind: "Ändrade mig",
-    cancelReasonFoundSolution: "Hittade en annan lösning",
-    cancelReasonDriverLate: "Föraren var sen",
-    cancelReasonCannotMakeIt: "Kan inte komma",
-    cancelReasonVehicleIssue: "Fordonsfel",
-    cancelReasonJobTooLarge: "Jobbet är för stort",
-    cancelReasonOther: "Annat",
-    confirmCancellation: "Bekräfta avbokning",
-
-    // Start job
-    startJob: "Starta jobbet",
-    jobStarted: "Jobbet startat",
-    jobStartedBody: "Din förare har startat jobbet och är på väg.",
-
-    // Driver rating display
-    jobsPosted: "jobb publicerade",
-    driverRating: "Förarens betyg",
-
-    // Active job screen
-    arrivedAtPickup: "Jag har anlänt till hämtning",
-    routeToPickup: "Rutt till hämtning",
+    // Driver active job
+    arrivedAtPickup: "Jag har anlänt till upphämtning",
+    routeToPickup: "Navigera till upphämtning",
     jobDetails: "Jobbdetaljer",
-    pickup: "Hämtning",
-    dropoff: "Lämning",
+    pickup: "Upphämtning",
+    dropoff: "Avlämning",
     address: "Adress",
     items: "Föremål",
     time: "Tid",
-    beforeLoading: "Innan lastning (krävs)",
-    afterDelivery: "Efter leverans (krävs)",
-    photoHintBefore: "Ta minst 1 foto av föremålen innan lastning.",
-    photoHintAfter: "Ta minst 1 foto efter leveransen för att bekräfta slutförande.",
+    beforeLoading: "Innan lastning (Obligatoriskt)",
+    afterDelivery: "Efter leverans (Obligatoriskt)",
+    photoHintBefore: "Ta minst 1 foto på föremålen innan lastning.",
+    photoHintAfter: "Ta minst 1 foto efter leverans för att bekräfta slutförandet.",
     requiredPhoto: "Krävs för att slutföra jobbet",
     customerPhotos: "Kundens foton",
-    customerPhotosAttached: "Kundfoton bifogade",
-    jobValue: "Jobbets värde",
+    customerPhotosAttached: "Kundens foton bifogade",
+    jobValue: "Jobbvärde",
     yourEarnings: "Dina intäkter",
     uploadingPhotos: "Laddar upp foton...",
-    addPhotosHint: "Lägg till foton innan och efter för att slutföra jobbet",
+    addPhotosHint: "Lägg till foton före & efter för att slutföra jobbet",
     customerCancelled: "Kund avbokade",
-    customerCancelledMsg: "Kunden avbokade jobbet efter att du accepterat det.",
+    customerCancelledMsg: "Kunden avbokade jobbet efter att du hade accepterat det.",
     youreProtected: "Du är skyddad",
     yourCompensation: "Din ersättning",
     findAnotherJob: "Hitta ett annat jobb",
     youEarn: "Du tjänar",
+    jobsPosted: "jobb lagda",
+    whyCancelling: "Varför avbokar du?",
+    confirmCancellation: "Bekräfta avbokning",
   },
 } as const;
 

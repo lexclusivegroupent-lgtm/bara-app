@@ -7,7 +7,7 @@ function getBaseUrl(): string {
   if (typeof window !== "undefined" && window.location?.origin) {
     return window.location.origin;
   }
-  return `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "baraapp.se"}`;
+  return `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "app.baraapp.se"}`;
 }
 const BASE_URL = getBaseUrl();
 setBaseUrl(BASE_URL);
