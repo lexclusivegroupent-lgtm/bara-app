@@ -169,28 +169,27 @@ export default function DriverActiveJobScreen() {
     return (
       <View style={[styles.container, { backgroundColor: Colors.navy }]}>
         <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-          <Text style={styles.headerTitle}>Job Cancelled</Text>
+          <Text style={styles.headerTitle}>{t("jobCancelled")}</Text>
         </View>
         <View style={styles.loadingState}>
           <View style={styles.cancelledIcon}>
             <Feather name="x-circle" size={36} color={Colors.error} />
           </View>
-          <Text style={styles.cancelledTitle}>Customer Cancelled</Text>
+          <Text style={styles.cancelledTitle}>{t("customerCancelled")}</Text>
           <Text style={styles.cancelledSubtext}>
-            The customer cancelled this job after you had accepted it.
+            {t("customerCancelledMsg")}
           </Text>
           <View style={styles.compensationCard}>
             <View style={styles.compensationCardHeader}>
               <Feather name="shield" size={16} color={Colors.success} />
-              <Text style={styles.compensationCardTitle}>You're Protected</Text>
+              <Text style={styles.compensationCardTitle}>{t("youreProtected")}</Text>
             </View>
             <Text style={styles.compensationCardBody}>
-              A cancellation fee of{" "}
-              <Text style={{ fontFamily: "Inter_700Bold", color: Colors.gold }}>{formatSEK(fee)}</Text>{" "}
-              has been charged to the customer as compensation for your time.
+              {t("yourCompensation")}{": "}
+              <Text style={{ fontFamily: "Inter_700Bold", color: Colors.gold }}>{formatSEK(fee)}</Text>
             </Text>
             <View style={styles.compensationRow}>
-              <Text style={styles.compensationLabel}>Your compensation</Text>
+              <Text style={styles.compensationLabel}>{t("yourCompensation")}</Text>
               <Text style={styles.compensationAmount}>{formatSEK(fee)}</Text>
             </View>
           </View>
@@ -200,7 +199,7 @@ export default function DriverActiveJobScreen() {
             activeOpacity={0.85}
           >
             <Feather name="map" size={15} color={Colors.navy} />
-            <Text style={styles.backToMapText}>Find Another Job</Text>
+            <Text style={styles.backToMapText}>{t("findAnotherJob")}</Text>
           </TouchableOpacity>
         </View>
         <BottomNav />
@@ -214,7 +213,7 @@ export default function DriverActiveJobScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <Text style={styles.headerTitle}>Active Job</Text>
+        <Text style={styles.headerTitle}>{t("activeJob")}</Text>
         <View style={styles.jobTypeBadge}>
           <MaterialCommunityIcons
             name={isFurniture ? "sofa" : "delete-sweep"}
@@ -222,66 +221,64 @@ export default function DriverActiveJobScreen() {
             color={Colors.gold}
           />
           <Text style={styles.jobTypeBadgeText}>
-            {isFurniture ? "Furniture" : "Junk Pickup"}
+            {isFurniture ? t("furnitureTransport") : t("junkTrash")}
           </Text>
         </View>
       </View>
 
       <View style={styles.mapPlaceholder}>
         <MaterialCommunityIcons name="map-marker-path" size={28} color={Colors.textMuted} />
-        <Text style={styles.mapText}>Route to pickup</Text>
+        <Text style={styles.mapText}>{t("routeToPickup")}</Text>
         <TouchableOpacity style={styles.navigationBtn} activeOpacity={0.85} onPress={handleNavigate}>
           <Feather name="navigation" size={14} color={Colors.navy} />
-          <Text style={styles.navigationBtnText}>Navigate</Text>
+          <Text style={styles.navigationBtnText}>{t("navigateTo")}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Customer</Text>
+          <Text style={styles.cardTitle}>{t("customer")}</Text>
           <View style={styles.customerRow}>
             <View style={styles.customerAvatar}>
               <Feather name="user" size={18} color={Colors.gold} />
             </View>
-            <Text style={styles.customerName}>{job.customer?.fullName || "Customer"}</Text>
+            <Text style={styles.customerName}>{job.customer?.fullName || t("customer")}</Text>
           </View>
           {job.photosCustomer && job.photosCustomer.length > 0 && (
             <View style={styles.customerPhotosRow}>
               <Feather name="image" size={12} color={Colors.textMuted} />
-              <Text style={styles.customerPhotosLabel}>Customer photos attached</Text>
+              <Text style={styles.customerPhotosLabel}>{t("customerPhotosAttached")}</Text>
             </View>
           )}
           {job.photosCustomer && job.photosCustomer.length > 0 && (
             <PhotoPicker
               photos={job.photosCustomer}
               editable={false}
-              label="Customer's Photos"
+              label={t("customerPhotos")}
             />
           )}
         </View>
 
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Job Details</Text>
+          <Text style={styles.cardTitle}>{t("jobDetails")}</Text>
           {isFurniture ? (
             <>
-              <DetailRow icon="map-pin" label="Pickup" value={job.pickupAddress || "N/A"} />
-              <DetailRow icon="flag" label="Drop-off" value={job.dropoffAddress || "N/A"} />
+              <DetailRow icon="map-pin" label={t("pickup")} value={job.pickupAddress || "N/A"} />
+              <DetailRow icon="flag" label={t("dropoff")} value={job.dropoffAddress || "N/A"} />
             </>
           ) : (
-            <DetailRow icon="home" label="Address" value={job.homeAddress || "N/A"} />
+            <DetailRow icon="home" label={t("address")} value={job.homeAddress || "N/A"} />
           )}
-          <DetailRow icon="package" label="Items" value={job.itemDescription} />
-          <DetailRow icon="clock" label="Time" value={formatDate(job.preferredTime)} />
+          <DetailRow icon="package" label={t("items")} value={job.itemDescription} />
+          <DetailRow icon="clock" label={t("time")} value={formatDate(job.preferredTime)} />
         </View>
 
         <View style={styles.card}>
           <View style={styles.photoSectionHeader}>
             <Feather name="camera" size={14} color={Colors.gold} />
-            <Text style={styles.cardTitle}>Before Loading (Required)</Text>
+            <Text style={styles.cardTitle}>{t("beforeLoading")}</Text>
           </View>
-          <Text style={styles.photoHint}>
-            Take at least 1 photo of the items before loading into the vehicle.
-          </Text>
+          <Text style={styles.photoHint}>{t("photoHintBefore")}</Text>
           <PhotoPicker
             photos={pickupPhotos}
             onChange={setPickupPhotos}
@@ -291,7 +288,7 @@ export default function DriverActiveJobScreen() {
           {pickupPhotos.length === 0 && (
             <View style={styles.photoRequired}>
               <Feather name="alert-circle" size={12} color={Colors.orange} />
-              <Text style={styles.photoRequiredText}>Required to complete job</Text>
+              <Text style={styles.photoRequiredText}>{t("requiredPhoto")}</Text>
             </View>
           )}
         </View>
@@ -299,11 +296,9 @@ export default function DriverActiveJobScreen() {
         <View style={styles.card}>
           <View style={styles.photoSectionHeader}>
             <Feather name="camera" size={14} color={Colors.gold} />
-            <Text style={styles.cardTitle}>After Delivery (Required)</Text>
+            <Text style={styles.cardTitle}>{t("afterDelivery")}</Text>
           </View>
-          <Text style={styles.photoHint}>
-            Take at least 1 photo after delivery to confirm completion.
-          </Text>
+          <Text style={styles.photoHint}>{t("photoHintAfter")}</Text>
           <PhotoPicker
             photos={dropoffPhotos}
             onChange={setDropoffPhotos}
@@ -313,7 +308,7 @@ export default function DriverActiveJobScreen() {
           {dropoffPhotos.length === 0 && (
             <View style={styles.photoRequired}>
               <Feather name="alert-circle" size={12} color={Colors.orange} />
-              <Text style={styles.photoRequiredText}>Required to complete job</Text>
+              <Text style={styles.photoRequiredText}>{t("requiredPhoto")}</Text>
             </View>
           )}
         </View>
@@ -321,12 +316,12 @@ export default function DriverActiveJobScreen() {
         <View style={styles.earningsCard}>
           <View style={styles.earningsRow}>
             <View>
-              <Text style={styles.earningsLabel}>Job Value</Text>
+              <Text style={styles.earningsLabel}>{t("jobValue")}</Text>
               <Text style={styles.earningsTotal}>{formatSEK(job.priceTotal)}</Text>
             </View>
             <View style={styles.earningsDivider} />
             <View style={styles.earningsRight}>
-              <Text style={styles.earningsLabel}>Your Earnings</Text>
+              <Text style={styles.earningsLabel}>{t("yourEarnings")}</Text>
               <Text style={styles.earningsAmount}>{formatSEK(job.driverPayout)}</Text>
             </View>
           </View>
@@ -354,23 +349,21 @@ export default function DriverActiveJobScreen() {
             <View style={styles.completingRow}>
               <ActivityIndicator color={Colors.navy} />
               <Text style={styles.completeBtnText}>
-                {uploadingPhotos ? "Uploading photos..." : "Completing..."}
+                {uploadingPhotos ? t("uploadingPhotos") : t("completing")}
               </Text>
             </View>
           ) : (
             <>
               <Feather name="check-circle" size={18} color={canComplete ? Colors.navy : Colors.textMuted} />
               <Text style={[styles.completeBtnText, !canComplete && styles.completeBtnTextDisabled]}>
-                Complete Job
+                {t("completeJob")}
               </Text>
             </>
           )}
         </TouchableOpacity>
 
         {!canComplete && (
-          <Text style={styles.completeHint}>
-            Add before & after photos to complete this job
-          </Text>
+          <Text style={styles.completeHint}>{t("addPhotosHint")}</Text>
         )}
 
         {/* Chat with customer */}
