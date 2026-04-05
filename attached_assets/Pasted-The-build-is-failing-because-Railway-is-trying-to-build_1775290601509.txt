@@ -1,0 +1,22 @@
+The build is failing because Railway is trying to build the frontend separately as its own service. We need to stop that and let the API server handle everything.
+Tell Replit this:
+
+My Railway build is failing because there are two separate services trying to build — @workspace/bara (frontend) and @workspace/api-server (backend). The frontend should NOT be a separate Railway service. It should be built as part of the API server build and served statically from Express.
+Please fix this:
+Fix 1 — Disable the @workspace/bara Railway service
+The bara frontend should not deploy as its own Railway service. Check if there is a separate railway.toml or package.json in artifacts/bara that is causing Railway to treat it as a standalone service. If so remove or rename it so Railway only deploys the api-server service.
+Fix 2 — Fix the railway.toml build command
+The railway.toml in the root should build both frontend and backend in one command under the api-server service only. Update it to:
+[build]
+builder = "NIXPACKS"
+buildCommand = "cd artifacts/bara && npx expo export --platform web --output-dir ../api-server/static-build && cd ../api-server && npm install && npm run build"
+
+[deploy]
+startCommand = "node artifacts/api-server/dist/index.js"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+Fix 3 — Disable the GitHub Actions workflow
+There is a GitHub Actions workflow called "Build Bara Static Bundle" that is failing. Go to .github/workflows/ and either delete this workflow file or disable it by adding a condition that prevents it from running. We do not need GitHub Actions — Railway handles the build directly.
+Fix 4 — Verify Express serves the frontend
+Confirm that in artifacts/api-server/src/app.ts the Express server is configured to serve static files from the static-build directory at the root URL with a catch-all fallback to index.html for client-side routing.
+After making all changes push to GitHub and confirm Railway only shows one deploying service — @workspace/api-server. Report back what the Railway build logs show.
