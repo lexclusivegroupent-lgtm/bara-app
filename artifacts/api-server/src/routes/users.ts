@@ -64,6 +64,20 @@ router.delete("/account", authenticate, async (req: AuthenticatedRequest, res) =
     const userId = req.userId!;
 
     // Check for any active jobs (can't delete mid-job)
+    const activeJobs = await db.select({ id: jobsTable.id })
+      .from(jobsTable)
+      .where(
+        or(
+          eq(jobsTable.customerId, userId),
+          eq(jobsTable.driverId, userId)
+        )
+      );
+
+    const hasActive = activeJobs.some((j) => {
+      // We'd need status, so let's just do the check inline
+      return false; // placeholder — we check below
+    });
+
     const activeJobsWithStatus = await db.select({ id: jobsTable.id, status: jobsTable.status })
       .from(jobsTable)
       .where(
