@@ -17,6 +17,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
+import { StarRating } from "@/components/StarRating";
 import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { BottomNav } from "@/components/BottomNav";
@@ -92,6 +93,15 @@ export default function DriverMapScreen() {
         <View>
           <Text style={styles.greeting}>{t("hello")}, {firstName}</Text>
           <Text style={styles.city}>{user?.city}</Text>
+          <View style={{ marginTop: 4 }}>
+            <StarRating
+              rating={user?.rating ? Number(user.rating) : null}
+              totalJobs={user?.totalJobs}
+              size={13}
+              showNew
+              showCount
+            />
+          </View>
         </View>
         <View style={styles.headerRight}>
           {user?.role === "both" && (
