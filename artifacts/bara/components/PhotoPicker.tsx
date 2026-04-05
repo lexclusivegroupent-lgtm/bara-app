@@ -14,6 +14,8 @@ import {
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
+import { BASE_URL } from "@/constants/config";
+import { getAuthToken } from "@workspace/api-client-react";
 
 interface Props {
   photos: string[];
@@ -23,30 +25,24 @@ interface Props {
   label?: string;
 }
 
-async function uploadToCloudinary(base64DataUri: string): Promise<string> {
-  const cloudName = process.env.EXPO_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const uploadPreset = process.env.EXPO_PUBLIC_CLOUDINARY_UPLOAD_PRESET;
-
-  if (!cloudName || !uploadPreset) {
-    throw new Error("Photo upload is not configured. Contact support.");
-  }
-
-  const formData = new FormData();
-  formData.append("file", base64DataUri);
-  formData.append("upload_preset", uploadPreset);
-
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
-    { method: "POST", body: formData }
-  );
+async function uploadPhoto(base64DataUri: string): Promise<string> {
+  const token = getAuthToken();
+  const response = await fetch(`${BASE_URL}/api/upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ data: base64DataUri }),
+  });
 
   if (!response.ok) {
     const err = await response.json().catch(() => ({}));
-    throw new Error(err?.error?.message || "Upload failed. Please try again.");
+    throw new Error((err as any)?.error || "Upload failed. Please try again.");
   }
 
-  const data = await response.json();
-  return data.secure_url as string;
+  const result = await response.json() as { url: string };
+  return result.url;
 }
 
 async function requestCameraPermission(): Promise<boolean> {
@@ -87,7 +83,7 @@ export function PhotoPicker({ photos, onChange, maxPhotos = 3, editable = true, 
     setPicking(true);
     try {
       const dataUri = `data:image/jpeg;base64,${base64}`;
-      const url = await uploadToCloudinary(dataUri);
+      const url = await uploadPhoto(dataUri);
       onChange?.([...photos, url]);
     } catch (e: any) {
       setUploadError(e?.message || "Photo upload failed. Please try again.");

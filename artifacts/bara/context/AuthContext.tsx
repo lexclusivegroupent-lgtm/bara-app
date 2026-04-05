@@ -3,7 +3,13 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { setBaseUrl, setAuthTokenGetter } from "@workspace/api-client-react";
 import { registerForPushNotificationsAsync } from "@/utils/pushSetup";
 
-const BASE_URL = `https://${process.env.EXPO_PUBLIC_DOMAIN}`;
+function getBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "baraapp.se"}`;
+}
+const BASE_URL = getBaseUrl();
 setBaseUrl(BASE_URL);
 
 export interface User {

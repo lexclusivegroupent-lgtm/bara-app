@@ -9,6 +9,7 @@ import placesRouter from "./places";
 import addressesRouter from "./addresses";
 import promosRouter from "./promos";
 import supportRouter from "./support";
+import uploadRouter from "./upload";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use("/places", placesRouter);
 router.use("/addresses", addressesRouter);
 router.use("/promos", promosRouter);
 router.use("/support", supportRouter);
+router.use("/upload", uploadRouter);
 
 export default router;
