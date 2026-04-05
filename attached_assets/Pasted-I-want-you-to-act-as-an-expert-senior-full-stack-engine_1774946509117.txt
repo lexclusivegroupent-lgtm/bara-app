@@ -1,0 +1,144 @@
+I want you to act as an expert senior full-stack engineer and product-minded Replit Agent.
+
+Your job is to improve my existing app, Bära, so it is:
+1. more stable,
+2. more efficient,
+3. more presentable for ALMI / Venture Cup in Sweden,
+4. safer and more credible for launch,
+without rebuilding it from scratch.
+
+APP CONTEXT
+- App name: Bära
+- Market: Sweden
+- Core services ONLY:
+  1. Furniture transport
+  2. Bulky item pickup/delivery
+  3. Junk and trash pickup
+- Stack: React Native + Expo frontend, Node.js/Express backend, PostgreSQL
+- Deployment: Railway
+- Goal: make the app grant-ready, demo-ready, and operationally stronger
+
+WORKING RULES
+- Do NOT rebuild the app
+- Do NOT redesign everything
+- Keep the current app structure unless a change is necessary
+- Make small, high-impact, production-minded improvements
+- Work in phases
+- After each phase, stop and summarize what changed
+- Use checkpoints
+- Audit first before making changes
+- Prioritize trust, stability, usability, and demo quality over adding flashy new features
+
+FIRST TASK: AUDIT
+Before changing code, audit the current project and give me:
+1. What is already strong
+2. What is broken or fragile
+3. What is missing for a strong demo to ALMI / Venture Cup
+4. What is missing for launch credibility
+5. A prioritized plan with:
+   - Quick wins
+   - Medium changes
+   - Later-stage items
+
+THEN IMPLEMENT ONLY THE QUICK WINS FIRST.
+
+QUICK WINS TO PRIORITIZE
+I want you to focus on the highest-value improvements first:
+
+1. AUTH / FORGOT PASSWORD
+Implement a proper Forgot Password flow:
+- “Forgot Password?” link on login screen
+- email input screen
+- backend endpoint to request password reset
+- secure, expiring reset token
+- reset password screen
+- validation for strong new password
+- success and error states
+- invalidate existing sessions/tokens after password reset if my auth setup supports it
+- document required env vars if email sending is used
+If email sending is not fully configured yet, still build the full flow and add a clear development-safe fallback or placeholder so the demo works.
+
+2. DEMO / PRESENTATION READINESS
+Make the app easier to present to ALMI / Venture Cup:
+- ensure the 3 service categories are clearly visible:
+  - furniture transport
+  - bulky item delivery
+  - junk pickup
+- improve empty states so the app does not look unfinished
+- add demo-friendly seed/sample data mode if useful
+- improve error states so failed API calls do not look broken during a demo
+- make sure navigation and key screens feel polished enough for a founder demo
+
+3. TRUST / SAFETY BASICS
+Add visible signs that the app is serious and launch-minded:
+- job lifecycle states:
+  - created
+  - accepted
+  - arrived
+  - picked_up
+  - delivered
+  - cancelled
+  - disputed
+- cancellation / no-show tracking for drivers
+- dispute flag flow
+- prohibited items text in job creation flow
+- make sure pickup and dropoff photo proof are consistently enforced
+
+4. LEGAL / ACCOUNT BASICS
+Add minimum credibility/legal/account features:
+- Terms of Service screen
+- Privacy Policy screen
+- Driver Terms screen
+- consent checkboxes where needed
+- account settings placeholders for:
+  - request account deletion
+  - request data export
+
+5. FUNDING-READY METRICS
+Add simple reporting or demo metrics so I can show traction potential:
+- total jobs posted
+- completed jobs
+- cancelled jobs
+- disputed jobs
+- active drivers
+- average completion time
+This can be a basic admin view, demo dashboard, or backend metrics endpoints.
+
+6. COST / ARCHITECTURE CLEANUP
+Audit obvious cost/risk issues:
+- check Google Maps usage and identify where ETA can be replaced later with a cheaper alternative
+- do not do a huge rewrite yet unless absolutely necessary
+- identify only the highest-impact cost optimizations
+- make sure Railway deployment remains stable
+
+BANKID / VERIFICATION
+Do NOT build live BankID right now.
+Instead:
+- prepare the codebase for future verification
+- add clean placeholders/fields if needed:
+  - verification_status
+  - verified_driver
+  - driver_license_status
+- add a visible roadmap-friendly placeholder if appropriate
+This is for future funding/use after business structure is ready.
+
+TECHNICAL EXPECTATIONS
+- Reuse existing libraries where possible
+- Keep changes simple and maintainable
+- Add migrations only if needed
+- Update env.example
+- Update README for new auth/reset-password requirements
+- Use secure defaults for password reset and auth handling
+- Avoid fragile hacks
+
+DELIVERABLES
+After implementing quick wins, give me:
+1. What you changed
+2. What still needs third-party setup
+3. What is now strong enough to show ALMI / Venture Cup
+4. What should be the next prompt after this one
+
+IMPORTANT
+Start with the audit and plan first.
+Then implement ONLY the quick wins first.
+Then stop for review.
