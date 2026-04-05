@@ -9,9 +9,10 @@ import {
   Platform,
   KeyboardAvoidingView,
   ScrollView,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
-import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
+import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useAuth } from "@/context/AuthContext";
@@ -68,9 +69,11 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.header}>
-            <View style={styles.logoSmall}>
-              <MaterialCommunityIcons name="truck-delivery" size={28} color={Colors.gold} />
-            </View>
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logoSmall}
+              resizeMode="contain"
+            />
             <Text style={styles.title}>{t("welcomeBack")}</Text>
             <Text style={styles.subtitle}>{t("loginSubtitle")}</Text>
           </View>
@@ -166,15 +169,10 @@ const styles = StyleSheet.create({
     marginBottom: 36,
   },
   logoSmall: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    backgroundColor: Colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 72,
+    height: 72,
+    borderRadius: 18,
     marginBottom: 20,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   title: {
     fontSize: 28,

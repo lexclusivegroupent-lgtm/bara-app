@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { router } from "expo-router";
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
@@ -88,9 +89,11 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <View style={styles.header}>
-          <View style={styles.logoSmall}>
-            <MaterialCommunityIcons name="truck-delivery" size={28} color={Colors.gold} />
-          </View>
+          <Image
+            source={require("../assets/images/logo.png")}
+            style={styles.logoSmall}
+            resizeMode="contain"
+          />
           <Text style={styles.title}>{t("createAccount")}</Text>
           <Text style={styles.subtitle}>{t("joinBara")}</Text>
         </View>
@@ -243,15 +246,10 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, justifyContent: "center", marginBottom: 20 },
   header: { marginBottom: 28 },
   logoSmall: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: Colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
+    width: 72,
+    height: 72,
+    borderRadius: 18,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
   title: { fontSize: 26, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 4 },
   subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted },
