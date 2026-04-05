@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Bära"
+version = "1.0.0"
+id = "artifacts/bara"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 22149
+
+[services.development]
+run = "pnpm --filter @workspace/bara run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/bara", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/bara", "run", "serve" ]
+
+[services.env]
+PORT = "22149"
+BASE_PATH = "/"
