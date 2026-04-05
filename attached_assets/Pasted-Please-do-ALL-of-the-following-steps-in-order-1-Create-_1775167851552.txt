@@ -1,0 +1,95 @@
+Please do ALL of the following steps in order:
+
+1. Create artifacts/bara/assets/images/logo.svg with this content (professional gold truck in a circle):
+
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <circle cx="100" cy="100" r="100" fill="#1B2B4B"/>
+  <g fill="#DAA520">
+    <!-- Truck body -->
+    <rect x="28" y="85" width="88" height="52" rx="5"/>
+    <!-- Truck cab -->
+    <rect x="116" y="98" width="56" height="39" rx="5"/>
+    <!-- Cab window -->
+    <rect x="120" y="103" width="24" height="18" rx="3" fill="#1B2B4B" opacity="0.6"/>
+    <!-- Cargo stripes -->
+    <rect x="44" y="95" width="4" height="32" rx="1" fill="#1B2B4B" opacity="0.3"/>
+    <rect x="56" y="95" width="4" height="32" rx="1" fill="#1B2B4B" opacity="0.3"/>
+    <rect x="68" y="95" width="4" height="32" rx="1" fill="#1B2B4B" opacity="0.3"/>
+    <rect x="80" y="95" width="4" height="32" rx="1" fill="#1B2B4B" opacity="0.3"/>
+    <rect x="92" y="95" width="4" height="32" rx="1" fill="#1B2B4B" opacity="0.3"/>
+    <!-- Connector between cab and body -->
+    <rect x="112" y="95" width="8" height="42" fill="#DAA520"/>
+    <!-- Front bumper/nose -->
+    <rect x="168" y="112" width="8" height="20" rx="3"/>
+    <!-- Exhaust stack -->
+    <rect x="155" y="78" width="6" height="22" rx="2"/>
+    <rect x="152" y="76" width="12" height="5" rx="2"/>
+    <!-- Left rear wheel -->
+    <circle cx="55" cy="140" r="14" fill="#1B2B4B"/>
+    <circle cx="55" cy="140" r="14" fill="none" stroke="#DAA520" stroke-width="4"/>
+    <circle cx="55" cy="140" r="6" fill="#DAA520"/>
+    <!-- Right rear wheel -->
+    <circle cx="90" cy="140" r="14" fill="#1B2B4B"/>
+    <circle cx="90" cy="140" r="14" fill="none" stroke="#DAA520" stroke-width="4"/>
+    <circle cx="90" cy="140" r="6" fill="#DAA520"/>
+    <!-- Front wheel -->
+    <circle cx="148" cy="140" r="14" fill="#1B2B4B"/>
+    <circle cx="148" cy="140" r="14" fill="none" stroke="#DAA520" stroke-width="4"/>
+    <circle cx="148" cy="140" r="6" fill="#DAA520"/>
+    <!-- Speed lines -->
+    <line x1="18" y1="95" x2="8" y2="95" stroke="#DAA520" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+    <line x1="20" y1="105" x2="6" y2="105" stroke="#DAA520" stroke-width="3" stroke-linecap="round" opacity="0.5"/>
+    <line x1="22" y1="115" x2="10" y2="115" stroke="#DAA520" stroke-width="3" stroke-linecap="round" opacity="0.3"/>
+  </g>
+</svg>
+
+2. Now create a Node.js script at /tmp/svg_to_png.mjs with this content and run it to convert the SVG to PNG:
+
+import { createCanvas } from 'canvas';
+import { readFileSync, writeFileSync } from 'fs';
+// Read SVG and draw it to canvas at 512x512
+const size = 512;
+const canvas = createCanvas(size, size);
+const ctx = canvas.getContext('2d');
+// Draw dark navy circle background
+ctx.fillStyle = '#1B2B4B';
+ctx.beginPath();
+ctx.arc(256, 256, 256, 0, Math.PI * 2);
+ctx.fill();
+// Draw gold truck shapes (scaled 2.56x from 200px viewBox)
+const s = 2.56;
+ctx.fillStyle = '#DAA520';
+// Truck body
+ctx.beginPath(); ctx.roundRect(28*s,85*s,88*s,52*s,5*s); ctx.fill();
+// Truck cab
+ctx.beginPath(); ctx.roundRect(116*s,98*s,56*s,39*s,5*s); ctx.fill();
+// Connector
+ctx.fillRect(112*s,95*s,8*s,42*s);
+// Front bumper
+ctx.beginPath(); ctx.roundRect(168*s,112*s,8*s,20*s,3*s); ctx.fill();
+// Exhaust
+ctx.beginPath(); ctx.roundRect(155*s,78*s,6*s,22*s,2*s); ctx.fill();
+ctx.beginPath(); ctx.roundRect(152*s,76*s,12*s,5*s,2*s); ctx.fill();
+// Wheels (dark circle + gold ring + gold center)
+const drawWheel = (cx,cy,r) => {
+  ctx.fillStyle = '#1B2B4B';
+  ctx.beginPath(); ctx.arc(cx*s,cy*s,r*s,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#DAA520'; ctx.lineWidth=4*s;
+  ctx.beginPath(); ctx.arc(cx*s,cy*s,r*s,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#DAA520';
+  ctx.beginPath(); ctx.arc(cx*s,cy*s,6*s,0,Math.PI*2); ctx.fill();
+};
+drawWheel(55,140,14); drawWheel(90,140,14); drawWheel(148,140,14);
+// Cab window
+ctx.fillStyle='rgba(27,43,75,0.6)';
+ctx.beginPath(); ctx.roundRect(120*s,103*s,24*s,18*s,3*s); ctx.fill();
+const buf = canvas.toBuffer('image/png');
+writeFileSync('artifacts/bara/assets/images/logo.png', buf);
+console.log('PNG written: ' + buf.length + ' bytes');
+
+Actually skip the Node canvas approach - it's complex. Instead:
+
+2. Just run this shell command to use sharp or convert the SVG. First check if 'convert' (ImageMagick) or 'sharp' is available:
+run: which convert && echo 'imagemagick available' || echo 'not available'
+
+Then let me know what is available so we can convert the SVG to PNG.
