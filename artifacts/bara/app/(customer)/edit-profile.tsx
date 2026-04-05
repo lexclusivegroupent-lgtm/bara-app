@@ -40,7 +40,7 @@ export default function EditProfileScreen() {
 
   async function handleSave() {
     if (!fullName.trim()) {
-      Alert.alert(t("missingInfo"), t("pleaseDescribeItems"));
+      Alert.alert(t("missingInfo"), t("enterFullName"));
       return;
     }
     setLoading(true);
@@ -64,7 +64,7 @@ export default function EditProfileScreen() {
       updateUser(data);
       router.back();
     } catch (e: any) {
-      Alert.alert("Error", e.message || "Failed to save profile.");
+      Alert.alert(t("error"), e.message || "Failed to save profile.");
     } finally {
       setLoading(false);
     }
