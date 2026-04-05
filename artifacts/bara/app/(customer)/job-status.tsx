@@ -23,6 +23,7 @@ import { BASE_URL, formatSEK, formatDate, getStatusColor, getStatusLabel, CANCEL
 import { safeJson } from "@/utils/api";
 import { Job } from "@/components/JobCard";
 import { PhotoPicker } from "@/components/PhotoPicker";
+import { StarRating } from "@/components/StarRating";
 import { BaraDateTimePicker } from "@/components/BaraDateTimePicker";
 import { VehicleBadge } from "@/components/VehicleTypePicker";
 
@@ -224,14 +225,17 @@ export default function JobStatusScreen() {
               </View>
               <View style={styles.driverDetails}>
                 <Text style={styles.driverName}>{job.driver.fullName}</Text>
+                <View style={styles.ratingRow}>
+                  <StarRating
+                    rating={job.driver.rating ? Number(job.driver.rating) : null}
+                    totalJobs={job.driver.totalJobs}
+                    size={15}
+                    showNew
+                    showCount
+                  />
+                </View>
                 {job.driver.vehicleType && (
                   <VehicleBadge vehicleType={job.driver.vehicleType} lang={lang} />
-                )}
-                {job.driver.rating && (
-                  <View style={styles.ratingRow}>
-                    <Feather name="star" size={12} color={Colors.gold} />
-                    <Text style={styles.ratingText}>{Number(job.driver.rating).toFixed(1)}</Text>
-                  </View>
                 )}
                 {job.driver.vehicleDescription && (
                   <Text style={styles.vehicleText}>{job.driver.vehicleDescription}</Text>
