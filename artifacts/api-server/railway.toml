@@ -1,0 +1,16 @@
+# This file is used when Railway's service root directory is set to artifacts/api-server/
+# All paths here are relative to artifacts/api-server/
+
+[build]
+builder = "NIXPACKS"
+# Step up to the repo root so pnpm workspace dependencies resolve correctly,
+# then build the api-server package.
+buildCommand = "cd ../../ && pnpm install --frozen-lockfile && pnpm --filter @workspace/api-server run build"
+
+[deploy]
+# Runs DB migrations then starts the server (migrations need runtime env vars)
+startCommand = "node dist/index.mjs"
+healthcheckPath = "/api/healthz"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
