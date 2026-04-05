@@ -10,6 +10,7 @@ import addressesRouter from "./addresses";
 import promosRouter from "./promos";
 import supportRouter from "./support";
 import uploadRouter from "./upload";
+import waitlistRouter from "./waitlist";
 
 const router: IRouter = Router();
 
@@ -24,5 +25,6 @@ router.use("/addresses", addressesRouter);
 router.use("/promos", promosRouter);
 router.use("/support", supportRouter);
 router.use("/upload", uploadRouter);
+router.use("/waitlist", waitlistRouter);
 
 export default router;
