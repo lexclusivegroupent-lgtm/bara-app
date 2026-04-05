@@ -1,0 +1,45 @@
+Yes — add it. Here’s my thinking:
+
+Why It’s Worth Adding
+Sweden has 1.5 million foreign-born residents. Many speak English but not Swedish. Making the app accessible to both groups doubles your potential driver and customer pool from day one.
+It also makes Bära look more professional and polished — exactly what you want when demoing to ALMI.
+
+Where To Put It
+Settings screen — a simple toggle labeled “Language / Språk” with Swedish and English options. Not a prominent button on every screen — just one setting that changes everything globally.
+Swedish default exactly as you said.
+
+Replit Prompt
+Paste this into Replit:
+
+Add a language toggle to the Bära app with Swedish as the default language. Please implement the following:
+Step 1 — Language system
+Create a language context or global state that stores the current language preference — either “sv” for Swedish or “en” for English. Default to Swedish. Store the preference in AsyncStorage so it persists between sessions.
+Step 2 — Swedish translations
+Translate all key UI strings into Swedish. Priority strings to translate:
+	∙	Get Started → Kom igång
+	∙	Log In → Logga in
+	∙	Sign Up → Skapa konto
+	∙	Post a Job → Lägg upp ett jobb
+	∙	Furniture Transport → Möbeltransport
+	∙	Junk and Trash Pickup → Skräphämtning
+	∙	Accept → Acceptera
+	∙	Complete Job → Slutför jobbet
+	∙	My Jobs → Mina jobb
+	∙	Settings → Inställningar
+	∙	Home → Hem
+	∙	Available Jobs → Tillgängliga jobb
+	∙	Submit Rating → Skicka betyg
+	∙	Edit Profile → Redigera profil
+	∙	Log Out → Logga ut
+	∙	Driver → Förare
+	∙	Customer → Kund
+	∙	Both → Båda
+Step 3 — Language toggle in Settings
+In the Settings screen add a row labeled “Language / Språk” with a toggle or selector showing “Svenska” and “English”. When toggled the entire app switches language instantly without requiring a restart.
+Step 4 — Apply translations throughout
+Apply the language context to all screens so every button, label, heading, and message displays in the selected language. The app should feel fully Swedish when set to Swedish and fully English when set to English.
+Step 5 — Bilingual elements that stay bilingual
+The landing screen tagline should remain bilingual regardless of language setting: “Carry anything, anywhere” and “Bär vad som helst, vart som helst” — this is part of the brand identity.
+After implementing confirm the toggle works in Settings and that switching to Swedish changes the app language throughout. Report back with a summary of changes made.
+
+Send me what Replit reports back.​​​​​​​​​​​​​​​​
