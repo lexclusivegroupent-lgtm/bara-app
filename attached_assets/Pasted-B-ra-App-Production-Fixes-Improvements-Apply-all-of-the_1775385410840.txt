@@ -1,0 +1,283 @@
+Bära App — Production Fixes & Improvements
+Apply all of the following changes to this React Native (Expo Router) + Express monorepo. Do not skip any step.
+
+1. Fix BASE_URL — use window.location.origin on web
+artifacts/bara/constants/config.ts — find the BASE_URL export and replace it:
+
+
+function getBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "app.baraapp.se"}`;
+}
+export const BASE_URL = getBaseUrl();
+artifacts/bara/context/AuthContext.tsx — find const BASE_URL = ... at the top (line ~6) and replace with:
+
+
+function getBaseUrl(): string {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "app.baraapp.se"}`;
+}
+const BASE_URL = getBaseUrl();
+setBaseUrl(BASE_URL);
+2. Load vector icon fonts for web
+artifacts/bara/app/_layout.tsx — add these imports and include the fonts in useFonts:
+
+
+import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
+
+// Inside useFonts:
+const [fontsLoaded] = useFonts({
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+  ...Feather.font,
+  ...MaterialCommunityIcons.font,
+});
+3. Fix Expo Router origin
+artifacts/bara/app.json — find the expo-router plugin and update:
+
+
+["expo-router", { "origin": "https://app.baraapp.se" }]
+4. Increase API body limit for photo uploads
+artifacts/api-server/src/app.ts — update both lines:
+
+
+app.use(express.json({ limit: "15mb" }));
+app.use(express.urlencoded({ extended: true, limit: "15mb" }));
+Also make sure FALLBACK_ORIGINS contains exactly:
+
+
+const FALLBACK_ORIGINS = [
+  "https://app.baraapp.se",
+  "https://baraapp.se",
+  "https://www.baraapp.se",
+];
+5. Server-side Cloudinary upload route
+Create artifacts/api-server/src/routes/upload.ts:
+
+
+import { Router } from "express";
+import crypto from "node:crypto";
+import { authenticate } from "../middlewares/auth";
+import type { AuthenticatedRequest } from "../middlewares/auth";
+
+const router = Router();
+
+router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+  if (!cloudName || !apiKey || !apiSecret) {
+    res.status(503).json({ error: "Photo upload is not configured." });
+    return;
+  }
+
+  const { data } = req.body as { data?: string };
+  if (!data || typeof data !== "string") {
+    res.status(400).json({ error: "Missing field: data (base64 image URI)" });
+    return;
+  }
+
+  const timestamp = Math.floor(Date.now() / 1000);
+  const folder = "bara-jobs";
+  const signature = crypto.createHash("sha1")
+    .update(`folder=${folder}&timestamp=${timestamp}${apiSecret}`)
+    .digest("hex");
+
+  const formData = new FormData();
+  formData.append("file", data);
+  formData.append("api_key", apiKey);
+  formData.append("timestamp", String(timestamp));
+  formData.append("signature", signature);
+  formData.append("folder", folder);
+
+  try {
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
+      { method: "POST", body: formData }
+    );
+    const result = await response.json() as any;
+    if (!response.ok) {
+      res.status(502).json({ error: result?.error?.message || "Upload failed" });
+      return;
+    }
+    res.json({ url: result.secure_url as string });
+  } catch {
+    res.status(502).json({ error: "Could not reach Cloudinary." });
+  }
+});
+
+export default router;
+artifacts/api-server/src/routes/index.ts — add:
+
+
+import uploadRouter from "./upload";
+router.use("/upload", uploadRouter);
+artifacts/bara/components/PhotoPicker.tsx — add these imports at the top:
+
+
+import { BASE_URL } from "@/constants/config";
+import { getAuthToken } from "@workspace/api-client-react";
+Replace the uploadToCloudinary function entirely with:
+
+
+async function uploadPhoto(base64DataUri: string): Promise<string> {
+  const token = getAuthToken();
+  const response = await fetch(`${BASE_URL}/api/upload`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ data: base64DataUri }),
+  });
+  if (!response.ok) {
+    const err = await response.json().catch(() => ({}));
+    throw new Error((err as any)?.error || "Upload failed. Please try again.");
+  }
+  const result = await response.json() as { url: string };
+  return result.url;
+}
+Then inside handlePicked, replace uploadToCloudinary(dataUri) with uploadPhoto(dataUri).
+
+6. Waitlist table + API route
+Create lib/db/src/schema/waitlist.ts:
+
+
+import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+
+export const waitlistTable = pgTable("waitlist", {
+  id: serial("id").primaryKey(),
+  email: text("email").notNull().unique(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+lib/db/src/schema/index.ts — add:
+
+
+export * from "./waitlist";
+Create artifacts/api-server/src/routes/waitlist.ts:
+
+
+import { Router } from "express";
+import { z } from "zod";
+import { db, waitlistTable } from "@workspace/db";
+
+const router = Router();
+const emailSchema = z.object({ email: z.string().email("Please enter a valid email address.") });
+
+router.post("/", async (req, res) => {
+  const parsed = emailSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid email." });
+    return;
+  }
+  try {
+    await db.insert(waitlistTable).values({ email: parsed.data.email.toLowerCase().trim() });
+    res.status(201).json({ ok: true });
+  } catch (err: any) {
+    if (err?.code === "23505") { res.status(200).json({ ok: true, already: true }); return; }
+    res.status(500).json({ error: "Something went wrong. Please try again." });
+  }
+});
+
+export default router;
+artifacts/api-server/src/routes/index.ts — add:
+
+
+import waitlistRouter from "./waitlist";
+router.use("/waitlist", waitlistRouter);
+7. Add missing translation keys
+artifacts/bara/constants/translations.ts — add to the en object:
+
+
+arrivedAtPickup: "I've Arrived at Pickup",
+routeToPickup: "Route to pickup",
+jobDetails: "Job Details",
+pickup: "Pickup",
+dropoff: "Drop-off",
+address: "Address",
+items: "Items",
+time: "Time",
+beforeLoading: "Before Loading (Required)",
+afterDelivery: "After Delivery (Required)",
+photoHintBefore: "Take at least 1 photo of items before loading.",
+photoHintAfter: "Take at least 1 photo after delivery to confirm completion.",
+requiredPhoto: "Required to complete job",
+customerPhotos: "Customer's Photos",
+customerPhotosAttached: "Customer photos attached",
+jobValue: "Job Value",
+yourEarnings: "Your Earnings",
+uploadingPhotos: "Uploading photos...",
+addPhotosHint: "Add before & after photos to complete this job",
+customerCancelled: "Customer Cancelled",
+customerCancelledMsg: "The customer cancelled this job after you had accepted it.",
+youreProtected: "You're Protected",
+yourCompensation: "Your compensation",
+findAnotherJob: "Find Another Job",
+youEarn: "You earn",
+jobsPosted: "jobs posted",
+whyCancelling: "Why are you cancelling?",
+confirmCancellation: "Confirm Cancellation",
+Add to the sv object:
+
+
+arrivedAtPickup: "Jag har anlänt till upphämtning",
+routeToPickup: "Navigera till upphämtning",
+jobDetails: "Jobbdetaljer",
+pickup: "Upphämtning",
+dropoff: "Avlämning",
+address: "Adress",
+items: "Föremål",
+time: "Tid",
+beforeLoading: "Innan lastning (Obligatoriskt)",
+afterDelivery: "Efter leverans (Obligatoriskt)",
+photoHintBefore: "Ta minst 1 foto på föremålen innan lastning.",
+photoHintAfter: "Ta minst 1 foto efter leverans för att bekräfta slutförandet.",
+requiredPhoto: "Krävs för att slutföra jobbet",
+customerPhotos: "Kundens foton",
+customerPhotosAttached: "Kundens foton bifogade",
+jobValue: "Jobbvärde",
+yourEarnings: "Dina intäkter",
+uploadingPhotos: "Laddar upp foton...",
+addPhotosHint: "Lägg till foton före & efter för att slutföra jobbet",
+customerCancelled: "Kund avbokade",
+customerCancelledMsg: "Kunden avbokade jobbet efter att du hade accepterat det.",
+youreProtected: "Du är skyddad",
+yourCompensation: "Din ersättning",
+findAnotherJob: "Hitta ett annat jobb",
+youEarn: "Du tjänar",
+jobsPosted: "jobb lagda",
+whyCancelling: "Varför avbokar du?",
+confirmCancellation: "Bekräfta avbokning",
+8. Fix nixpacks.toml (root of repo)
+Replace the entire file with:
+
+
+[variables]
+NIXPACKS_NODE_VERSION = "20"
+
+[phases.install]
+cmds = ['npm install -g pnpm@9 && pnpm install --no-frozen-lockfile']
+
+[phases.build]
+cmds = ['cd artifacts/bara && npx expo export --platform web --clear --output-dir ../api-server/static-build && cd ../../ && pnpm --filter @workspace/api-server run build']
+
+[start]
+cmd = 'node artifacts/api-server/dist/index.mjs'
+Required environment variables (set these in your deployment platform)
+Variable	Description
+DATABASE_URL	PostgreSQL connection string
+JWT_SECRET	Long random secret string
+RESEND_API_KEY	Resend email API key
+RESEND_FROM_EMAIL	Bära <hello@baraapp.se>
+CLOUDINARY_CLOUD_NAME	dup8xvjij
+CLOUDINARY_API_KEY	Cloudinary API key
+CLOUDINARY_API_SECRET	Cloudinary API secret
+EXPO_PUBLIC_GOOGLE_MAPS_KEY	Google Maps API key
+BARA_ADMIN_KEY	Secret key for admin dashboard
