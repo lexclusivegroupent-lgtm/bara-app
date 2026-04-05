@@ -1,0 +1,580 @@
+openapi: 3.1.0
+info:
+  title: Api
+  version: 0.1.0
+  description: Bära gig marketplace API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: users
+    description: User operations
+  - name: jobs
+    description: Job operations
+  - name: ratings
+    description: Rating operations
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: User created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Logged in
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /users/profile:
+    put:
+      operationId: updateProfile
+      tags: [users]
+      summary: Update user profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfileRequest"
+      responses:
+        "200":
+          description: Profile updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /jobs:
+    get:
+      operationId: getJobs
+      tags: [jobs]
+      summary: Get jobs (filtered by city/status for drivers)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: city
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: role
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of jobs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Job"
+    post:
+      operationId: createJob
+      tags: [jobs]
+      summary: Create a new job
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateJobRequest"
+      responses:
+        "201":
+          description: Job created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}:
+    get:
+      operationId: getJob
+      tags: [jobs]
+      summary: Get a specific job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}/accept:
+    post:
+      operationId: acceptJob
+      tags: [jobs]
+      summary: Accept a job (driver only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}/complete:
+    post:
+      operationId: completeJob
+      tags: [jobs]
+      summary: Complete a job (driver only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job completed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}/rate:
+    post:
+      operationId: rateJob
+      tags: [ratings]
+      summary: Rate a user for a completed job
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RateJobRequest"
+      responses:
+        "200":
+          description: Rating submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}/cancel:
+    post:
+      operationId: cancelJob
+      tags: [jobs]
+      summary: Cancel a job (customer only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Job cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /distance:
+    post:
+      operationId: calculateDistance
+      tags: [jobs]
+      summary: Calculate distance between two addresses
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DistanceRequest"
+      responses:
+        "200":
+          description: Distance calculated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DistanceResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [customer, driver]
+        city:
+          type: string
+        profilePhoto:
+          type: string
+          nullable: true
+        isAvailable:
+          type: boolean
+        rating:
+          type: number
+          nullable: true
+        totalJobs:
+          type: integer
+        vehicleDescription:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - email
+        - fullName
+        - role
+        - city
+        - isAvailable
+        - totalJobs
+        - createdAt
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+        fullName:
+          type: string
+        role:
+          type: string
+          enum: [customer, driver]
+        city:
+          type: string
+        vehicleDescription:
+          type: string
+          nullable: true
+      required:
+        - email
+        - password
+        - fullName
+        - role
+        - city
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        fullName:
+          type: string
+        city:
+          type: string
+        vehicleDescription:
+          type: string
+          nullable: true
+        isAvailable:
+          type: boolean
+        profilePhoto:
+          type: string
+          nullable: true
+
+    Job:
+      type: object
+      properties:
+        id:
+          type: integer
+        customerId:
+          type: integer
+        driverId:
+          type: integer
+          nullable: true
+        jobType:
+          type: string
+          enum: [furniture_transport, junk_pickup]
+        status:
+          type: string
+          enum: [pending, accepted, in_progress, completed, cancelled]
+        pickupAddress:
+          type: string
+          nullable: true
+        dropoffAddress:
+          type: string
+          nullable: true
+        homeAddress:
+          type: string
+          nullable: true
+        itemDescription:
+          type: string
+        preferredTime:
+          type: string
+        distanceKm:
+          type: number
+          nullable: true
+        priceTotal:
+          type: number
+        driverPayout:
+          type: number
+        platformFee:
+          type: number
+        rating:
+          type: number
+          nullable: true
+        paymentStatus:
+          type: string
+          enum: [unpaid, paid]
+        city:
+          type: string
+        createdAt:
+          type: string
+        acceptedAt:
+          type: string
+          nullable: true
+        completedAt:
+          type: string
+          nullable: true
+        customer:
+          $ref: "#/components/schemas/User"
+          nullable: true
+        driver:
+          $ref: "#/components/schemas/User"
+          nullable: true
+      required:
+        - id
+        - customerId
+        - jobType
+        - status
+        - itemDescription
+        - preferredTime
+        - priceTotal
+        - driverPayout
+        - platformFee
+        - paymentStatus
+        - city
+        - createdAt
+
+    CreateJobRequest:
+      type: object
+      properties:
+        jobType:
+          type: string
+          enum: [furniture_transport, junk_pickup]
+        pickupAddress:
+          type: string
+          nullable: true
+        dropoffAddress:
+          type: string
+          nullable: true
+        homeAddress:
+          type: string
+          nullable: true
+        itemDescription:
+          type: string
+        preferredTime:
+          type: string
+        distanceKm:
+          type: number
+          nullable: true
+        priceTotal:
+          type: number
+        driverPayout:
+          type: number
+        platformFee:
+          type: number
+        city:
+          type: string
+      required:
+        - jobType
+        - itemDescription
+        - preferredTime
+        - priceTotal
+        - driverPayout
+        - platformFee
+        - city
+
+    RateJobRequest:
+      type: object
+      properties:
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        ratedUserId:
+          type: integer
+      required:
+        - score
+        - ratedUserId
+
+    DistanceRequest:
+      type: object
+      properties:
+        origin:
+          type: string
+        destination:
+          type: string
+      required:
+        - origin
+        - destination
+
+    DistanceResponse:
+      type: object
+      properties:
+        distanceKm:
+          type: number
+        distanceText:
+          type: string
+      required:
+        - distanceKm
+        - distanceText
