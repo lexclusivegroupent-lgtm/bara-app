@@ -48,8 +48,6 @@ export default function JobStatusScreen() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [showCancelFeeModal, setShowCancelFeeModal] = useState(false);
-  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
-  const [cancelReason, setCancelReason] = useState<string | null>(null);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
   const [disputing, setDisputing] = useState(false);
@@ -103,14 +101,13 @@ export default function JobStatusScreen() {
     }
   }
 
-  async function handleCancel(reason?: string) {
+  async function handleCancel() {
     setCancelling(true);
     setCancelError(null);
     try {
       const res = await fetch(`${BASE_URL}/api/jobs/${id}/cancel`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ reason: reason || null }),
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Could not cancel job");
@@ -230,19 +227,10 @@ export default function JobStatusScreen() {
                 {job.driver.vehicleType && (
                   <VehicleBadge vehicleType={job.driver.vehicleType} lang="en" />
                 )}
-                {(job.driver.rating != null || job.driver.totalJobs != null) && (
+                {job.driver.rating && (
                   <View style={styles.ratingRow}>
-                    {job.driver.rating != null && (
-                      <>
-                        <Feather name="star" size={12} color={Colors.gold} />
-                        <Text style={styles.ratingText}>{Number(job.driver.rating).toFixed(1)}</Text>
-                      </>
-                    )}
-                    {job.driver.totalJobs != null && (
-                      <Text style={styles.ratingText}>
-                        {job.driver.rating != null ? " · " : ""}{job.driver.totalJobs} {t("jobsDone").toLowerCase()}
-                      </Text>
-                    )}
+                    <Feather name="star" size={12} color={Colors.gold} />
+                    <Text style={styles.ratingText}>{Number(job.driver.rating).toFixed(1)}</Text>
                   </View>
                 )}
                 {job.driver.vehicleDescription && (
@@ -343,7 +331,7 @@ export default function JobStatusScreen() {
             )}
             <TouchableOpacity
               style={[styles.cancelBtn, cancelling && styles.cancelBtnDisabled]}
-              onPress={() => { setCancelReason(null); setShowCancelReasonModal(true); }}
+              onPress={handleCancel}
               disabled={cancelling}
               activeOpacity={0.85}
             >
@@ -467,7 +455,7 @@ export default function JobStatusScreen() {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.feeModalConfirmBtn, cancelling && styles.cancelBtnDisabled]}
-                onPress={() => { setShowCancelFeeModal(false); setCancelReason(null); setShowCancelReasonModal(true); }}
+                onPress={() => { setShowCancelFeeModal(false); handleCancel(); }}
                 disabled={cancelling}
                 activeOpacity={0.85}
               >
@@ -478,49 +466,6 @@ export default function JobStatusScreen() {
                 )}
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
-      </Modal>
-
-      <Modal visible={showCancelReasonModal} animationType="slide" transparent presentationStyle="overFullScreen">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Why are you cancelling?</Text>
-              <TouchableOpacity onPress={() => setShowCancelReasonModal(false)} style={styles.modalClose}>
-                <Feather name="x" size={20} color={Colors.textMuted} />
-              </TouchableOpacity>
-            </View>
-            {[
-              "Changed my mind",
-              "Found another solution",
-              "Driver was late",
-              "Other",
-            ].map((reason) => (
-              <TouchableOpacity
-                key={reason}
-                style={[styles.reasonOption, cancelReason === reason && styles.reasonOptionSelected]}
-                onPress={() => setCancelReason(reason)}
-                activeOpacity={0.8}
-              >
-                <View style={[styles.reasonRadio, cancelReason === reason && styles.reasonRadioSelected]}>
-                  {cancelReason === reason && <View style={styles.reasonRadioDot} />}
-                </View>
-                <Text style={[styles.reasonOptionText, cancelReason === reason && styles.reasonOptionTextSelected]}>{reason}</Text>
-              </TouchableOpacity>
-            ))}
-            <TouchableOpacity
-              style={[styles.submitDisputeBtn, (!cancelReason || cancelling) && styles.disabled]}
-              onPress={() => { setShowCancelReasonModal(false); handleCancel(cancelReason!); }}
-              disabled={!cancelReason || cancelling}
-              activeOpacity={0.85}
-            >
-              {cancelling
-                ? <ActivityIndicator color={Colors.navy} />
-                : <Text style={styles.submitDisputeBtnText}>Confirm Cancellation</Text>
-              }
-            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -1168,46 +1113,4 @@ const styles = StyleSheet.create({
     color: Colors.navy,
   },
   disabled: { opacity: 0.5 },
-  reasonOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    backgroundColor: Colors.navy,
-  },
-  reasonOptionSelected: {
-    borderColor: Colors.gold,
-    backgroundColor: `${Colors.gold}12`,
-  },
-  reasonRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  reasonRadioSelected: {
-    borderColor: Colors.gold,
-  },
-  reasonRadioDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: Colors.gold,
-  },
-  reasonOptionText: {
-    fontSize: 14,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-  },
-  reasonOptionTextSelected: {
-    color: Colors.text,
-    fontFamily: "Inter_500Medium",
-  },
 });
