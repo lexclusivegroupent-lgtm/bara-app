@@ -1,0 +1,123 @@
+I need you to improve my existing app, Bära, so it is stable, safer, and credible for ALMI and Venture Cup applications in Sweden.
+
+APP CONTEXT
+- Name: Bära
+- Market: Sweden
+- Core services only:
+  1. furniture transport
+  2. bulky item pickup/delivery
+  3. junk and trash pickup
+- Stack: React Native + Expo frontend, Node.js/Express backend, PostgreSQL
+- Deployment: Railway
+- Goal: make the app launch-ready and grant/investor-ready without rebuilding it from scratch
+
+IMPORTANT RULES
+- Do NOT rebuild the app
+- Do NOT redesign the whole UI
+- Do NOT remove working features unless necessary
+- Make small, safe, production-minded changes
+- Work in phases and create checkpoints
+- Before coding, audit the project and tell me:
+  1. what already works
+  2. what is broken
+  3. what is risky
+  4. what is missing for launch credibility
+- After each phase, stop and summarize changes before continuing
+
+WHY THIS MATTERS
+I want Bära to look credible for:
+- ALMI, which cares about innovation, growth potential, and a realistic development plan
+- Venture Cup, which cares about scalable business ideas, traction, and credibility
+
+PHASE 1 — DEPLOYMENT + STABILITY
+1. Audit the repo and fix Railway deployment issues.
+2. Ensure production does not run Metro incorrectly.
+3. Add a simple `/health` endpoint for Railway monitoring.
+4. Improve error handling in backend and frontend for failed API calls.
+5. Update README with:
+   - deploy steps
+   - required environment variables
+   - how to check logs
+   - how to recover from common failures
+
+PHASE 2 — TRUST + SAFETY
+1. Add or standardize job lifecycle states:
+   - created
+   - accepted
+   - arrived
+   - picked_up
+   - delivered
+   - cancelled
+   - disputed
+2. Add cancellation and no-show tracking for drivers.
+3. Add a simple dispute flag flow.
+4. Ensure pickup and dropoff photo proof are consistently enforced.
+5. Add prohibited items text to the job creation flow.
+6. Add placeholder database fields for future verification:
+   - verification_status
+   - verified_driver
+   - driver_license_status
+7. Do NOT build live BankID yet; only prepare the code structure for future integration.
+
+PHASE 3 — COST CONTROL
+1. Audit all current Google Maps usage.
+2. Replace only ETA/travel-time calculation with a cheaper/free alternative if feasible.
+3. Do NOT build in-app turn-by-turn navigation.
+4. For navigation, open external apps like Google Maps / Apple Maps / Waze.
+5. Add an abstraction/config layer so map providers can be swapped later via environment variables.
+6. Identify any other major cost risks in the current architecture.
+
+PHASE 4 — DEMO + FUNDING READINESS
+1. Add simple reporting endpoints or an admin/demo metrics view showing:
+   - total jobs posted
+   - completed jobs
+   - cancelled jobs
+   - disputed jobs
+   - active drivers
+   - average completion time
+2. Add demo/seed data mode if useful for presenting the app.
+3. Make sure the app clearly reflects the 3 service categories:
+   - furniture transport
+   - bulky item delivery
+   - junk pickup
+4. Make demo screens polished and presentable, even if some future features are labeled “coming soon”.
+
+PHASE 5 — LEGAL / COMPLIANCE BASICS
+1. Add screens/routes for:
+   - Terms of Service
+   - Privacy Policy
+   - Driver Terms
+2. Add consent checkboxes during signup/onboarding where needed.
+3. Add account settings placeholders for:
+   - request account deletion
+   - request data export
+4. Keep this simple and functional, not overengineered.
+
+TECHNICAL REQUIREMENTS
+- Prefer small, low-risk changes
+- Reuse existing libraries where possible
+- Add migrations only when necessary
+- Update env.example
+- Document new env vars and new flows
+- Keep code organized and easy to maintain
+
+DELIVERABLES
+I need:
+- stable deployment
+- safer operational flows
+- lower map cost where possible
+- demo-ready metrics/reporting
+- visible legal/compliance basics
+- updated README
+- a short written summary of:
+  1. what is fixed now
+  2. what still needs third-party setup
+  3. what I can say in an ALMI or Venture Cup meeting
+
+START NOW
+First, audit the project and give me a prioritized plan with:
+- Quick wins
+- Medium changes
+- Later-stage items
+
+Then implement ONLY the quick wins first and stop for review.
