@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "rea
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
 import { formatSEK, formatDate, getStatusColor, getStatusLabel } from "@/constants/config";
+import { useLanguage } from "@/context/LanguageContext";
 
 export interface Job {
   id: number;
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting, showDriverEarnings }: Props) {
+  const { t } = useLanguage();
   const statusColor = getStatusColor(job.status);
   const isFurniture = job.jobType === "furniture_transport";
 
@@ -65,7 +67,7 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
           />
         </View>
         <View style={styles.jobInfo}>
-          <Text style={styles.jobType}>{isFurniture ? "Furniture Transport" : "Junk & Trash Pickup"}</Text>
+          <Text style={styles.jobType}>{job.jobType === "furniture_transport" ? t("furnitureTransport") : job.jobType === "bulky_delivery" ? t("bulkyDelivery") : t("junkTrash")}</Text>
           <Text style={styles.itemDesc} numberOfLines={1}>{job.itemDescription}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: `${statusColor}22` }]}>
@@ -93,7 +95,7 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
               <Text style={styles.price}>
                 {formatSEK(job.customerPrice ?? job.priceTotal)}
               </Text>
-              <Text style={styles.earnings}>You earn {formatSEK(job.driverPayout)}</Text>
+              <Text style={styles.earnings}>{t("youEarn")} {formatSEK(job.driverPayout)}</Text>
               {job.customerPrice != null && job.customerPrice !== job.priceTotal && (
                 <Text style={styles.suggestedLabel}>
                   Suggested {formatSEK(job.priceTotal)}
@@ -132,7 +134,7 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
           {job.customer.totalJobs != null && (
             <>
               <Text style={styles.customerRatingDot}>·</Text>
-              <Text style={styles.customerRatingText}>{job.customer.totalJobs} jobs posted</Text>
+              <Text style={styles.customerRatingText}>{job.customer.totalJobs} {t("jobsPosted")}</Text>
             </>
           )}
         </View>
