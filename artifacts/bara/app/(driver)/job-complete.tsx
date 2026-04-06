@@ -12,10 +12,15 @@ import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function JobCompleteScreen() {
   const insets = useSafeAreaInsets();
-  const { jobId, userId } = useLocalSearchParams<{ jobId: string; userId: string }>();
+  const { jobId, userId, payout } = useLocalSearchParams<{ jobId: string; userId: string; payout?: string }>();
+  const { lang } = useLanguage();
+  const isSv = lang === "sv";
+  const payoutNum = payout ? Math.round(Number(payout)) : null;
+  const taxReserve = payoutNum ? Math.round(payoutNum * 0.30) : null;
 
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -70,6 +75,19 @@ export default function JobCompleteScreen() {
             Bära is free during launch — no fees collected. Thank you for being part of it!
           </Text>
         </View>
+
+        {payoutNum && (
+          <View style={styles.taxCard}>
+            <Text style={styles.taxCardTitle}>
+              {isSv ? "💰 Inkomstpåminnelse" : "💰 Tax Reminder"}
+            </Text>
+            <Text style={styles.taxCardBody}>
+              {isSv
+                ? `Inkomst: ${payoutNum} SEK — Kom ihåg att sätta undan ${taxReserve} SEK för skatt (30%)`
+                : `Earnings: ${payoutNum} SEK — Remember to set aside ${taxReserve} SEK for tax (30%)`}
+            </Text>
+          </View>
+        )}
       </Animated.View>
 
       <Animated.View style={[styles.buttons, { opacity: fadeAnim }]}>
@@ -196,5 +214,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: "Inter_600SemiBold",
     color: Colors.textMuted,
+  },
+  taxCard: {
+    backgroundColor: `${Colors.success}15`,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: `${Colors.success}35`,
+    marginTop: 8,
+    gap: 4,
+  },
+  taxCardTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: Colors.success,
+  },
+  taxCardBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 20,
   },
 });
