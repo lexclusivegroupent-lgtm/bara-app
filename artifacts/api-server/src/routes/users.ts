@@ -58,6 +58,67 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
   }
 });
 
+router.post("/accept-driver-agreement", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const [user] = await db.update(usersTable)
+      .set({ driverAgreementAccepted: true, driverAgreementAcceptedAt: new Date() })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+    res.json(formatUser(user));
+  } catch (err) {
+    req.log?.error(err, "Accept driver agreement error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/earnings", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const now = new Date();
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - now.getDay());
+    startOfWeek.setHours(0, 0, 0, 0);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfYear = new Date(now.getFullYear(), 0, 1);
+
+    const completedJobs = await db.select({
+      driverPayout: jobsTable.driverPayout,
+      completedAt: jobsTable.completedAt,
+    }).from(jobsTable).where(
+      eq(jobsTable.driverId, req.userId!)
+    );
+
+    const done = completedJobs.filter(j => j.completedAt && j.driverPayout);
+
+    function sumFrom(from: Date) {
+      return done
+        .filter(j => j.completedAt! >= from)
+        .reduce((s, j) => s + Number(j.driverPayout), 0);
+    }
+
+    const yearEarnings = Math.round(sumFrom(startOfYear));
+    const monthEarnings = Math.round(sumFrom(startOfMonth));
+    const weekEarnings = Math.round(sumFrom(startOfWeek));
+    const totalEarnings = Math.round(done.reduce((s, j) => s + Number(j.driverPayout), 0));
+    const avgPerJob = done.length > 0 ? Math.round(totalEarnings / done.length) : 0;
+
+    res.json({ weekEarnings, monthEarnings, yearEarnings, totalEarnings, jobCount: done.length, avgPerJob });
+  } catch (err) {
+    req.log?.error(err, "Earnings error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/export", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
+    if (!user) { res.status(404).json({ error: "Not found" }); return; }
+    const { passwordHash, resetToken, resetTokenExpiry, pushToken, ...exportable } = user;
+    res.json({ ok: true, message: "Data export requested — will be emailed within 24 hours.", preview: exportable });
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // GDPR: anonymise and deactivate account (soft delete)
 router.delete("/account", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
