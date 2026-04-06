@@ -23,6 +23,11 @@ export const usersTable = pgTable("users", {
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   passwordChangedAt: timestamp("password_changed_at"),
+  driverAgreementAccepted: boolean("driver_agreement_accepted").notNull().default(false),
+  driverAgreementAcceptedAt: timestamp("driver_agreement_accepted_at"),
+  isDeactivated: boolean("is_deactivated").notNull().default(false),
+  deactivationReason: text("deactivation_reason"),
+  annualEarnings: integer("annual_earnings").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
