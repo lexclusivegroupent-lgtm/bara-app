@@ -39,7 +39,13 @@ const FALLBACK_ORIGINS = [
   "https://baraapp.se",
   "https://app.baraapp.se",
   "https://www.baraapp.se",
+  "https://baraapp.lovable.app",
 ];
+
+const ORIGIN_PATTERNS = [
+  /^https:\/\/.*\.lovableproject\.com$/,
+];
+
 const allowedOrigins: string[] = corsOrigin
   ? corsOrigin.split(",").map((o) => o.trim())
   : FALLBACK_ORIGINS;
@@ -52,11 +58,16 @@ if (process.env.NODE_ENV === "production" && !corsOrigin) {
   );
 }
 
+function isAllowedOrigin(origin: string): boolean {
+  if (allowedOrigins.includes(origin)) return true;
+  return ORIGIN_PATTERNS.some((pattern) => pattern.test(origin));
+}
+
 app.use(cors({
   origin: (origin, callback) => {
     if (!origin) return callback(null, true);
     if (process.env.NODE_ENV !== "production") return callback(null, true);
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (isAllowedOrigin(origin)) return callback(null, true);
     callback(new Error(`Origin ${origin} not allowed by CORS`));
   },
   credentials: true,
