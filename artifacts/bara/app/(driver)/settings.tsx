@@ -265,17 +265,26 @@ export default function DriverSettingsScreen() {
         </View>
 
         <View style={styles.section}>
+          <Text style={styles.sectionLabel}>{lang === "sv" ? "Min status" : "My Status"}</Text>
+          <SettingsRow icon="bar-chart-2" label={lang === "sv" ? "Min status & rättigheter" : "My Status & Rights"} onPress={() => router.push("/driver-welfare")} />
+          <SettingsRow icon="trending-up" label={t("myEarnings")} onPress={() => router.push("/(driver)/earnings")} />
+          <SettingsRow icon="file-text" label={lang === "sv" ? "Föraravtal" : "Driver Agreement"} onPress={() => router.push("/driver-agreement")} />
+        </View>
+
+        <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t("legal")}</Text>
           <SettingsRow icon="file-text" label={t("termsOfServiceRow")} onPress={() => router.push("/terms")} />
           <SettingsRow icon="shield" label={t("privacyPolicy")} onPress={() => router.push("/privacy")} />
           <SettingsRow icon="truck" label={t("driverTerms")} onPress={() => router.push("/driver-terms")} />
+          <SettingsRow icon="lock" label={lang === "sv" ? "Data & integritet" : "Data & Privacy"} onPress={() => router.push("/data-privacy")} />
+          <SettingsRow icon="shield" label={lang === "sv" ? "Försäkring & säkerhet" : "Insurance & Safety"} onPress={() => router.push("/insurance-safety")} />
+          <SettingsRow icon="alert-circle" label={lang === "sv" ? "Överklaga beslut" : "Appeal a Decision"} onPress={() => router.push("/appeal")} />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t("privacyData")}</Text>
-          <SettingsRow icon="trending-up" label={t("myEarnings")} onPress={() => router.push("/(driver)/earnings")} />
           <SettingsRow icon="headphones" label={t("contactSupport")} onPress={() => router.push("/support")} />
-          <SettingsRow icon="download" label={t("requestDataExport")} onPress={() => router.push("/privacy")} />
+          <SettingsRow icon="download" label={t("requestDataExport")} onPress={() => router.push("/data-privacy")} />
           <SettingsRow icon="trash-2" label={t("deleteAccount")} onPress={handleDeleteAccount} danger />
         </View>
 
