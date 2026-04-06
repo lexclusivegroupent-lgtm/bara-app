@@ -76,7 +76,7 @@ export default function SupportScreen() {
                 <Feather name="check-circle" size={40} color={Colors.success} />
               </View>
               <Text style={styles.successTitle}>{t("messageSent")}</Text>
-              <Text style={styles.successSub}>{t("weWillGetBack")}</Text>
+              <Text style={styles.successSub}>{t("messageSentSuccess")}</Text>
               <TouchableOpacity style={styles.backHomeBtn} onPress={() => router.back()} activeOpacity={0.85}>
                 <Text style={styles.backHomeBtnText}>{t("home")}</Text>
               </TouchableOpacity>
@@ -85,7 +85,10 @@ export default function SupportScreen() {
             <>
               <View style={styles.introCard}>
                 <Feather name="headphones" size={20} color={Colors.gold} />
-                <Text style={styles.introText}>{t("supportSubtitle")}</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.introText}>{t("supportSubtitle")}</Text>
+                  <Text style={styles.response24h}>{t("respondsWithin24h")}</Text>
+                </View>
               </View>
 
               <View style={styles.field}>
@@ -161,7 +164,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: `${Colors.gold}25`,
   },
-  introText: { flex: 1, fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.text, lineHeight: 20 },
+  introText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.text, lineHeight: 20 },
+  response24h: { fontSize: 12, fontFamily: "Inter_600SemiBold", color: Colors.gold, marginTop: 4 },
   field: { gap: 8 },
   fieldLabel: {
     fontSize: 12,

@@ -96,6 +96,8 @@ const translations = {
     itemPhotos: "Item Photos (Optional)",
     photosHint: "Photos help drivers prepare the right equipment and improve your quote accuracy.",
     yourOfferToDriver: "Your Offer to Driver",
+    priceBase: "Base fee",
+    pricePerKm: "Per km",
     suggestedPrice: "Suggested price",
     allowedRange: "Allowed range",
     leaveBlankPrice: "Leave blank to use the suggested price. Drivers see your offered price before accepting.",
@@ -411,6 +413,52 @@ const translations = {
     independentContractor: "Independent Contractor",
     platformCommission: "Platform Commission",
     fTaxReminder: "F-Tax Reminder",
+
+    // Error & success messages (Fix 4)
+    errorNetwork: "Network error. Check your connection.",
+    errorServer: "Server error. Please try again later.",
+    errorInvalidEmail: "Enter a valid email address.",
+    errorInvalidPassword: "Password must be at least 8 characters.",
+    errorPasswordsNoMatch: "Passwords do not match.",
+    errorRequiredField: "This field is required.",
+    errorJobFailed: "Could not create the job. Please try again.",
+    errorLoginFailed: "Invalid credentials. Please try again.",
+    errorUnknown: "Something went wrong. Please try again.",
+    successJobPosted: "Job posted successfully!",
+    successProfileSaved: "Profile saved successfully.",
+    successRatingSubmitted: "Rating submitted successfully.",
+
+    // Support 24h (Fix 9)
+    respondsWithin24h: "We respond within 24 hours",
+    messageSentSuccess: "Your message has been sent! We will get back to you within 24 hours.",
+
+    // Empty states (Fix 2)
+    noEarningsYet: "No earnings yet",
+    noEarningsYetSub: "Complete your first job to start earning.",
+    noChatYet: "No conversation yet",
+    noChatYetSub: "Send a message to your driver.",
+    noChatYetSvDriver: "Send a message to your customer.",
+    noJobsAvailable: "No jobs available",
+    noJobsAvailableSub: "There are no jobs in your city right now. We will notify you when a new job appears.",
+    stayOnlineHint: "Make sure you are online to receive jobs",
+
+    // Version (Fix 8)
+    appVersion: "Version 1.0.0 · Bära",
+    appCopyright: "© 2026 Bära AB · baraapp.se",
+
+    // Price breakdown (Fix 6)
+    priceBreakdown: "Price Breakdown",
+    baseRate: "Base rate",
+    distanceCost: "Distance cost",
+    subtotal: "Subtotal",
+    promoDiscountLabel: "Promo discount",
+    totalPrice: "Total",
+    driverEarns: "Driver earns (75%)",
+    finalPriceNote: "Final price confirmed when driver accepts the job.",
+
+    // Prohibited items collapsible (Fix 10)
+    prohibitedItemsHeader: "⚠️ Prohibited Items",
+    prohibitedItemsContact: "Questions? Contact hello@baraapp.se",
   },
 
   sv: {
@@ -508,6 +556,8 @@ const translations = {
     itemPhotos: "Föremålsfoton (valfritt)",
     photosHint: "Foton hjälper förare att förbereda rätt utrustning och förbättra din offert.",
     yourOfferToDriver: "Ditt erbjudande till föraren",
+    priceBase: "Grundavgift",
+    pricePerKm: "Per km",
     suggestedPrice: "Rekommenderat pris",
     allowedRange: "Tillåtet intervall",
     leaveBlankPrice: "Lämna tomt för rekommenderat pris. Förare ser ditt erbjudna pris innan de accepterar.",
@@ -823,6 +873,52 @@ const translations = {
     independentContractor: "Oberoende uppdragstagare",
     platformCommission: "Plattformsavgift",
     fTaxReminder: "F-skatteinfo",
+
+    // Error & success messages (Fix 4)
+    errorNetwork: "Nätverksfel. Kontrollera din anslutning.",
+    errorServer: "Serverfel. Försök igen senare.",
+    errorInvalidEmail: "Ange en giltig e-postadress.",
+    errorInvalidPassword: "Lösenordet måste vara minst 8 tecken.",
+    errorPasswordsNoMatch: "Lösenorden matchar inte.",
+    errorRequiredField: "Detta fält är obligatoriskt.",
+    errorJobFailed: "Det gick inte att skapa jobbet. Försök igen.",
+    errorLoginFailed: "Felaktiga uppgifter. Försök igen.",
+    errorUnknown: "Något gick fel. Försök igen.",
+    successJobPosted: "Jobbet har lagts upp!",
+    successProfileSaved: "Profilen har sparats.",
+    successRatingSubmitted: "Betyget har skickats.",
+
+    // Support 24h (Fix 9)
+    respondsWithin24h: "Vi svarar inom 24 timmar",
+    messageSentSuccess: "Ditt meddelande har skickats! Vi återkommer inom 24 timmar.",
+
+    // Empty states (Fix 2)
+    noEarningsYet: "Inga intäkter ännu",
+    noEarningsYetSub: "Slutför ditt första jobb för att börja tjäna.",
+    noChatYet: "Ingen konversation ännu",
+    noChatYetSub: "Skicka ett meddelande till din förare.",
+    noChatYetSvDriver: "Skicka ett meddelande till kunden.",
+    noJobsAvailable: "Inga jobb tillgängliga",
+    noJobsAvailableSub: "Det finns inga jobb i din stad just nu. Vi meddelar dig när ett nytt jobb dyker upp.",
+    stayOnlineHint: "Se till att du är online för att ta emot jobb",
+
+    // Version (Fix 8)
+    appVersion: "Version 1.0.0 · Bära",
+    appCopyright: "© 2026 Bära AB · baraapp.se",
+
+    // Price breakdown (Fix 6)
+    priceBreakdown: "Prisöversikt",
+    baseRate: "Grundpris",
+    distanceCost: "Avståndskostnad",
+    subtotal: "Delsumma",
+    promoDiscountLabel: "Rabattkod",
+    totalPrice: "Totalt",
+    driverEarns: "Föraren tjänar (75%)",
+    finalPriceNote: "Slutpriset bekräftas när föraren accepterar jobbet.",
+
+    // Prohibited items collapsible (Fix 10)
+    prohibitedItemsHeader: "⚠️ Förbjudna föremål",
+    prohibitedItemsContact: "Frågor? Kontakta hello@baraapp.se",
   },
 } as const;
 

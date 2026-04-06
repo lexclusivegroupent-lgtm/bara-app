@@ -48,6 +48,69 @@ router.post("/register", async (req, res) => {
     }).returning();
 
     const token = signToken(user.id, user.role);
+
+    // Send welcome email (non-blocking)
+    const resend = getResend();
+    if (resend) {
+      const fromEmail = process.env.RESEND_FROM_EMAIL || "Bära <noreply@baraapp.se>";
+      const firstName = fullName.split(" ")[0];
+      const isDriver = role === "driver" || role === "both";
+      const subject = isDriver ? "Välkommen till Bära-teamet! 🚛💰" : "Välkommen till Bära! 🚛";
+      const html = isDriver ? `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#1B2A4A;color:#fff;border-radius:16px;overflow:hidden;">
+          <div style="background:#C9A84C;padding:32px;text-align:center;">
+            <h1 style="margin:0;color:#1B2A4A;font-size:28px;font-weight:800;">Bära</h1>
+            <p style="color:#1B2A4A;margin:8px 0 0;font-size:14px;font-weight:600;">Sveriges first on-demand transport app</p>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="color:#C9A84C;margin:0 0 8px;">Hej ${firstName}! 👋</h2>
+            <p>Du är nu registrerad som Bära-förare. Här är hur du kommer igång:</p>
+            <ol style="color:#C4C9D4;line-height:1.8;">
+              <li>Sätt din status till <strong style="color:#fff">Tillgänglig</strong> på kartan</li>
+              <li>Vänta på jobbförfrågningar i din stad</li>
+              <li>Acceptera jobb och tjäna 75% av varje jobb</li>
+            </ol>
+            <div style="background:#243252;border-radius:12px;padding:16px;margin:20px 0;border-left:4px solid #C9A84C;">
+              <p style="margin:0;font-size:13px;color:#C9A84C;font-weight:600;">💡 Skattepåminnelse</p>
+              <p style="margin:8px 0 0;font-size:13px;color:#C4C9D4;">Kom ihåg att sätta undan 30% av dina intäkter för skatt.</p>
+            </div>
+            <p>Glöm inte att ange din fordonstyp i inställningarna.</p>
+            <hr style="border:none;border-top:1px solid #2D3F60;margin:24px 0;" />
+            <p style="color:#C4C9D4;font-size:13px;">Remember to set your vehicle type in Settings.<br>Earn 75% of every job · No minimum requirements · You set your own hours.</p>
+            <a href="https://app.baraapp.se" style="display:inline-block;background:#C9A84C;color:#1B2A4A;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:16px;">Öppna Bära</a>
+            <p style="color:#C4C9D4;font-size:13px;margin-top:24px;">Support: <a href="mailto:hello@baraapp.se" style="color:#C9A84C;">hello@baraapp.se</a></p>
+          </div>
+          <div style="background:#243252;padding:16px;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#6B7280;">© 2026 Bära AB · baraapp.se</p>
+          </div>
+        </div>
+      ` : `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#1B2A4A;color:#fff;border-radius:16px;overflow:hidden;">
+          <div style="background:#C9A84C;padding:32px;text-align:center;">
+            <h1 style="margin:0;color:#1B2A4A;font-size:28px;font-weight:800;">Bära</h1>
+            <p style="color:#1B2A4A;margin:8px 0 0;font-size:14px;font-weight:600;">Sveriges first on-demand transport app</p>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="color:#C9A84C;margin:0 0 8px;">Hej ${firstName}! 👋</h2>
+            <p>Du är nu en del av Bära — Sveriges första app för möbeltransport på begäran.</p>
+            <ol style="color:#C4C9D4;line-height:1.8;">
+              <li>Tryck på <strong style="color:#fff">Nytt jobb</strong> på startsidan</li>
+              <li>Beskriv vad som ska flyttas och välj tid</li>
+              <li>En verifierad förare nära dig accepterar jobbet</li>
+            </ol>
+            <a href="https://app.baraapp.se" style="display:inline-block;background:#C9A84C;color:#1B2A4A;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:16px;">Lägg upp ditt första jobb</a>
+            <hr style="border:none;border-top:1px solid #2D3F60;margin:24px 0;" />
+            <p style="color:#C4C9D4;font-size:13px;">Post your first job and get help within hours.<br>Simple, fast and affordable furniture transport across Sweden.</p>
+            <p style="color:#C4C9D4;font-size:13px;">Support: <a href="mailto:hello@baraapp.se" style="color:#C9A84C;">hello@baraapp.se</a></p>
+          </div>
+          <div style="background:#243252;padding:16px;text-align:center;">
+            <p style="margin:0;font-size:11px;color:#6B7280;">© 2026 Bära AB · baraapp.se</p>
+          </div>
+        </div>
+      `;
+      resend.emails.send({ from: fromEmail, to: email.toLowerCase(), subject, html }).catch(() => {});
+    }
+
     res.status(201).json({
       token,
       user: formatUser(user),

@@ -80,6 +80,7 @@ function RootLayoutNav() {
       <Stack.Screen name="index" />
       <Stack.Screen name="login" />
       <Stack.Screen name="register" />
+      <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
       <Stack.Screen name="terms" />
       <Stack.Screen name="notifications" />
       <Stack.Screen name="(customer)" options={{ headerShown: false }} />

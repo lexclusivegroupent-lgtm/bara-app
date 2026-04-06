@@ -58,6 +58,9 @@ export default function PostJobScreen() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
 
+  // UI toggles
+  const [prohibitedOpen, setProhibitedOpen] = useState(false);
+
   const pricing = calculatePrice(jobType, distanceKm);
   const suggestedPrice = pricing.priceTotal;
   const minPrice = Math.max(299, Math.round(suggestedPrice * 0.70));
@@ -404,14 +407,19 @@ export default function PostJobScreen() {
           </View>
         </View>
 
-        <View style={styles.prohibitedCard}>
+        <TouchableOpacity style={styles.prohibitedCard} onPress={() => setProhibitedOpen(p => !p)} activeOpacity={0.85}>
           <View style={styles.prohibitedHeader}>
             <Feather name="alert-triangle" size={14} color={Colors.gold} />
-            <Text style={styles.prohibitedTitle}>{t("prohibitedItems")}</Text>
+            <Text style={[styles.prohibitedTitle, { flex: 1 }]}>{t("prohibitedItems")}</Text>
+            <Feather name={prohibitedOpen ? "chevron-up" : "chevron-down"} size={15} color={Colors.textMuted} />
           </View>
-          <Text style={styles.prohibitedText}>{t("prohibitedList")}</Text>
-          <Text style={styles.prohibitedSubtext}>{t("prohibitedNote")}</Text>
-        </View>
+          {prohibitedOpen && (
+            <>
+              <Text style={styles.prohibitedText}>{t("prohibitedList")}</Text>
+              <Text style={styles.prohibitedSubtext}>{t("prohibitedNote")}</Text>
+            </>
+          )}
+        </TouchableOpacity>
 
         <View style={styles.photoSection}>
           <View style={styles.photoSectionHeader}>
@@ -484,10 +492,29 @@ export default function PostJobScreen() {
 
         <View style={styles.priceCard}>
           <Text style={styles.priceCardTitle}>{t("yourOfferToDriver")}</Text>
-          <View style={styles.priceRow}>
-            <Text style={styles.priceLabel}>{t("suggestedPrice")}</Text>
-            <Text style={styles.priceValue}>{formatSEK(suggestedPrice)}</Text>
+
+          {/* Itemized breakdown */}
+          <View style={styles.breakdownBlock}>
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>{t("priceBase")}</Text>
+              <Text style={styles.breakdownValue}>{formatSEK(pricing.basePrice)}</Text>
+            </View>
+            {isFurniture && (
+              <View style={styles.breakdownRow}>
+                <Text style={styles.breakdownLabel}>{t("pricePerKm")} × {distanceKm} km</Text>
+                <Text style={styles.breakdownValue}>{formatSEK(pricing.rateKm * distanceKm)}</Text>
+              </View>
+            )}
+            <View style={[styles.breakdownRow, styles.breakdownDivider]}>
+              <Text style={styles.breakdownLabel}>{t("platformFee")} (25%)</Text>
+              <Text style={styles.breakdownValue}>{formatSEK(pricing.platformFee)}</Text>
+            </View>
+            <View style={styles.breakdownRow}>
+              <Text style={[styles.breakdownLabel, { color: Colors.gold, fontFamily: "Inter_700Bold" }]}>{t("suggestedPrice")}</Text>
+              <Text style={[styles.breakdownValue, { color: Colors.gold, fontFamily: "Inter_700Bold" }]}>{formatSEK(suggestedPrice)}</Text>
+            </View>
           </View>
+
           <View style={styles.priceRow}>
             <Text style={styles.priceLabel}>{t("allowedRange")}</Text>
             <Text style={styles.priceValue}>{formatSEK(minPrice)} – {formatSEK(maxPrice)}</Text>
@@ -741,6 +768,36 @@ const styles = StyleSheet.create({
     color: Colors.navy,
   },
   disabled: { opacity: 0.7 },
+  breakdownBlock: {
+    backgroundColor: Colors.navy,
+    borderRadius: 10,
+    padding: 12,
+    gap: 6,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  breakdownRow: {
+    flexDirection: "row" as const,
+    justifyContent: "space-between" as const,
+    alignItems: "center" as const,
+  },
+  breakdownDivider: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 6,
+    marginTop: 2,
+  },
+  breakdownLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  breakdownValue: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
   prohibitedCard: {
     backgroundColor: `${Colors.gold}10`,
     borderRadius: 12,

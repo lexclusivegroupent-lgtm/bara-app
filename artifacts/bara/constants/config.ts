@@ -193,6 +193,8 @@ export function calculatePrice(jobType: JobType, distanceKm: number): {
   priceTotal: number;
   driverPayout: number;
   platformFee: number;
+  basePrice: number;
+  rateKm: number;
 } {
   let basePrice: number;
   let ratePerKm: number;
@@ -222,7 +224,7 @@ export function calculatePrice(jobType: JobType, distanceKm: number): {
   const driverPayout = Math.round(rounded * 0.75);
   const platformFee = Math.round(rounded * 0.25);
 
-  return { priceTotal: rounded, driverPayout, platformFee };
+  return { priceTotal: rounded, driverPayout, platformFee, basePrice, rateKm: ratePerKm };
 }
 
 export function formatSEK(amount: number): string {

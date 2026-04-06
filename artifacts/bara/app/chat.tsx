@@ -103,9 +103,11 @@ export default function ChatScreen() {
           </View>
         ) : messages.length === 0 ? (
           <View style={styles.center}>
-            <Feather name="message-circle" size={36} color={Colors.border} />
-            <Text style={styles.emptyTitle}>{t("noMessages")}</Text>
-            <Text style={styles.emptySub}>{t("startConversation")}</Text>
+            <Text style={styles.emptyEmoji}>💬</Text>
+            <Text style={styles.emptyTitle}>{t("noChatYet")}</Text>
+            <Text style={styles.emptySub}>
+              {user?.role === "driver" ? t("noChatYetSvDriver") : t("noChatYetSub")}
+            </Text>
           </View>
         ) : (
           <FlatList
@@ -176,9 +178,10 @@ const styles = StyleSheet.create({
   backBtn: { width: 40, height: 40, justifyContent: "center" },
   headerCenter: { flexDirection: "row", alignItems: "center", gap: 8 },
   headerTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12 },
-  emptyTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
-  emptySub: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", paddingHorizontal: 32 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, paddingHorizontal: 32 },
+  emptyEmoji: { fontSize: 56 },
+  emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" },
+  emptySub: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center" },
   list: { padding: 16, gap: 10 },
   bubble: {
     maxWidth: "80%",

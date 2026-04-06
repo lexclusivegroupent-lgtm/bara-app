@@ -293,4 +293,68 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
   }
 });
 
+// Seed demo data endpoint — creates sample jobs for testing
+router.post("/seed-demo", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    // Check if demo user already exists
+    const existingDemo = await db.select().from(usersTable).where(eq(usersTable.email, "demo@baraapp.se")).limit(1);
+    let demoUserId: number;
+    let demoDriverId: number;
+
+    if (existingDemo.length > 0) {
+      demoUserId = existingDemo[0].id;
+    } else {
+      const bcrypt = await import("bcryptjs");
+      const hash = await bcrypt.hash("demo1234", 10);
+      const [customer] = await db.insert(usersTable).values({
+        email: "demo@baraapp.se",
+        fullName: "Demo Kund",
+        role: "customer",
+        passwordHash: hash,
+        isAvailable: false,
+        totalJobs: 0,
+      }).returning();
+      demoUserId = customer.id;
+    }
+
+    const existingDriver = await db.select().from(usersTable).where(eq(usersTable.email, "demo.driver@baraapp.se")).limit(1);
+    if (existingDriver.length > 0) {
+      demoDriverId = existingDriver[0].id;
+    } else {
+      const bcrypt = await import("bcryptjs");
+      const hash = await bcrypt.hash("demo1234", 10);
+      const [driver] = await db.insert(usersTable).values({
+        email: "demo.driver@baraapp.se",
+        fullName: "Demo Förare",
+        role: "driver",
+        passwordHash: hash,
+        isAvailable: true,
+        totalJobs: 12,
+        vehicleType: "van",
+        vehicleDescription: "VW Transporter 2021",
+        lat: 59.3293,
+        lng: 18.0686,
+      }).returning();
+      demoDriverId = driver.id;
+    }
+
+    // Seed 5 sample jobs
+    const now = new Date();
+    const sampleJobs = [
+      { customerId: demoUserId, driverId: demoDriverId, status: "completed" as const, jobType: "furniture_transport" as const, pickupAddress: "Drottninggatan 1, Stockholm", dropoffAddress: "Södermalm, Stockholm", itemDescription: "3-sits soffa + kaffebord", distanceKm: 4.2, priceTotal: 890, driverPayout: 668, platformFee: 222, preferredTime: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
+      { customerId: demoUserId, driverId: null, status: "pending" as const, jobType: "junk_pickup" as const, pickupAddress: null, dropoffAddress: null, homeAddress: "Vasagatan 10, Stockholm", itemDescription: "Gammal tvättmaskin + tre IKEA-stolar", distanceKm: 0, priceTotal: 599, driverPayout: 449, platformFee: 150, preferredTime: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000) },
+      { customerId: demoUserId, driverId: demoDriverId, status: "in_progress" as const, jobType: "bulky_delivery" as const, pickupAddress: "IKEA Kungens Kurva, Huddinge", dropoffAddress: "Nacka, Stockholm", itemDescription: "PAX garderob 236cm", distanceKm: 18.5, priceTotal: 1290, driverPayout: 968, platformFee: 322, preferredTime: now },
+      { customerId: demoUserId, driverId: demoDriverId, status: "completed" as const, jobType: "furniture_transport" as const, pickupAddress: "Gamla Stan, Stockholm", dropoffAddress: "Östermalm, Stockholm", itemDescription: "Skrivbord + kontorsstol + 4 kartonger", distanceKm: 2.8, priceTotal: 749, driverPayout: 562, platformFee: 187, preferredTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+      { customerId: demoUserId, driverId: null, status: "pending" as const, jobType: "furniture_transport" as const, pickupAddress: "Kungsholmen, Stockholm", dropoffAddress: "Bromma, Stockholm", itemDescription: "Dubbelsäng med resårmadrass", distanceKm: 7.1, priceTotal: 999, driverPayout: 749, platformFee: 250, preferredTime: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000) },
+    ];
+
+    const inserted = await db.insert(jobsTable).values(sampleJobs).returning({ id: jobsTable.id });
+    res.json({ success: true, created: { demoCustomerId: demoUserId, demoDriverId, jobs: inserted.map(j => j.id) } });
+  } catch (err: any) {
+    console.error("Seed demo error:", err);
+    res.status(500).json({ error: "Failed to seed demo data", detail: err.message });
+  }
+});
+
 export default router;

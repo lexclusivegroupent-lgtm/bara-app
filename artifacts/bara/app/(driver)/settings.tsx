@@ -292,6 +292,11 @@ export default function DriverSettingsScreen() {
           <SettingsRow icon="log-out" label={t("logOut")} onPress={handleLogout} danger />
         </View>
 
+        <View style={styles.versionBlock}>
+          <Text style={styles.versionText}>{t("appVersion")}</Text>
+          <Text style={styles.copyrightText}>{t("appCopyright")}</Text>
+        </View>
+
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 16 }} />
       </ScrollView>
 
@@ -546,4 +551,19 @@ const styles = StyleSheet.create({
     borderTopColor: Colors.border,
   },
   vehicleText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  versionBlock: {
+    alignItems: "center" as const,
+    paddingVertical: 20,
+    gap: 4,
+  },
+  versionText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  copyrightText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.border,
+  },
 });

@@ -71,9 +71,20 @@ export default function MyJobsScreen() {
             </View>
           ) : (
             <View style={styles.empty}>
-              <MaterialCommunityIcons name="clipboard-text-outline" size={48} color={Colors.textMuted} />
-              <Text style={styles.emptyText}>{t("noJobsYet")}</Text>
-              <Text style={styles.emptySubtext}>{t("postFromHome")}</Text>
+              <Text style={styles.emptyEmoji}>🛋️</Text>
+              <Text style={styles.emptyTitle}>{t("noJobsYet")}</Text>
+              <Text style={styles.emptySubtext}>
+                {"Lägg upp ditt första jobb och få hjälp inom timmar.\nPost your first job and get help within hours."}
+              </Text>
+              <TouchableOpacity
+                style={styles.postBtn}
+                onPress={() => router.push("/(customer)/home")}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.postBtnText}>
+                  {t("postAJob")}
+                </Text>
+              </TouchableOpacity>
             </View>
           )
         }
@@ -102,9 +113,21 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 80,
-    gap: 10,
+    paddingTop: 60,
+    paddingHorizontal: 32,
+    gap: 12,
   },
+  emptyEmoji: { fontSize: 64 },
+  emptyTitle: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" },
   emptyText: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
-  emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center" },
+  emptySubtext: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", lineHeight: 22 },
+  postBtn: {
+    marginTop: 8,
+    backgroundColor: Colors.gold,
+    borderRadius: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 28,
+    alignItems: "center",
+  },
+  postBtnText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.navy },
 });

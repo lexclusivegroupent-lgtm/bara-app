@@ -199,9 +199,10 @@ export default function DriverMapScreen() {
               </View>
             ) : (
               <View style={styles.emptyState}>
-                <MaterialCommunityIcons name="clipboard-search-outline" size={40} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>{t("noJobsArea")}</Text>
-                <Text style={styles.emptySubtext}>{t("jobsAppear")}</Text>
+                <Text style={styles.emptyEmoji}>🚛</Text>
+                <Text style={styles.emptyTitle}>{t("noJobsAvailable")}</Text>
+                <Text style={styles.emptySubtext}>{t("noJobsAvailableSub")}</Text>
+                <Text style={styles.emptyHint}>{t("stayOnlineHint")}</Text>
               </View>
             )
           }
@@ -282,11 +283,15 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: "center",
     justifyContent: "center",
-    paddingTop: 40,
+    paddingTop: 32,
+    paddingHorizontal: 24,
     gap: 8,
   },
+  emptyEmoji: { fontSize: 52 },
+  emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" },
   emptyText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
-  emptySubtext: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center" },
+  emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", lineHeight: 20 },
+  emptyHint: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center", fontStyle: "italic" },
   driverLaunchNote: {
     flexDirection: "row",
     alignItems: "center",

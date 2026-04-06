@@ -114,9 +114,9 @@ export default function EarningsScreen() {
 
           {jobs.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Feather name="inbox" size={32} color={Colors.textMuted} />
+              <Text style={styles.emptyEmoji}>💰</Text>
               <Text style={styles.emptyTitle}>{t("noEarningsYet")}</Text>
-              <Text style={styles.emptySub}>{t("startAcceptingJobs")}</Text>
+              <Text style={styles.emptySub}>{t("noEarningsYetSub")}</Text>
             </View>
           ) : (
             jobs.map((job) => (
@@ -276,8 +276,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  emptyTitle: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
-  emptySub: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center" },
+  emptyEmoji: { fontSize: 52, textAlign: "center" as const },
+  emptyTitle: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text, textAlign: "center" as const },
+  emptySub: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center" as const },
   row: {
     backgroundColor: Colors.surface,
     borderRadius: 14,

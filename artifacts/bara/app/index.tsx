@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Image,
 } from "react-native";
 import { router } from "expo-router";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -33,19 +34,27 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const logoScale = useSharedValue(0);
   const contentOpacity = useSharedValue(0);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
     if (!isLoading) {
-      if (user) {
-        if (user.role === "driver") {
-          router.replace("/(driver)/map");
-        } else {
-          router.replace("/(customer)/home");
+      AsyncStorage.getItem("bara_onboarding_complete").then((val) => {
+        if (!val) {
+          router.replace("/onboarding");
+          return;
         }
-        return;
-      }
-      logoScale.value = withSpring(1, { damping: 12 });
-      contentOpacity.value = withDelay(400, withTiming(1, { duration: 600 }));
+        setOnboardingChecked(true);
+        if (user) {
+          if (user.role === "driver") {
+            router.replace("/(driver)/map");
+          } else {
+            router.replace("/(customer)/home");
+          }
+          return;
+        }
+        logoScale.value = withSpring(1, { damping: 12 });
+        contentOpacity.value = withDelay(400, withTiming(1, { duration: 600 }));
+      });
     }
   }, [isLoading, user]);
 
@@ -57,7 +66,7 @@ export default function HomeScreen() {
     opacity: contentOpacity.value,
   }));
 
-  if (isLoading) {
+  if (isLoading || !onboardingChecked) {
     return (
       <View style={[styles.container, { backgroundColor: Colors.navy }]} />
     );

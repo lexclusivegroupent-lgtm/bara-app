@@ -102,20 +102,19 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
         <View style={styles.priceSection}>
           {showDriverEarnings ? (
             <View style={styles.earningsContainer}>
-              <Text style={styles.price}>
-                {formatSEK(job.customerPrice ?? job.priceTotal)}
-              </Text>
-              <Text style={styles.earnings}>You earn {formatSEK(job.driverPayout)}</Text>
+              <Text style={styles.earningsBig}>{formatSEK(job.driverPayout)}</Text>
+              <Text style={styles.earningsLabel}>Du tjänar / You earn</Text>
+              <Text style={styles.totalSmall}>{formatSEK(job.customerPrice ?? job.priceTotal)} totalt</Text>
               {job.customerPrice != null && job.customerPrice !== job.priceTotal && (
                 <Text style={styles.suggestedLabel}>
-                  Suggested {formatSEK(job.priceTotal)}
+                  Föreslagen {formatSEK(job.priceTotal)}
                 </Text>
               )}
             </View>
           ) : (
             <View style={styles.freeBadge}>
               <Feather name="gift" size={11} color={Colors.success} />
-              <Text style={styles.freeText}>Free</Text>
+              <Text style={styles.freeText}>Gratis</Text>
             </View>
           )}
         </View>
@@ -245,6 +244,24 @@ const styles = StyleSheet.create({
   },
   earningsContainer: {
     alignItems: "flex-end",
+  },
+  earningsBig: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+    textAlign: "right",
+  },
+  earningsLabel: {
+    fontSize: 10,
+    fontFamily: "Inter_500Medium",
+    color: Colors.gold,
+    opacity: 0.8,
+  },
+  totalSmall: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "right",
   },
   earnings: {
     fontSize: 11,
