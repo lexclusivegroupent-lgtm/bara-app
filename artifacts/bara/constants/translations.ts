@@ -391,6 +391,26 @@ const translations = {
     starting: "Starting...",
     markArrived: "Mark Arrived",
     markingArrived: "Marking...",
+
+    // Driver welfare & legal screens
+    myStatus: "My Status",
+    myStatusRights: "My Status & Rights",
+    driverAgreement: "Driver Agreement",
+    dataPrivacy: "Data & Privacy",
+    insuranceSafety: "Insurance & Safety",
+    appealDecision: "Appeal a Decision",
+    taxOverview: "Tax Overview",
+    totalEarned: "Total Earned",
+    taxReserve: "Tax Reserve (30%)",
+    monthlyEarnings: "Monthly Earnings",
+    yearlyEarnings: "Annual Earnings",
+    baraCommitments: "Bära's commitments to you",
+    contactSupport: "Contact support",
+    viewDriverAgreement: "View Driver Agreement",
+    sideGigIncome: "Bära as side income",
+    independentContractor: "Independent Contractor",
+    platformCommission: "Platform Commission",
+    fTaxReminder: "F-Tax Reminder",
   },
 
   sv: {
@@ -783,6 +803,26 @@ const translations = {
     starting: "Startar...",
     markArrived: "Markera anlänt",
     markingArrived: "Markerar...",
+
+    // Driver welfare & legal screens
+    myStatus: "Min status",
+    myStatusRights: "Min status & rättigheter",
+    driverAgreement: "Föraravtal",
+    dataPrivacy: "Data & integritet",
+    insuranceSafety: "Försäkring & säkerhet",
+    appealDecision: "Överklaga beslut",
+    taxOverview: "Skatteöversikt",
+    totalEarned: "Totalt intjänat",
+    taxReserve: "Skattereserv (30%)",
+    monthlyEarnings: "Månadsintäkter",
+    yearlyEarnings: "Årsintäkter",
+    baraCommitments: "Bäras löften till dig",
+    contactSupport: "Kontakta support",
+    viewDriverAgreement: "Visa föraravtal",
+    sideGigIncome: "Bära som biinkomst",
+    independentContractor: "Oberoende uppdragstagare",
+    platformCommission: "Plattformsavgift",
+    fTaxReminder: "F-skatteinfo",
   },
 } as const;
 
