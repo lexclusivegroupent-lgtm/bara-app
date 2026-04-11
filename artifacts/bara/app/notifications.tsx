@@ -80,7 +80,7 @@ function buildNotifications(jobs: Job[], userId: number, activeMode: "customer" 
         iconSet: "feather",
         iconColor: Colors.gold,
         title: "New job available",
-        subtitle: `New ${job.jobType === "furniture_transport" ? "furniture transport" : "junk pickup"} job in your area`,
+        subtitle: `New ${job.jobType?.replace(/_/g, " ") ?? "small item"} job in your area`,
         time: job.createdAt,
         jobId: job.id,
       });
