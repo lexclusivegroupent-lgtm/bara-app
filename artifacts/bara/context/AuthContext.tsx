@@ -33,8 +33,8 @@ interface AuthContextType {
   isLoading: boolean;
   activeMode: "customer" | "driver";
   setActiveMode: (mode: "customer" | "driver") => void;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterData) => Promise<void>;
+  login: (email: string, password: string) => Promise<{ user: User; mode: "customer" | "driver" }>;
+  register: (data: RegisterData) => Promise<{ user: User; mode: "customer" | "driver" }>;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
@@ -46,6 +46,7 @@ interface RegisterData {
   role: "customer" | "driver" | "both";
   city: string;
   vehicleDescription?: string;
+  vehicleType?: string;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -93,7 +94,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  async function login(email: string, password: string) {
+  async function login(email: string, password: string): Promise<{ user: User; mode: "customer" | "driver" }> {
+    console.log("[Auth] login() starting API call for:", email);
     let res: Response;
     try {
       res = await fetch(`${BASE_URL}/api/auth/login`, {
@@ -101,18 +103,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-    } catch {
+    } catch (e) {
+      console.log("[Auth] login() network error:", e);
       throw new Error("Could not reach server. Check your internet connection.");
     }
     const data = await safeJson(res);
+    console.log("[Auth] login() API response status:", res.status, "ok:", res.ok);
     if (!res.ok) throw new Error(data.error || "Login failed");
     const mode = defaultMode(data.user.role);
     setActiveModeState(mode);
     await AsyncStorage.setItem("bara_mode", mode);
     await persistAuth(data.token, data.user);
+    console.log("[Auth] login() persistAuth done, user role:", data.user.role, "mode:", mode);
+    return { user: data.user, mode };
   }
 
-  async function register(registerData: RegisterData) {
+  async function register(registerData: RegisterData): Promise<{ user: User; mode: "customer" | "driver" }> {
     let res: Response;
     try {
       res = await fetch(`${BASE_URL}/api/auth/register`, {
@@ -129,6 +135,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setActiveModeState(mode);
     await AsyncStorage.setItem("bara_mode", mode);
     await persistAuth(data.token, data.user);
+    return { user: data.user, mode };
   }
 
   async function persistAuth(tok: string, userData: User) {
