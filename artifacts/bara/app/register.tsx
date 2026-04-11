@@ -24,7 +24,8 @@ type Role = "customer" | "driver" | "both";
 
 export default function RegisterScreen() {
   const { register } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
   const [role, setRole] = useState<Role>("customer");
   const [fullName, setFullName] = useState("");
@@ -33,6 +34,7 @@ export default function RegisterScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [city, setCity] = useState("Stockholm");
   const [vehicleDescription, setVehicleDescription] = useState("");
+  const [vehicleType, setVehicleType] = useState("regular_car");
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -61,6 +63,7 @@ export default function RegisterScreen() {
         role,
         city,
         vehicleDescription: vehicleDescription.trim() || undefined,
+        vehicleType: showVehicle ? vehicleType : undefined,
       });
     } catch (e: any) {
       Alert.alert(t("registrationFailed"), e.message || t("somethingWentWrong"));
@@ -165,13 +168,59 @@ export default function RegisterScreen() {
           </View>
 
           {showVehicle && (
-            <InputField
-              label={t("vehicleDescription")}
-              icon="truck"
-              value={vehicleDescription}
-              onChangeText={setVehicleDescription}
-              placeholder={t("vehiclePlaceholder")}
-            />
+            <>
+              {/* Any car qualifies banner */}
+              <View style={styles.anyCarBanner}>
+                <MaterialCommunityIcons name="car-check" size={18} color={Colors.gold} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.anyCarTitle}>
+                    {isSv ? "Vilken bil som helst kvalificerar" : "Any car qualifies"}
+                  </Text>
+                  <Text style={styles.anyCarSub}>
+                    {isSv
+                      ? "Ingen skåpbil eller trailer krävs — bara en vanlig personbil."
+                      : "No van or trailer needed — just a regular car."}
+                  </Text>
+                </View>
+              </View>
+
+              {/* Vehicle type picker */}
+              <View style={styles.vehicleTypeSection}>
+                <Text style={styles.vehicleTypeLabel}>{t("vehicleType") || "Vehicle type"}</Text>
+                <View style={styles.vehicleTypeGrid}>
+                  {[
+                    { id: "regular_car", labelSV: "Personbil", labelEN: "Regular car", icon: "car" },
+                    { id: "suv", labelSV: "SUV", labelEN: "SUV", icon: "car-side" },
+                    { id: "estate_car", labelSV: "Kombi", labelEN: "Estate car", icon: "car-estate" },
+                    { id: "roof_box", labelSV: "Bil med takbox", labelEN: "Car with roof box", icon: "car-settings" },
+                  ].map((vt) => (
+                    <TouchableOpacity
+                      key={vt.id}
+                      style={[styles.vehicleTypeBtn, vehicleType === vt.id && styles.vehicleTypeBtnActive]}
+                      onPress={() => setVehicleType(vt.id)}
+                      activeOpacity={0.8}
+                    >
+                      <MaterialCommunityIcons
+                        name={vt.icon as any}
+                        size={20}
+                        color={vehicleType === vt.id ? Colors.navy : Colors.gold}
+                      />
+                      <Text style={[styles.vehicleTypeBtnText, vehicleType === vt.id && styles.vehicleTypeBtnTextActive]}>
+                        {vt.labelSV}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              <InputField
+                label={t("vehicleDescription")}
+                icon="truck"
+                value={vehicleDescription}
+                onChangeText={setVehicleDescription}
+                placeholder={t("vehiclePlaceholder")}
+              />
+            </>
           )}
 
           <TouchableOpacity
@@ -358,4 +407,61 @@ const styles = StyleSheet.create({
   footer: { flexDirection: "row", justifyContent: "center", marginTop: 28 },
   footerText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   footerLink: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.gold },
+  anyCarBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: `${Colors.gold}15`,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}30`,
+  },
+  anyCarTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+    marginBottom: 2,
+  },
+  anyCarSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 17,
+  },
+  vehicleTypeSection: { gap: 8 },
+  vehicleTypeLabel: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textMuted,
+  },
+  vehicleTypeGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  vehicleTypeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.surface,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  vehicleTypeBtnActive: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  vehicleTypeBtnText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  vehicleTypeBtnTextActive: {
+    color: Colors.navy,
+    fontFamily: "Inter_600SemiBold",
+  },
 });
