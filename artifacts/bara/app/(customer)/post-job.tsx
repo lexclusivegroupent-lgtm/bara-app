@@ -16,20 +16,39 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
-import { BASE_URL, calculatePrice, formatSEK } from "@/constants/config";
+import { BASE_URL, calculatePrice, formatSEK, type JobType, JOB_TYPE_ICONS } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { PhotoPicker } from "@/components/PhotoPicker";
 import { PlacesAutocomplete, type PlaceResult } from "@/components/PlacesAutocomplete";
 import { BaraDateTimePicker } from "@/components/BaraDateTimePicker";
 
+const JOB_LABELS_SV: Record<JobType, string> = {
+  blocket_pickup: "Blocket hämtning",
+  facebook_pickup: "Facebook Marketplace",
+  small_furniture: "Liten möbel",
+  office_items: "Kontorsföremål",
+  children_items: "Barnprylar",
+  electronics: "Elektronik",
+  other_small: "Övrigt litet",
+};
+const JOB_LABELS_EN: Record<JobType, string> = {
+  blocket_pickup: "Blocket Pickup",
+  facebook_pickup: "Facebook Marketplace",
+  small_furniture: "Small Furniture",
+  office_items: "Office Items",
+  children_items: "Children's Items",
+  electronics: "Electronics",
+  other_small: "Other Small Items",
+};
+
 export default function PostJobScreen() {
-  const { type } = useLocalSearchParams<{ type: "furniture_transport" | "bulky_delivery" | "junk_pickup" }>();
+  const { type } = useLocalSearchParams<{ type: JobType }>();
   const { user, token } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
 
-  const jobType = (type || "furniture_transport") as "furniture_transport" | "bulky_delivery" | "junk_pickup";
-  const isFurniture = jobType === "furniture_transport" || jobType === "bulky_delivery";
+  const jobType = (type || "blocket_pickup") as JobType;
 
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -58,13 +77,17 @@ export default function PostJobScreen() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
 
+  // Size/weight confirmation
+  const [agreedToSize, setAgreedToSize] = useState(false);
+
   // UI toggles
   const [prohibitedOpen, setProhibitedOpen] = useState(false);
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   const pricing = calculatePrice(jobType, distanceKm);
   const suggestedPrice = pricing.priceTotal;
-  const minPrice = Math.max(299, Math.round(suggestedPrice * 0.70));
-  const maxPrice = Math.round(suggestedPrice * 1.30);
+  const minPrice = 99;
+  const maxPrice = 299;
 
   // Haversine formula for direct distance between two lat/lng points
   function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -79,7 +102,6 @@ export default function PostJobScreen() {
 
   // Auto-calculate distance whenever both sets of coordinates are available
   useEffect(() => {
-    if (!isFurniture) return;
     if (pickupCoords && dropoffCoords) {
       const km = Math.max(1, Math.round(haversineKm(
         pickupCoords.lat, pickupCoords.lng,
@@ -89,7 +111,7 @@ export default function PostJobScreen() {
       setCustomerPriceInput("");
       setPriceError(null);
     }
-  }, [pickupCoords, dropoffCoords, isFurniture]);
+  }, [pickupCoords, dropoffCoords]);
 
   async function estimateDistance() {
     // Only called as fallback when coordinates aren't available from autocomplete
@@ -117,7 +139,6 @@ export default function PostJobScreen() {
 
   // Fallback: when user types manually (no coords from Places), debounce a server geocode call
   useEffect(() => {
-    if (!isFurniture) return;
     if (pickupCoords && dropoffCoords) return; // haversine effect handles this
     if (!pickupAddress.trim() || !dropoffAddress.trim()) return;
 
@@ -167,12 +188,12 @@ export default function PostJobScreen() {
       setError(t("pleaseEnterTime"));
       return;
     }
-    if (isFurniture && (!pickupAddress.trim() || !dropoffAddress.trim())) {
+    if (!pickupAddress.trim() || !dropoffAddress.trim()) {
       setError(t("pleaseEnterAddresses"));
       return;
     }
-    if (!isFurniture && !homeAddress.trim()) {
-      setError(t("pleaseEnterHome"));
+    if (!agreedToSize) {
+      setError(isSv ? "Bekräfta föremålets storlek och vikt." : t("pleaseConfirmSize"));
       return;
     }
     if (!agreedToOwnership) {
@@ -186,7 +207,7 @@ export default function PostJobScreen() {
     if (cpRaw) {
       const cp = parseInt(cpRaw, 10);
       if (isNaN(cp) || cp < minPrice || cp > maxPrice) {
-        setPriceError(`Enter a price between ${minPrice} and ${maxPrice} kr`);
+        setPriceError(isSv ? `Ange ett pris mellan ${minPrice} och ${maxPrice} kr` : `Enter a price between ${minPrice} and ${maxPrice} kr`);
         return;
       }
       resolvedCustomerPrice = cp;
@@ -203,9 +224,9 @@ export default function PostJobScreen() {
         },
         body: JSON.stringify({
           jobType,
-          pickupAddress: isFurniture ? pickupAddress : null,
-          dropoffAddress: isFurniture ? dropoffAddress : null,
-          homeAddress: !isFurniture ? homeAddress : null,
+          pickupAddress,
+          dropoffAddress,
+          homeAddress: null,
           extraStops: extraStops.filter(Boolean),
           itemDescription: itemDescription.trim(),
           preferredTime: preferredTime ? preferredTime.toISOString() : null,
@@ -242,11 +263,11 @@ export default function PostJobScreen() {
         </TouchableOpacity>
         <View style={styles.headerCenter}>
           <MaterialCommunityIcons
-            name={isFurniture ? "sofa" : "delete-sweep"}
+            name={JOB_TYPE_ICONS[jobType] as any}
             size={18}
             color={Colors.gold}
           />
-          <Text style={styles.headerTitle}>{t("postAJob")}</Text>
+          <Text style={styles.headerTitle}>{isSv ? JOB_LABELS_SV[jobType] : JOB_LABELS_EN[jobType]}</Text>
         </View>
         <View style={{ width: 40 }} />
       </View>
@@ -256,83 +277,111 @@ export default function PostJobScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Size guide card */}
+        <TouchableOpacity
+          style={styles.sizeGuideCard}
+          onPress={() => setSizeGuideOpen(o => !o)}
+          activeOpacity={0.85}
+        >
+          <View style={styles.sizeGuideHeader}>
+            <View style={styles.sizeGuideHeaderLeft}>
+              <MaterialCommunityIcons name="ruler" size={16} color={Colors.gold} />
+              <Text style={styles.sizeGuideTitle}>
+                {isSv ? "Storleksguide — vad ryms?" : "Size guide — what qualifies?"}
+              </Text>
+            </View>
+            <Feather name={sizeGuideOpen ? "chevron-up" : "chevron-down"} size={15} color={Colors.textMuted} />
+          </View>
+          {sizeGuideOpen && (
+            <View style={styles.sizeGuideBody}>
+              <Text style={styles.sizeGuideSubtitle}>
+                {isSv
+                  ? "Föremål mindre än en liten byrå · Under 25 kg · En person kan bära det"
+                  : "Smaller than a small dresser · Under 25 kg · One person can carry it"}
+              </Text>
+              <View style={styles.sizeGuideColumns}>
+                <View style={styles.sizeGuideCol}>
+                  <Text style={styles.sizeGuideColLabel}>✅ {isSv ? "Okej" : "OK"}</Text>
+                  {["Sängbord", "Liten bokhylla", "Skrivbordsstol", "Liten byrå", "Lampor & tavlor", "Lådor & kartonger"].map(item => (
+                    <Text key={item} style={styles.sizeGuideItem}>· {item}</Text>
+                  ))}
+                </View>
+                <View style={styles.sizeGuideDivider} />
+                <View style={styles.sizeGuideCol}>
+                  <Text style={[styles.sizeGuideColLabel, { color: "#E05252" }]}>❌ {isSv ? "För stort" : "Too large"}</Text>
+                  {["Soffor", "Garderober", "Vitvaror", "Sängar"].map(item => (
+                    <Text key={item} style={[styles.sizeGuideItem, { color: Colors.textMuted }]}>· {item}</Text>
+                  ))}
+                </View>
+              </View>
+            </View>
+          )}
+        </TouchableOpacity>
+
         <View style={styles.jobTypeBadge}>
           <MaterialCommunityIcons
-            name={isFurniture ? "sofa" : "delete-sweep"}
+            name={JOB_TYPE_ICONS[jobType] as any}
             size={20}
             color={Colors.gold}
           />
           <Text style={styles.jobTypeLabel}>
-            {isFurniture ? t("furnitureTransport") : t("junkTrashPickup")}
+            {isSv ? JOB_LABELS_SV[jobType] : JOB_LABELS_EN[jobType]}
           </Text>
         </View>
 
-        {isFurniture ? (
-          <>
-            <FormField label={t("pickupAddress")} icon="map-pin">
-              <PlacesAutocomplete
-                value={pickupAddress}
-                onSelect={handlePickupSelect}
-                placeholder={t("searchPickup")}
-                token={token}
-              />
-            </FormField>
-            <FormField label={t("dropoffAddress")} icon="flag">
-              <PlacesAutocomplete
-                value={dropoffAddress}
-                onSelect={handleDropoffSelect}
-                placeholder={t("searchDropoff")}
-                token={token}
-              />
-            </FormField>
+        <FormField label={t("pickupAddress")} icon="map-pin">
+          <PlacesAutocomplete
+            value={pickupAddress}
+            onSelect={handlePickupSelect}
+            placeholder={t("searchPickup")}
+            token={token}
+          />
+        </FormField>
+        <FormField label={t("dropoffAddress")} icon="flag">
+          <PlacesAutocomplete
+            value={dropoffAddress}
+            onSelect={handleDropoffSelect}
+            placeholder={t("searchDropoff")}
+            token={token}
+          />
+        </FormField>
 
-            {/* Extra stops */}
-            <FormField label={t("extraStops")} icon="git-branch">
-              <View style={{ gap: 8 }}>
-                {extraStops.map((stop, i) => (
-                  <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                    <TextInput
-                      style={[styles.input, { flex: 1 }]}
-                      placeholder={`${t("stop")} ${i + 1}`}
-                      placeholderTextColor={Colors.textMuted}
-                      value={stop}
-                      onChangeText={(v) => {
-                        const updated = [...extraStops];
-                        updated[i] = v;
-                        setExtraStops(updated);
-                      }}
-                    />
-                    <TouchableOpacity
-                      onPress={() => setExtraStops(extraStops.filter((_, j) => j !== i))}
-                      style={{ padding: 8 }}
-                    >
-                      <Feather name="x" size={16} color={Colors.textMuted} />
-                    </TouchableOpacity>
-                  </View>
-                ))}
-                {extraStops.length < 3 && (
-                  <TouchableOpacity
-                    onPress={() => setExtraStops([...extraStops, ""])}
-                    style={styles.addStopBtn}
-                    activeOpacity={0.8}
-                  >
-                    <Feather name="plus" size={14} color={Colors.gold} />
-                    <Text style={styles.addStopText}>{t("addStop")}</Text>
-                  </TouchableOpacity>
-                )}
+        {/* Extra stops */}
+        <FormField label={t("extraStops")} icon="git-branch">
+          <View style={{ gap: 8 }}>
+            {extraStops.map((stop, i) => (
+              <View key={i} style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                <TextInput
+                  style={[styles.input, { flex: 1 }]}
+                  placeholder={`${t("stop")} ${i + 1}`}
+                  placeholderTextColor={Colors.textMuted}
+                  value={stop}
+                  onChangeText={(v) => {
+                    const updated = [...extraStops];
+                    updated[i] = v;
+                    setExtraStops(updated);
+                  }}
+                />
+                <TouchableOpacity
+                  onPress={() => setExtraStops(extraStops.filter((_, j) => j !== i))}
+                  style={{ padding: 8 }}
+                >
+                  <Feather name="x" size={16} color={Colors.textMuted} />
+                </TouchableOpacity>
               </View>
-            </FormField>
-          </>
-        ) : (
-          <FormField label={t("homeAddress")} icon="home">
-            <PlacesAutocomplete
-              value={homeAddress}
-              onSelect={(r) => setHomeAddress(r.address)}
-              placeholder={t("searchHome")}
-              token={token}
-            />
-          </FormField>
-        )}
+            ))}
+            {extraStops.length < 3 && (
+              <TouchableOpacity
+                onPress={() => setExtraStops([...extraStops, ""])}
+                style={styles.addStopBtn}
+                activeOpacity={0.8}
+              >
+                <Feather name="plus" size={14} color={Colors.gold} />
+                <Text style={styles.addStopText}>{t("addStop")}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        </FormField>
 
         <FormField label={t("itemDescription")} icon="package">
           <TextInput
@@ -499,12 +548,10 @@ export default function PostJobScreen() {
               <Text style={styles.breakdownLabel}>{t("priceBase")}</Text>
               <Text style={styles.breakdownValue}>{formatSEK(pricing.basePrice)}</Text>
             </View>
-            {isFurniture && (
-              <View style={styles.breakdownRow}>
-                <Text style={styles.breakdownLabel}>{t("pricePerKm")} × {distanceKm} km</Text>
-                <Text style={styles.breakdownValue}>{formatSEK(pricing.rateKm * distanceKm)}</Text>
-              </View>
-            )}
+            <View style={styles.breakdownRow}>
+              <Text style={styles.breakdownLabel}>{t("pricePerKm")} × {distanceKm} km</Text>
+              <Text style={styles.breakdownValue}>{formatSEK(pricing.rateKm * distanceKm)}</Text>
+            </View>
             <View style={[styles.breakdownRow, styles.breakdownDivider]}>
               <Text style={styles.breakdownLabel}>{t("platformFee")} (25%)</Text>
               <Text style={styles.breakdownValue}>{formatSEK(pricing.platformFee)}</Text>
@@ -550,6 +597,22 @@ export default function PostJobScreen() {
             {t("freeLaunchNote")}
           </Text>
         </View>
+
+        {/* Mandatory size confirmation checkbox */}
+        <TouchableOpacity
+          style={[styles.ownershipRow, !agreedToSize && styles.ownershipRowHighlight]}
+          onPress={() => setAgreedToSize(!agreedToSize)}
+          activeOpacity={0.8}
+        >
+          <View style={[styles.checkbox, agreedToSize && styles.checkboxActive]}>
+            {agreedToSize && <Feather name="check" size={12} color={Colors.navy} />}
+          </View>
+          <Text style={styles.ownershipText}>
+            {isSv
+              ? "Jag bekräftar att föremålet är mindre än en liten byrå och väger under 25 kg"
+              : "I confirm the item is smaller than a small dresser and weighs under 25 kg"}
+          </Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.ownershipRow}
@@ -768,6 +831,74 @@ const styles = StyleSheet.create({
     color: Colors.navy,
   },
   disabled: { opacity: 0.7 },
+  ownershipRowHighlight: {
+    borderWidth: 1,
+    borderColor: `${Colors.gold}40`,
+    borderRadius: 10,
+    backgroundColor: `${Colors.gold}08`,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    marginHorizontal: -10,
+  },
+  sizeGuideCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sizeGuideHeader: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    justifyContent: "space-between" as const,
+  },
+  sizeGuideHeaderLeft: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 8,
+    flex: 1,
+  },
+  sizeGuideTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+  },
+  sizeGuideBody: {
+    marginTop: 12,
+    gap: 10,
+  },
+  sizeGuideSubtitle: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 18,
+  },
+  sizeGuideColumns: {
+    flexDirection: "row" as const,
+    gap: 12,
+    marginTop: 4,
+  },
+  sizeGuideCol: {
+    flex: 1,
+    gap: 4,
+  },
+  sizeGuideDivider: {
+    width: 1,
+    backgroundColor: Colors.border,
+    alignSelf: "stretch" as const,
+  },
+  sizeGuideColLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: Colors.success,
+    marginBottom: 4,
+  },
+  sizeGuideItem: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 20,
+  },
   breakdownBlock: {
     backgroundColor: Colors.navy,
     borderRadius: 10,
