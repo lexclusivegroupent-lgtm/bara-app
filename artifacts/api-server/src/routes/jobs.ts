@@ -120,19 +120,29 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     promoCode,
   } = req.body;
 
-  if (!jobType || !itemDescription || !preferredTime || !city || priceTotal == null) {
-    res.status(400).json({ error: "Missing required fields: jobType, itemDescription, preferredTime, city, priceTotal" });
+  if (!jobType || !itemDescription || !preferredTime || priceTotal == null) {
+    res.status(400).json({ error: "Missing required fields: jobType, itemDescription, preferredTime, priceTotal" });
     return;
   }
+  // City is optional — fall back to a default so drivers can still see the job
+  const resolvedCity: string = (city && city.trim()) ? city.trim() : "Sverige";
 
-  if (!["furniture_transport", "bulky_delivery", "junk_pickup"].includes(jobType)) {
-    res.status(400).json({ error: "Invalid jobType" });
+  const VALID_JOB_TYPES = [
+    // New types (7 categories)
+    "blocket_pickup", "facebook_pickup", "small_furniture",
+    "office_items", "children_items", "electronics", "other_small",
+    // Legacy types (kept for backward compatibility)
+    "furniture_transport", "bulky_delivery", "junk_pickup",
+  ];
+  if (!VALID_JOB_TYPES.includes(jobType)) {
+    res.status(400).json({ error: `Invalid jobType. Must be one of: ${VALID_JOB_TYPES.join(", ")}` });
     return;
   }
 
   const suggested = parseFloat(priceTotal);
-  const minAllowed = Math.max(299, Math.round(suggested * 0.70));
-  const maxAllowed = Math.round(suggested * 1.30);
+  // New pricing range: 99–299 SEK; allow ±30% flex around suggested but clamp to 99–299
+  const minAllowed = Math.max(99, Math.round(suggested * 0.70));
+  const maxAllowed = Math.min(299, Math.round(suggested * 1.30));
 
   let resolvedCustomerPrice: number | null = null;
   if (customerPrice != null) {
@@ -183,7 +193,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       platformFee: (platformFee ?? Math.round(priceTotal * 0.25)).toString(),
       customerPrice: resolvedCustomerPrice != null ? resolvedCustomerPrice.toString() : null,
       paymentStatus: "unpaid",
-      city,
+      city: resolvedCity,
       photosCustomer: Array.isArray(customerPhotos) ? customerPhotos : [],
       floorNumber: floorNumber != null ? parseInt(floorNumber) : null,
       hasElevator: hasElevator != null ? Boolean(hasElevator) : null,
@@ -197,9 +207,9 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     res.status(201).json(enriched);
 
     // Notify all available drivers in the same city (fire and forget)
-    const typeLabel = jobType === "furniture_transport" ? "Furniture transport" : jobType === "bulky_delivery" ? "Bulky delivery" : "Junk pickup";
+    const typeLabel = jobType.replace(/_/g, " ");
     db.select({ pushToken: usersTable.pushToken }).from(usersTable)
-      .where(and(eq(usersTable.city, city), eq(usersTable.isAvailable, true)))
+      .where(and(eq(usersTable.city, resolvedCity), eq(usersTable.isAvailable, true)))
       .then((drivers) => {
         const messages = drivers
           .filter((d) => d.pushToken)
