@@ -77,7 +77,7 @@ export function DriverMapView({ city, jobs, onAccept, accepting, isAvailable }: 
           >
             <View style={[styles.jobMarker, selectedJob === job.id && styles.jobMarkerSelected]}>
               <MaterialCommunityIcons
-                name={job.jobType === "furniture_transport" ? "sofa" : "delete"}
+                name="package-variant-closed"
                 size={16}
                 color={selectedJob === job.id ? Colors.navy : Colors.gold}
               />
@@ -85,7 +85,7 @@ export function DriverMapView({ city, jobs, onAccept, accepting, isAvailable }: 
             <Callout tooltip>
               <View style={styles.callout}>
                 <Text style={styles.calloutTitle}>
-                  {job.jobType === "furniture_transport" ? "Furniture Transport" : "Junk Pickup"}
+                  {job.jobType?.replace(/_/g, " ") ?? "Small Item"}
                 </Text>
                 <Text style={styles.calloutAddress} numberOfLines={2}>
                   {job.pickupAddress || job.homeAddress}
