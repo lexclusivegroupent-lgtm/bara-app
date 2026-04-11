@@ -65,9 +65,9 @@ export default function RegisterScreen() {
         vehicleDescription: vehicleDescription.trim() || undefined,
         vehicleType: showVehicle ? vehicleType : undefined,
       });
+      router.replace("/onboarding");
     } catch (e: any) {
       Alert.alert(t("registrationFailed"), e.message || t("somethingWentWrong"));
-    } finally {
       setLoading(false);
     }
   }
