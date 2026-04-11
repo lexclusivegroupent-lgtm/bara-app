@@ -36,11 +36,18 @@ export default function LoginScreen() {
     }
     setError(null);
     setLoading(true);
+    console.log("[Login] handleLogin() called for:", email.trim());
     try {
-      await login(email.trim(), password);
+      console.log("[Login] Calling login() from AuthContext...");
+      const { mode } = await login(email.trim(), password);
+      console.log("[Login] login() resolved, mode:", mode);
+      const destination = mode === "driver" ? "/(driver)/map" : "/(customer)/home";
+      console.log("[Login] Navigating to:", destination);
+      router.replace(destination as any);
+      console.log("[Login] router.replace() called successfully");
     } catch (e: any) {
+      console.log("[Login] login() threw error:", e.message);
       setError(e.message || "Invalid credentials. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
