@@ -2,14 +2,65 @@ import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
-import { formatSEK, formatDate, getStatusColor, getStatusLabel } from "@/constants/config";
+import { formatSEK, formatDate, getStatusColor, getStatusLabel, type JobType, JOB_TYPE_ICONS } from "@/constants/config";
 import { StarRating } from "@/components/StarRating";
+
+const JOB_LABELS_SV: Record<string, string> = {
+  blocket_pickup: "Blocket hämtning",
+  facebook_pickup: "Facebook Marketplace",
+  small_furniture: "Liten möbel",
+  office_items: "Kontorsföremål",
+  children_items: "Barnprylar",
+  electronics: "Elektronik",
+  other_small: "Övrigt litet",
+  // Legacy types
+  furniture_transport: "Möbeltransport",
+  bulky_delivery: "Tungvaror",
+  junk_pickup: "Skräp & sopor",
+};
+
+const JOB_LABELS_EN: Record<string, string> = {
+  blocket_pickup: "Blocket Pickup",
+  facebook_pickup: "Facebook Marketplace",
+  small_furniture: "Small Furniture",
+  office_items: "Office Items",
+  children_items: "Children's Items",
+  electronics: "Electronics",
+  other_small: "Other Small Items",
+  // Legacy types
+  furniture_transport: "Furniture Transport",
+  bulky_delivery: "Bulky Delivery",
+  junk_pickup: "Junk Pickup",
+};
+
+const JOB_ICONS: Record<string, string> = {
+  blocket_pickup: "tag-outline",
+  facebook_pickup: "store-outline",
+  small_furniture: "chair-rolling",
+  office_items: "briefcase-outline",
+  children_items: "baby-carriage",
+  electronics: "laptop",
+  other_small: "package-variant-closed",
+  // Legacy types
+  furniture_transport: "sofa",
+  bulky_delivery: "truck-outline",
+  junk_pickup: "delete-sweep",
+};
+
+function getJobIcon(jobType: string): string {
+  return JOB_ICONS[jobType] ?? "package-variant-closed";
+}
+
+function getJobLabel(jobType: string, lang: "sv" | "en" = "sv"): string {
+  const map = lang === "sv" ? JOB_LABELS_SV : JOB_LABELS_EN;
+  return map[jobType] ?? jobType;
+}
 
 export interface Job {
   id: number;
   customerId: number;
   driverId?: number | null;
-  jobType: "furniture_transport" | "junk_pickup";
+  jobType: string;
   status: "pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "disputed";
   pickupAddress?: string | null;
   dropoffAddress?: string | null;
@@ -23,8 +74,8 @@ export interface Job {
   customerPrice?: number | null;
   cancellationFee?: number | null;
   rating?: number | null;
-  paymentStatus: "unpaid" | "paid";
-  city: string;
+  paymentStatus?: "unpaid" | "paid";
+  city?: string | null;
   createdAt: string;
   acceptedAt?: string | null;
   completedAt?: string | null;
@@ -46,7 +97,13 @@ interface Props {
 
 export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting, showDriverEarnings }: Props) {
   const statusColor = getStatusColor(job.status);
-  const isFurniture = job.jobType === "furniture_transport";
+  const icon = getJobIcon(job.jobType);
+  const labelSV = getJobLabel(job.jobType, "sv");
+  const labelEN = getJobLabel(job.jobType, "en");
+
+  const safePrice = job.priceTotal ?? 0;
+  const safeDriverPayout = job.driverPayout ?? 0;
+  const safePreferredTime = job.preferredTime ?? job.createdAt ?? null;
 
   return (
     <TouchableOpacity
@@ -57,14 +114,14 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
       <View style={styles.cardHeader}>
         <View style={styles.jobIcon}>
           <MaterialCommunityIcons
-            name={isFurniture ? "sofa" : "delete-sweep"}
+            name={icon as any}
             size={22}
             color={Colors.gold}
           />
         </View>
         <View style={styles.jobInfo}>
-          <Text style={styles.jobType}>{isFurniture ? "Furniture Transport" : "Junk & Trash Pickup"}</Text>
-          <Text style={styles.itemDesc} numberOfLines={1}>{job.itemDescription}</Text>
+          <Text style={styles.jobType} numberOfLines={1}>{labelSV} / {labelEN}</Text>
+          <Text style={styles.itemDesc} numberOfLines={1}>{job.itemDescription || "—"}</Text>
         </View>
         <View style={[styles.statusBadge, { backgroundColor: `${statusColor}22` }]}>
           <View style={[styles.statusDot, { backgroundColor: statusColor }]} />
@@ -72,28 +129,28 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
         </View>
       </View>
 
-      {job.driver && (
+      {job.driver ? (
         <View style={styles.driverRow}>
           <Feather name="user" size={12} color={Colors.textMuted} />
-          <Text style={styles.driverName} numberOfLines={1}>{job.driver.fullName}</Text>
+          <Text style={styles.driverName} numberOfLines={1}>{job.driver.fullName ?? "Driver"}</Text>
           <StarRating
-            rating={job.driver.rating ? Number(job.driver.rating) : null}
-            totalJobs={job.driver.totalJobs}
+            rating={job.driver.rating != null ? Number(job.driver.rating) : null}
+            totalJobs={job.driver.totalJobs ?? 0}
             size={12}
             showNew
             showCount={false}
           />
         </View>
-      )}
+      ) : null}
 
       <View style={styles.cardDivider} />
 
       <View style={styles.cardFooter}>
         <View style={styles.footerLeft}>
           <Feather name="clock" size={12} color={Colors.textMuted} />
-          <Text style={styles.footerMeta}>{formatDate(job.preferredTime)}</Text>
+          <Text style={styles.footerMeta}>{safePreferredTime ? formatDate(safePreferredTime) : "—"}</Text>
         </View>
-        {job.distanceKm && (
+        {job.distanceKm != null && job.distanceKm > 0 && (
           <View style={styles.footerLeft}>
             <Feather name="map" size={12} color={Colors.textMuted} />
             <Text style={styles.footerMeta}>{job.distanceKm} km</Text>
@@ -102,19 +159,18 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
         <View style={styles.priceSection}>
           {showDriverEarnings ? (
             <View style={styles.earningsContainer}>
-              <Text style={styles.earningsBig}>{formatSEK(job.driverPayout)}</Text>
+              <Text style={styles.earningsBig}>{formatSEK(safeDriverPayout)}</Text>
               <Text style={styles.earningsLabel}>Du tjänar / You earn</Text>
-              <Text style={styles.totalSmall}>{formatSEK(job.customerPrice ?? job.priceTotal)} totalt</Text>
-              {job.customerPrice != null && job.customerPrice !== job.priceTotal && (
+              <Text style={styles.totalSmall}>{formatSEK(job.customerPrice ?? safePrice)} totalt</Text>
+              {job.customerPrice != null && job.customerPrice !== safePrice && (
                 <Text style={styles.suggestedLabel}>
-                  Föreslagen {formatSEK(job.priceTotal)}
+                  Föreslagen {formatSEK(safePrice)}
                 </Text>
               )}
             </View>
           ) : (
-            <View style={styles.freeBadge}>
-              <Feather name="gift" size={11} color={Colors.success} />
-              <Text style={styles.freeText}>Gratis</Text>
+            <View style={styles.priceContainer}>
+              <Text style={styles.price}>{formatSEK(job.customerPrice ?? safePrice)}</Text>
             </View>
           )}
         </View>
@@ -177,7 +233,7 @@ const styles = StyleSheet.create({
     gap: 3,
   },
   jobType: {
-    fontSize: 14,
+    fontSize: 13,
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
   },
@@ -236,6 +292,9 @@ const styles = StyleSheet.create({
   priceSection: {
     marginLeft: "auto" as any,
   },
+  priceContainer: {
+    alignItems: "flex-end",
+  },
   price: {
     fontSize: 15,
     fontFamily: "Inter_700Bold",
@@ -263,33 +322,12 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     textAlign: "right",
   },
-  earnings: {
-    fontSize: 11,
-    fontFamily: "Inter_400Regular",
-    color: Colors.success,
-  },
   suggestedLabel: {
     fontSize: 10,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     textDecorationLine: "line-through",
     textAlign: "right",
-  },
-  freeBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-    backgroundColor: `${Colors.success}18`,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: `${Colors.success}30`,
-  },
-  freeText: {
-    fontSize: 11,
-    fontFamily: "Inter_700Bold",
-    color: Colors.success,
   },
   compensationBanner: {
     flexDirection: "row",
