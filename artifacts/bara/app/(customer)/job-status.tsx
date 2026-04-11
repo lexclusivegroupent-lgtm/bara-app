@@ -146,7 +146,7 @@ export default function JobStatusScreen() {
   }
 
   const currentStep = getStepIndex(job.status);
-  const isFurniture = job.jobType === "furniture_transport";
+  const hasRouteAddresses = !!(job.pickupAddress || job.dropoffAddress);
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
@@ -196,7 +196,7 @@ export default function JobStatusScreen() {
 
         <View style={styles.detailCard}>
           <Text style={styles.cardTitle}>{t("jobDetails")}</Text>
-          {isFurniture ? (
+          {hasRouteAddresses ? (
             <>
               <DetailRow icon="map-pin" label={t("pickup")} value={job.pickupAddress || "N/A"} />
               <DetailRow icon="flag" label={t("dropoff")} value={job.dropoffAddress || "N/A"} />
