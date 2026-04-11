@@ -147,6 +147,14 @@ function StatCard({ icon, label, value, sub }: { icon: any; label: string; value
 
 function EarningsRow({ job, t }: { job: Job; t: (k: any) => string }) {
   const typeIcons: Record<string, string> = {
+    blocket_pickup: "tag",
+    facebook_pickup: "shopping-bag",
+    small_furniture: "box",
+    office_items: "briefcase",
+    children_items: "heart",
+    electronics: "cpu",
+    other_small: "package",
+    // Legacy
     furniture_transport: "package",
     bulky_delivery: "box",
     junk_pickup: "trash-2",
