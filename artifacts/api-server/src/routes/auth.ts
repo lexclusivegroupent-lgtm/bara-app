@@ -16,7 +16,7 @@ function getResend(): Resend | null {
 }
 
 router.post("/register", async (req, res) => {
-  const { email, password, fullName, role, city, vehicleDescription } = req.body;
+  const { email, password, fullName, role, city, vehicleDescription, vehicleType } = req.body;
 
   if (!email || !password || !fullName || !role || !city) {
     res.status(400).json({ error: "Missing required fields" });
@@ -43,6 +43,7 @@ router.post("/register", async (req, res) => {
       role,
       city,
       vehicleDescription: vehicleDescription || null,
+      vehicleType: vehicleType || null,
       isAvailable: true,
       totalJobs: 0,
     }).returning();
