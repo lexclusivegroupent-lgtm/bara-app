@@ -245,7 +245,7 @@ export default function DriverActiveJobScreen() {
     );
   }
 
-  const isFurniture = job.jobType === "furniture_transport";
+  const hasRouteAddresses = !!(job.pickupAddress || job.dropoffAddress);
   const canComplete = pickupPhotos.length > 0 && dropoffPhotos.length > 0;
 
   return (
@@ -254,12 +254,12 @@ export default function DriverActiveJobScreen() {
         <Text style={styles.headerTitle}>{t("activeJob")}</Text>
         <View style={styles.jobTypeBadge}>
           <MaterialCommunityIcons
-            name={isFurniture ? "sofa" : "delete-sweep"}
+            name="package-variant-closed"
             size={14}
             color={Colors.gold}
           />
           <Text style={styles.jobTypeBadgeText}>
-            {isFurniture ? t("furnitureTransport") : t("junkTrash")}
+            {job.jobType?.replace(/_/g, " ") ?? t("activeJob")}
           </Text>
         </View>
       </View>
@@ -299,7 +299,7 @@ export default function DriverActiveJobScreen() {
 
         <View style={styles.card}>
           <Text style={styles.cardTitle}>{t("jobDetails")}</Text>
-          {isFurniture ? (
+          {hasRouteAddresses ? (
             <>
               <DetailRow icon="map-pin" label={t("pickup")} value={job.pickupAddress || "N/A"} />
               <DetailRow icon="flag" label={t("dropoff")} value={job.dropoffAddress || "N/A"} />
