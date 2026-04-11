@@ -180,6 +180,7 @@ export default function PostJobScreen() {
   }
 
   async function handlePost() {
+    setError(null);
     if (!itemDescription.trim()) {
       setError(t("pleaseDescribeItems"));
       return;
@@ -627,6 +628,13 @@ export default function PostJobScreen() {
           </Text>
         </TouchableOpacity>
 
+        {error ? (
+          <View style={styles.errorBanner}>
+            <Feather name="alert-circle" size={15} color={Colors.error} />
+            <Text style={styles.errorBannerText}>{error}</Text>
+          </View>
+        ) : null}
+
         <TouchableOpacity
           style={[styles.postBtn, loading && styles.disabled]}
           onPress={handlePost}
@@ -634,7 +642,10 @@ export default function PostJobScreen() {
           activeOpacity={0.85}
         >
           {loading ? (
-            <ActivityIndicator color={Colors.navy} />
+            <>
+              <ActivityIndicator color={Colors.navy} size="small" />
+              <Text style={styles.postBtnText}>{isSv ? "Skickar…" : "Sending…"}</Text>
+            </>
           ) : (
             <>
               <Text style={styles.postBtnText}>{t("postJobBtn")}</Text>
@@ -1103,5 +1114,23 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.error,
+  },
+  errorBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: `${Colors.error}18`,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: `${Colors.error}40`,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  errorBannerText: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
+    lineHeight: 20,
   },
 });
