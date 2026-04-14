@@ -187,39 +187,38 @@ export const SWEDISH_CITIES = [
   "Jokkmokk",
 ].sort((a, b) => a.localeCompare(b, "sv"));
 
-export type JobType = "furniture_transport" | "bulky_delivery" | "junk_pickup";
+export type JobType =
+  | "blocket_pickup"
+  | "facebook_pickup"
+  | "small_furniture"
+  | "office_items"
+  | "children_items"
+  | "electronics"
+  | "other_small";
 
-export function calculatePrice(jobType: JobType, distanceKm: number): {
+export const JOB_TYPE_ICONS: Record<JobType, string> = {
+  blocket_pickup: "tag-outline",
+  facebook_pickup: "store-outline",
+  small_furniture: "chair-rolling",
+  office_items: "briefcase-outline",
+  children_items: "baby-carriage",
+  electronics: "laptop",
+  other_small: "package-variant-closed",
+};
+
+export function calculatePrice(_jobType: JobType, distanceKm: number): {
   priceTotal: number;
   driverPayout: number;
   platformFee: number;
   basePrice: number;
   rateKm: number;
 } {
-  let basePrice: number;
-  let ratePerKm: number;
-  let minimum: number;
+  const basePrice = 99;
+  const ratePerKm = 10;
+  const minimum = 99;
+  const maximum = 299;
 
-  switch (jobType) {
-    case "furniture_transport":
-      basePrice = 299;
-      ratePerKm = 15;
-      minimum = 349;
-      break;
-    case "bulky_delivery":
-      basePrice = 249;
-      ratePerKm = 12;
-      minimum = 299;
-      break;
-    case "junk_pickup":
-    default:
-      basePrice = 199;
-      ratePerKm = 10;
-      minimum = 249;
-      break;
-  }
-
-  const priceTotal = Math.max(minimum, basePrice + distanceKm * ratePerKm);
+  const priceTotal = Math.min(maximum, Math.max(minimum, basePrice + distanceKm * ratePerKm));
   const rounded = Math.round(priceTotal);
   const driverPayout = Math.round(rounded * 0.75);
   const platformFee = Math.round(rounded * 0.25);

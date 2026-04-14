@@ -71,22 +71,27 @@ export default function OnboardingScreen() {
         scrollEventThrottle={16}
         style={styles.slideContainer}
       >
-        {/* Slide 1 */}
+        {/* Slide 1 — What Bära is */}
         <View style={[styles.slide, { paddingTop: insets.top + (Platform.OS === "web" ? 87 : 60) }]}>
           <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="truck-fast" size={56} color={Colors.gold} />
+            <MaterialCommunityIcons name="package-variant-closed" size={56} color={Colors.gold} />
           </View>
           <Text style={styles.slideTitle}>
             {isSv ? "Välkommen till Bära" : "Welcome to Bära"}
           </Text>
           <Text style={styles.slideSubtitle}>
             {isSv
-              ? "Sveriges första app för möbeltransport och skräphämtning på begäran."
-              : "Sweden's first on-demand furniture transport and junk pickup app."}
+              ? "Hämtning av små föremål — från Blocket, Facebook Marketplace eller hemmet. Får plats i vilken bil som helst. Från 99 kr, klart på 30 minuter."
+              : "Small item pickup — from Blocket, Facebook Marketplace or home. Fits in any car. From 99 SEK, done in 30 minutes."}
           </Text>
+          <View style={styles.featurePills}>
+            <FeaturePill text={isSv ? "Från 99 kr" : "From 99 SEK"} />
+            <FeaturePill text={isSv ? "30 min" : "30 min"} />
+            <FeaturePill text={isSv ? "Vilken bil som helst" : "Any car"} />
+          </View>
         </View>
 
-        {/* Slide 2 */}
+        {/* Slide 2 — How it works */}
         <View style={[styles.slide, { paddingTop: insets.top + (Platform.OS === "web" ? 87 : 60) }]}>
           <Text style={styles.slideTitle}>
             {isSv ? "Så fungerar det" : "How it works"}
@@ -95,33 +100,39 @@ export default function OnboardingScreen() {
             <Step
               number="1"
               title={isSv ? "Lägg upp ett jobb" : "Post a job"}
-              desc={isSv ? "Beskriv vad som ska flyttas och när." : "Describe what needs moving and when."}
+              desc={isSv ? "Välj kategori, ange hämtnings- och leveransadress och bekräfta att föremålet är litet." : "Choose a category, enter pickup and drop-off address, confirm the item is small."}
             />
             <Step
               number="2"
               title={isSv ? "En förare accepterar" : "A driver accepts"}
-              desc={isSv ? "En verifierad förare nära dig tar jobbet." : "A verified driver near you takes the job."}
+              desc={isSv ? "En förare nära dig tar jobbet med sin vanliga bil — ingen skåpbil behövs." : "A driver near you takes the job in their regular car — no van needed."}
             />
             <Step
               number="3"
-              title={isSv ? "Klart!" : "Done!"}
-              desc={isSv ? "Enkelt, snabbt och prisvärt." : "Simple, fast and affordable."}
+              title={isSv ? "Klart på 30 minuter!" : "Done in 30 minutes!"}
+              desc={isSv ? "Enkelt, snabbt och prisvärt. Kvitto skickas direkt." : "Simple, fast and affordable. Receipt sent instantly."}
             />
           </View>
         </View>
 
-        {/* Slide 3 */}
+        {/* Slide 3 — Drive with any car */}
         <View style={[styles.slide, { paddingTop: insets.top + (Platform.OS === "web" ? 87 : 60) }]}>
           <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="cash-multiple" size={56} color={Colors.gold} />
+            <MaterialCommunityIcons name="car-hatchback" size={56} color={Colors.gold} />
           </View>
           <Text style={styles.slideTitle}>
-            {isSv ? "Tjäna pengar på din tid" : "Earn money on your time"}
+            {isSv ? "Kör med din vanliga bil" : "Drive with any car"}
+          </Text>
+          <Text style={styles.slideSubtitle}>
+            {isSv
+              ? "Ingen skåpbil eller trailer behövs. Alla föremål ryms i en vanlig personbil."
+              : "No van or trailer needed. All items fit in a regular passenger car."}
           </Text>
           <View style={styles.bulletList}>
-            <BulletPoint text={isSv ? "Du bestämmer dina egna tider" : "You set your own hours"} />
+            <BulletPoint text={isSv ? "Vanlig bil, SUV, kombi eller bil med takbox" : "Regular car, SUV, estate or car with roof box"} />
             <BulletPoint text={isSv ? "Tjäna 75% av varje jobb" : "Earn 75% of every job"} />
-            <BulletPoint text={isSv ? "Inga minimikrav" : "No minimum requirements"} />
+            <BulletPoint text={isSv ? "Du bestämmer dina egna tider" : "You set your own hours"} />
+            <BulletPoint text={isSv ? "Inga minimikrav eller garantier" : "No minimum requirements"} />
           </View>
         </View>
       </ScrollView>
@@ -153,6 +164,14 @@ export default function OnboardingScreen() {
         )}
       </View>
     </LinearGradient>
+  );
+}
+
+function FeaturePill({ text }: { text: string }) {
+  return (
+    <View style={pillStyles.pill}>
+      <Text style={pillStyles.text}>{text}</Text>
+    </View>
   );
 }
 
@@ -218,11 +237,19 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   slideSubtitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     textAlign: "center",
-    lineHeight: 26,
+    lineHeight: 24,
+    marginBottom: 24,
+  },
+  featurePills: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    justifyContent: "center",
+    marginTop: 8,
   },
   stepList: {
     width: "100%",
@@ -231,8 +258,8 @@ const styles = StyleSheet.create({
   },
   bulletList: {
     width: "100%",
-    gap: 18,
-    marginTop: 28,
+    gap: 16,
+    marginTop: 24,
   },
   dotsRow: {
     flexDirection: "row",
@@ -285,6 +312,22 @@ const styles = StyleSheet.create({
   },
 });
 
+const pillStyles = StyleSheet.create({
+  pill: {
+    backgroundColor: `${Colors.gold}20`,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}35`,
+  },
+  text: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+  },
+});
+
 const stepStyles = StyleSheet.create({
   row: {
     flexDirection: "row",
@@ -327,10 +370,10 @@ const bulletStyles = StyleSheet.create({
     gap: 14,
   },
   text: {
-    fontSize: 16,
+    fontSize: 15,
     fontFamily: "Inter_500Medium",
     color: Colors.text,
     flex: 1,
-    lineHeight: 24,
+    lineHeight: 22,
   },
 });
