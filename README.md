@@ -2,6 +2,15 @@
 
 Bära is a mobile-first marketplace connecting customers in Sweden with independent drivers for on-demand furniture transport and junk pickup. Built with Expo React Native (frontend) and Node.js/Express (backend), deployed on Railway.
 
+## What Bära Transports
+Bära is designed for everyday small items that fit in a standard car.
+
+✅ Accepted: Any legal item under 25 kg that fits in a standard car
+❌ Not accepted: Illegal items of any kind
+❌ Not accepted: High-value or expensive items (antiques, luxury goods, high-end electronics)
+
+These limits are enforced at both the customer app and API level.
+
 ---
 
 ## Architecture
