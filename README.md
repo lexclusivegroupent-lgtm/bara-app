@@ -1,218 +1,270 @@
-# Bära — On-Demand Furniture Transport & Junk Pickup (Sweden)
+# Bära — On-Demand Small Item Transport in Sweden
 
-Bära is a mobile-first marketplace connecting customers in Sweden with independent drivers for on-demand furniture transport and junk pickup. Built with Expo React Native (frontend) and Node.js/Express (backend), deployed on Railway.
+> Small items only · Fits in any car · From 99 SEK · Done in 30 minutes
 
-## What Bära Transports
-Bära is designed for everyday small items that fit in a standard car.
-
-✅ Accepted: Any legal item under 25 kg that fits in a standard car
-❌ Not accepted: Illegal items of any kind
-❌ Not accepted: High-value or expensive items (antiques, luxury goods, high-end electronics)
-
-These limits are enforced at both the customer app and API level.
+Bära is a mobile-first marketplace connecting customers who need small items picked up or moved with drivers who can do it from their regular car. No van, no trailer — any regular car qualifies. Items must fit in a standard car and weigh under 25 kg.
 
 ---
 
-## Architecture
+## Project Structure
 
 ```
-/artifacts/api-server   → Node.js/Express REST API (TypeScript, ESM)
-/artifacts/bara         → Expo React Native app (iOS, Android, Web)
-/lib/db                 → Drizzle ORM schema + PostgreSQL client
-/lib/api-zod            → Shared Zod response schemas
+bara-app/
+├── artifacts/
+│   ├── bara/              # Expo React Native mobile app (@workspace/bara)
+│   └── api-server/        # Node.js + Express API (@workspace/api-server)
+├── lib/                   # Shared TypeScript utilities
+├── .github/workflows/     # GitHub Actions CI/CD
+├── pnpm-workspace.yaml
+└── railway.toml           # Railway deployment config
 ```
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Mobile App | Expo / React Native (iOS, Android, Web) |
+| API Server | Node.js + Express + TypeScript |
+| Database | PostgreSQL (via Drizzle ORM) |
+| Auth | JWT (stored in AsyncStorage) |
+| File Uploads | Cloudinary |
+| Maps | Google Maps / react-native-maps |
+| Address Search | Google Places Autocomplete |
+| Push Notifications | Expo Push Notifications |
+| Email | Resend |
+| Deployment | Railway (API), Expo (mobile) |
+| CI/CD | GitHub Actions |
+
+---
+
+## Prerequisites
+
+- [Node.js](https://nodejs.org/) v20+
+- [pnpm](https://pnpm.io/) v9+
+- [Expo CLI](https://docs.expo.dev/get-started/installation/) (`npm install -g expo-cli`)
+- A PostgreSQL database (local or hosted)
+- Accounts for: [Cloudinary](https://cloudinary.com), [Resend](https://resend.com), [Google Cloud](https://console.cloud.google.com) (Maps + Places APIs)
+
+---
+
+## Local Setup
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/lexclusivegroupent-lgtm/Bara-App.git
+cd Bara-App
+```
+
+### 2. Install dependencies
+
+```bash
+pnpm install
+```
+
+### 3. Configure environment variables
+
+```bash
+# API server
+cp artifacts/api-server/.env.example artifacts/api-server/.env
+
+# Mobile app
+cp artifacts/bara/.env.example artifacts/bara/.env
+```
+
+Fill in all values — see the `.env.example` files for descriptions of each variable.
+
+### 4. Set up the database
+
+```bash
+cd artifacts/api-server
+pnpm run db:push
+```
+
+This runs Drizzle migrations to create all tables.
+
+### 5. Start development servers
+
+```bash
+# Start both the API server and Expo app simultaneously
+pnpm run dev
+
+# Or individually:
+pnpm --filter @workspace/api-server run dev   # API on port 8080
+pnpm --filter @workspace/bara run dev          # Expo app
+```
+
+The API server runs on **http://localhost:8080**.  
+Open the Expo app in your browser, or scan the QR code with the Expo Go app.
 
 ---
 
 ## Environment Variables
 
-Copy `.env.example` to `.env` in `/artifacts/api-server/` and fill in the values.
+### API Server (`artifacts/api-server/.env`)
 
-| Variable | Required | Description |
-|---|---|---|
-| `DATABASE_URL` | Yes | PostgreSQL connection string (e.g. `postgres://user:pass@host:5432/bara`) |
-| `JWT_SECRET` | Yes | Secret key for signing JWTs — use a strong random string in production |
-| `PORT` | No | API server port (default: 3000) |
-| `NODE_ENV` | No | Set to `production` on Railway |
-| `ADMIN_STATS_KEY` | No | Key for `/api/admin/stats` endpoint (default: `bara-admin-2025`) — change in production |
-| `EXPO_PUBLIC_DOMAIN` | Yes (app) | Domain where the API server is reachable (e.g. `your-app.railway.app`) |
-| `EXPO_PUBLIC_GOOGLE_MAPS_KEY` | Yes (app) | Google Maps API key for map display |
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | PostgreSQL connection string |
+| `JWT_SECRET` | Secret key for signing JWTs (min 32 chars) |
+| `BARA_ADMIN_KEY` | Admin dashboard access key |
+| `CLOUDINARY_API_KEY` | Cloudinary API key |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary cloud name |
+| `RESEND_API_KEY` | Resend email API key |
+| `RESEND_FROM_EMAIL` | Sender email address (e.g. `hello@baraapp.se`) |
+| `APP_BASE_URL` | Production URL of the app (e.g. `https://app.baraapp.se`) |
+| `ADMIN_STATS_KEY` | Secondary key for admin stats endpoint |
 
----
+### Mobile App (`artifacts/bara/.env`)
 
-## Local Development
-
-### Prerequisites
-- Node.js 18+
-- pnpm 9+
-- PostgreSQL (or a Railway DB you can connect to locally)
-
-### Setup
-
-```bash
-# Install all dependencies from workspace root
-pnpm install
-
-# Push database schema (first time or after schema changes)
-cd lib/db && pnpm push
-
-# Start API server
-pnpm --filter @workspace/api-server run dev
-
-# Start Expo app (in a separate terminal)
-pnpm --filter @workspace/bara run dev
-```
+| Variable | Description |
+|---|---|
+| `EXPO_PUBLIC_DOMAIN` | Domain where the API is hosted (without `https://`) |
+| `EXPO_PUBLIC_GOOGLE_MAPS_KEY` | Google Maps + Places API key |
 
 ---
 
-## Railway Deployment
+## 7 Job Categories
 
-### One-time Setup
-
-1. Create a Railway project and add a **PostgreSQL** plugin
-2. Connect your GitHub repo to Railway
-3. Set all required environment variables in the Railway dashboard (see table above)
-4. Railway will auto-deploy from `main` branch on every push
-
-### Build & Start
-
-Railway uses `railway.toml` at the repo root:
-- **Build:** `cd artifacts/api-server && npm install --legacy-peer-deps && npm run build`
-- **Start:** `node artifacts/api-server/dist/index.js`
-
-### Push schema to production DB
-
-```bash
-DATABASE_URL=<your_railway_db_url> pnpm --filter @workspace/db run push
-```
+| Category | Description |
+|---|---|
+| `blocket_pickup` | Items bought on Blocket |
+| `facebook_pickup` | Facebook Marketplace pickups |
+| `small_furniture` | Small chairs, bedside tables, shelves |
+| `office_items` | Monitors, printers, small office equipment |
+| `children_items` | Strollers, toys, children's furniture |
+| `electronics` | TVs, computers, gaming consoles |
+| `other_small` | Anything small under 25 kg |
 
 ---
 
-## Health Check
+## Pricing
+
+- **Base**: 99 SEK
+- **Per km**: +10 SEK
+- **Cap**: Maximum 299 SEK
+- **Driver payout**: 75% of total
+- **Platform fee**: 25%
+- **Cancellation fee**: 150 SEK (charged when customer cancels after driver accepts)
+
+---
+
+## Job Status Flow
 
 ```
-GET /api/healthz
+pending → accepted → arrived → in_progress → completed
+                                           ↘ cancelled
+                                           ↘ cancelled_by_customer
+                                           ↘ disputed
 ```
-
-Returns `{ status: "ok", timestamp: "..." }`. Use this as Railway's health check URL.
 
 ---
 
 ## API Endpoints
 
-### Auth
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| POST | `/api/auth/register` | No | Create account (customer/driver/both) |
-| POST | `/api/auth/login` | No | Login, returns JWT |
-| GET | `/api/auth/me` | JWT | Get current user profile |
+All routes are prefixed with `/api`.
 
-### Jobs
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/jobs` | JWT | List jobs (filter by `city`, `status`) |
-| GET | `/api/jobs/:id` | JWT | Get job details |
-| POST | `/api/jobs` | JWT | Create a new job |
-| POST | `/api/jobs/:id/accept` | JWT | Driver accepts a pending job |
-| POST | `/api/jobs/:id/arrived` | JWT | Driver marks arrival at pickup |
-| POST | `/api/jobs/:id/photos` | JWT | Upload pickup/dropoff photos |
-| POST | `/api/jobs/:id/complete` | JWT | Driver completes the job |
-| POST | `/api/jobs/:id/dispute` | JWT | Flag a dispute with a reason |
-| POST | `/api/jobs/:id/rate` | JWT | Rate the other party |
-| POST | `/api/jobs/:id/cancel` | JWT | Cancel the job |
-
-### Admin
-| Method | Path | Auth | Description |
-|---|---|---|---|
-| GET | `/api/admin/stats?key=<ADMIN_STATS_KEY>` | Key | Platform statistics |
-
----
-
-## Job Lifecycle
-
-```
-pending → accepted → arrived → in_progress → completed
-                 ↘                         ↗
-                   cancelled / disputed
-```
-
-Status meanings:
-- `pending` — Job posted, waiting for a driver
-- `accepted` — Driver has accepted, en route to pickup
-- `arrived` — Driver has arrived at pickup location
-- `in_progress` — Items loaded, heading to destination
-- `completed` — Job done (both photos required)
-- `cancelled` — Cancelled by customer (pending only) or driver
-- `disputed` — Flagged by either party — requires manual review
+| Method | Path | Description |
+|---|---|---|
+| POST | `/auth/register` | Register new account |
+| POST | `/auth/login` | Login and receive JWT |
+| GET | `/auth/me` | Current user profile |
+| POST | `/auth/forgot-password` | Send password reset email |
+| POST | `/auth/reset-password` | Apply reset token |
+| DELETE | `/auth/account` | GDPR account deletion |
+| GET | `/jobs` | List jobs |
+| POST | `/jobs` | Create a new job |
+| GET | `/jobs/:id` | Job detail |
+| PATCH | `/jobs/:id/accept` | Driver accepts job |
+| PATCH | `/jobs/:id/arrived` | Driver marks arrived |
+| PATCH | `/jobs/:id/start` | Driver starts transport |
+| PATCH | `/jobs/:id/complete` | Driver completes job |
+| PATCH | `/jobs/:id/cancel` | Cancel job |
+| PATCH | `/jobs/:id/dispute` | Raise a dispute |
+| PATCH | `/jobs/:id/reschedule` | Reschedule job time |
+| POST | `/jobs/:id/rate` | Submit rating |
+| GET | `/places/autocomplete` | Google Places proxy |
+| GET | `/places/details` | Place coordinates by ID |
+| POST | `/distance` | Distance calculation |
+| POST | `/upload` | Cloudinary file upload |
+| POST | `/promos/validate` | Validate promo code |
+| GET | `/addresses` | Saved addresses |
+| POST | `/addresses` | Save address |
+| DELETE | `/addresses/:id` | Delete saved address |
+| POST | `/support` | Send support message |
+| POST | `/appeals` | Submit dispute appeal |
+| GET | `/admin` | Admin dashboard (HTML) |
+| GET | `/health` | Health check |
 
 ---
 
-## Checking Logs on Railway
+## Deployment
 
-1. Go to your Railway project → **Deployments**
-2. Click the latest deployment → **View Logs**
-3. Filter by log level using the search bar
+### Backend — Railway
 
-Or use Railway CLI:
+The API server is configured for Railway deployment via `railway.toml` and `artifacts/api-server/railway.toml`.
+
+1. Create a Railway project and add a PostgreSQL service
+2. Set all environment variables from `artifacts/api-server/.env.example`
+3. Connect this GitHub repository to Railway — it will auto-deploy on push to `main`
+
+### Mobile — Expo
+
 ```bash
-railway logs
+# Build for web
+cd artifacts/bara
+pnpm run build:web
+
+# Submit to App Store / Google Play
+eas build --platform ios
+eas build --platform android
+eas submit
 ```
 
 ---
 
-## Common Failures & Recovery
+## Demo Accounts
 
-| Problem | Likely Cause | Fix |
+| Role | Email | Password |
 |---|---|---|
-| `ECONNREFUSED` on startup | `DATABASE_URL` not set or DB not reachable | Check Railway env vars, ensure DB plugin is attached |
-| `401 Unauthorized` on all requests | `JWT_SECRET` mismatch between token generation and validation | Ensure `JWT_SECRET` is consistent across deployments |
-| Build fails: `EUNSUPPORTEDPROTOCOL` | Stale `workspace:*` deps — use `file:` protocol | Already fixed in `artifacts/api-server/package.json` |
-| Build fails: esbuild peer conflict | esbuild version mismatch | Fixed: `esbuild@^0.25.8` + `--legacy-peer-deps` |
-| Schema out of sync | New columns added without pushing | Run `drizzle-kit push` against production DB |
-| `Cannot complete job` (missing photos) | Driver didn't upload both pickup and dropoff photos | Required by design — driver must upload both sets |
+| Customer | `demo.customer@baraapp.se` | `BaraDemo2026` |
+| Driver | `demo.driver@baraapp.se` | `BaraDemo2026` |
 
 ---
 
-## Database Schema
+## Legal & Compliance
 
-Key tables:
-- **users** — customers and drivers; includes `verificationStatus`, `driverLicenseStatus`, `cancellationsCount`, `noShowCount`
-- **jobs** — full job lifecycle; includes `disputed`, `disputeReason`, `arrivedAt`, `disputedAt`
-- **ratings** — star ratings between customers and drivers
+The app includes full Swedish legal compliance:
 
-Schema is managed via Drizzle ORM's `push` command (no migration files).
-
----
-
-## What Still Needs Third-Party Setup
-
-| Feature | Status | Notes |
-|---|---|---|
-| Payments (Stripe) | Not active | Schema ready (`priceTotal`, `driverPayout`, `platformFee`). Free during launch. |
-| BankID verification | Placeholder only | `verificationStatus` + `driverLicenseStatus` fields exist. Integration not built. |
-| Push notifications | Not built | `isAvailable` toggle exists. Notification infrastructure TBD. |
-| Google Maps | Active | Requires `EXPO_PUBLIC_GOOGLE_MAPS_KEY`. Map provider abstraction planned. |
+- **Terms of Service** (Swedish)
+- **Privacy Policy** (GDPR compliant)
+- **Driver Agreement** (independent contractor terms)
+- **Driver Welfare screen** (status, rights, F-tax reminder, tax reserve guidance)
+- **Insurance & Safety** information
+- **Data Export** and **Account Deletion** (GDPR Article 17)
+- **Dispute & Appeal** flow
 
 ---
 
-## For ALMI / Venture Cup Presentations
+## Contributing
 
-**What works today:**
-- Full two-sided marketplace (customers post, drivers accept)
-- Real-time job tracking with status updates
-- Mandatory photo documentation for every job
-- Ratings and trust system
-- Dispute flagging and escalation flow
-- Swedish cities, bilingual UI (EN/SV)
-- GDPR-compliant privacy policy and user data deletion flow
-- Railway-hosted backend with health monitoring
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/my-feature`)
+3. Commit your changes (`git commit -m 'feat: add my feature'`)
+4. Push to the branch (`git push origin feature/my-feature`)
+5. Open a Pull Request
 
-**Business model (post-launch):**
-- 25% platform fee on each job
-- Free during launch period to drive adoption
-- Driver verification (BankID) planned for Q2
+---
 
-**Growth levers:**
-- Expand to more Swedish cities (currently: Stockholm, Göteborg, Malmö, Uppsala, Västerås, Örebro, Linköping)
-- B2B tier for moving companies and estate clearances
-- Subscription model for high-volume drivers
+## License
+
+MIT — see [LICENSE](LICENSE) for details.
+
+---
+
+## Contact
+
+**Bära AB** · [baraapp.se](https://baraapp.se) · hello@baraapp.se

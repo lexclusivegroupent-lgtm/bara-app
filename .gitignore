@@ -1,49 +1,78 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# =============================================================
+# Bära — .gitignore
+# =============================================================
 
-# compiled output
-dist
-tmp
-out-tsc
+# Dependencies
+node_modules/
+.pnpm-store/
+.pnpm-debug.log
+
+# Environment variables — NEVER commit real secrets
+.env
+.env.local
+.env.development
+.env.production
+.env.staging
+*.env
+
+# Build output
+dist/
+build/
+out/
+static-build/
+web-build/
+
+# Expo / React Native
+.expo/
+expo-env.d.ts
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# TypeScript
 *.tsbuildinfo
-.expo
-.expo-shared
+tsconfig.tsbuildinfo
 
-# dependencies
-node_modules
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
-# misc
-/.sass-cache
-/connect.lock
-/coverage
-/libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
-/typings
-
-# System Files
+# OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
+# Editor / IDE
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+.nvmrc
 
-# Replit
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
 .cache/
+
+# Replit-specific
+.replit
+replit.nix
 .local/
+replit.md
+
+# Railway / deployment
+.railway/
+
+# Cloudinary upload presets (contain secrets)
+cloudinary-credentials.json
