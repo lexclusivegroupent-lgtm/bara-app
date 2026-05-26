@@ -133,6 +133,35 @@ export default function CustomerHome() {
 
         <Text style={styles.sectionTitle}>{t("newJob")}</Text>
 
+        {/* "Not allowed" — always visible before category selection */}
+        <View style={styles.notAllowedCard}>
+          <View style={styles.notAllowedHeader}>
+            <Feather name="x-circle" size={13} color="#E05252" />
+            <Text style={styles.notAllowedTitle}>
+              {isSv ? "Bära transporterar INTE:" : "Bära does NOT transport:"}
+            </Text>
+          </View>
+          <View style={styles.notAllowedList}>
+            {(isSv ? [
+              "Hushållsavfall",
+              "Byggskräp",
+              "Farliga ämnen",
+              "Föremål över 25 kg",
+              "Föremål med specialtillstånd",
+              "Hel hemmaflytt",
+            ] : [
+              "Household waste",
+              "Construction debris",
+              "Hazardous materials",
+              "Items over 25 kg",
+              "Items requiring special permits",
+              "Full household moves",
+            ]).map((item) => (
+              <Text key={item} style={styles.notAllowedItem}>❌ {item}</Text>
+            ))}
+          </View>
+        </View>
+
         {/* 2-column category grid */}
         <View style={styles.categoryGrid}>
           {CATEGORIES.map((cat) => (
@@ -350,6 +379,39 @@ const styles = StyleSheet.create({
     backgroundColor: `${Colors.gold}18`,
     alignItems: "center",
     justifyContent: "center",
+  },
+  notAllowedCard: {
+    backgroundColor: "#E0525210",
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: "#E0525228",
+    marginBottom: 16,
+    gap: 8,
+  },
+  notAllowedHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+  },
+  notAllowedTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: "#E05252",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  notAllowedList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  notAllowedItem: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: "#C04040",
+    lineHeight: 18,
+    width: "48%",
   },
   jobsList: { gap: 12 },
   loadingCard: { padding: 24, alignItems: "center" },

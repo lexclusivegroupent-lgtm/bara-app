@@ -715,6 +715,35 @@ export default function PostJobScreen() {
           </Text>
         </View>
 
+        {/* "Not allowed" list — always visible, directly before submission */}
+        <View style={styles.notAllowedBlock}>
+          <View style={styles.notAllowedBlockHeader}>
+            <Feather name="x-circle" size={14} color="#E05252" />
+            <Text style={styles.notAllowedBlockTitle}>
+              {isSv ? "Bära transporterar INTE:" : "Bära does NOT transport:"}
+            </Text>
+          </View>
+          <View style={styles.notAllowedBlockList}>
+            {(isSv ? [
+              "Hushållsavfall",
+              "Byggskräp",
+              "Farliga ämnen",
+              "Föremål över 25 kg",
+              "Föremål med specialtillstånd",
+              "Hel hemmaflytt",
+            ] : [
+              "Household waste",
+              "Construction debris",
+              "Hazardous materials",
+              "Items over 25 kg",
+              "Items requiring special permits",
+              "Full household moves",
+            ]).map((item) => (
+              <Text key={item} style={styles.notAllowedBlockItem}>❌  {item}</Text>
+            ))}
+          </View>
+        </View>
+
         {/* Mandatory size confirmation checkbox */}
         <TouchableOpacity
           style={[styles.ownershipRow, !agreedToSize && styles.ownershipRowHighlight]}
@@ -1230,6 +1259,38 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.error,
+  },
+  notAllowedBlock: {
+    backgroundColor: "#E0525210",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E0525228",
+    gap: 10,
+  },
+  notAllowedBlockHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  notAllowedBlockTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_700Bold",
+    color: "#E05252",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+  },
+  notAllowedBlockList: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 4,
+  },
+  notAllowedBlockItem: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#C04040",
+    lineHeight: 20,
+    width: "48%",
   },
   otherSmallBanner: {
     flexDirection: "row",

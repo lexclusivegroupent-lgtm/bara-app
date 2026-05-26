@@ -20,9 +20,10 @@ Status key: ✅ Complete | 🔄 In Progress | ⏳ Not Started | ⚖️ Legal Rev
 - Frontend shows red restriction banner for other_small category
 - Mandatory yes/no hazardous materials question blocks submission if answered "Yes" or unanswered
 
-### 1C — "Not Allowed" List UI ⏳
-- Show prohibited items list before submission (always visible, not collapsed)
-- Add to category selection screen AND job confirmation screen
+### 1C — "Not Allowed" List UI ✅
+- home.tsx: always-visible "Bära does NOT transport" card above category grid (6 items, EN + SV)
+- post-job.tsx: non-collapsible "Not allowed" block placed directly before the submit button
+- Both show: household waste, construction debris, hazardous materials, over 25 kg, special permits, full household moves
 
 ### 1D — F-tax (F-skatt) Driver Compliance ⏳ ⚖️
 - Add `ftaxRegistered` and `ftaxNumber` fields to driver profile
