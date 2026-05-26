@@ -14,9 +14,11 @@ Status key: ✅ Complete | 🔄 In Progress | ⏳ Not Started | ⚖️ Legal Rev
 - Zod schema updated in `lib/api-zod/`
 - **DB migration needed**: run `pnpm --filter @workspace/db push` before deploying
 
-### 1B — other_small Category Validation ⏳
-- Add keyword validation (waste, debris, hazardous, construction)
-- Add UI copy and hazardous materials yes/no question
+### 1B — other_small Category Validation ✅
+- Server rejects `involvesHazardous: true` with clear error
+- Server scans `itemDescription` for forbidden keywords (EN + SV) when jobType is other_small
+- Frontend shows red restriction banner for other_small category
+- Mandatory yes/no hazardous materials question blocks submission if answered "Yes" or unanswered
 
 ### 1C — "Not Allowed" List UI ⏳
 - Show prohibited items list before submission (always visible, not collapsed)

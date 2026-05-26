@@ -118,7 +118,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     itemDescription, preferredTime, distanceKm, priceTotal,
     driverPayout, platformFee, city, customerPhotos, customerPrice,
     floorNumber, hasElevator, helpersNeeded, estimatedWeightKg,
-    weightPreset, promoCode,
+    weightPreset, involvesHazardous, promoCode,
   } = req.body;
 
   if (!jobType || !itemDescription || !preferredTime || priceTotal == null) {
@@ -149,6 +149,30 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
   if (!VALID_JOB_TYPES.includes(jobType)) {
     res.status(400).json({ error: `Invalid jobType. Must be one of: ${VALID_JOB_TYPES.join(", ")}` });
     return;
+  }
+
+  // other_small: block hazardous/waste content via explicit flag and keyword scan
+  if (jobType === "other_small") {
+    if (involvesHazardous === true) {
+      res.status(400).json({
+        error: "Bära cannot transport household waste or hazardous materials. Please contact your local council for waste disposal.",
+      });
+      return;
+    }
+    const FORBIDDEN_PATTERNS = [
+      /\b(household waste|garbage bag|trash bag|rubbish|construction debris|building rubble|demolition waste)\b/i,
+      /\b(hazardous material|hazardous waste|toxic|flammable liquid|explosive|asbestos)\b/i,
+      /\b(chemical[s]?|acid|solvent|paint thinner|pesticide)\b/i,
+      /\b(hushållsavfall|avfallssäck|avfall|byggavfall|farligt avfall|rivningsrester)\b/i,
+      /\b(kemikali[e]?[r]?|giftig[t]?|brandfarli[g]?|explosiv[t]?|asbest)\b/i,
+    ];
+    const desc = itemDescription as string;
+    if (FORBIDDEN_PATTERNS.some((p) => p.test(desc))) {
+      res.status(400).json({
+        error: "This job description contains prohibited content for 'Other small items'. Bära does not transport waste, hazardous materials, or construction debris.",
+      });
+      return;
+    }
   }
 
   const suggested = parseFloat(priceTotal);

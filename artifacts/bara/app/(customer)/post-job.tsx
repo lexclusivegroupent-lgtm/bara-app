@@ -77,6 +77,9 @@ export default function PostJobScreen() {
   const [promoError, setPromoError] = useState<string | null>(null);
   const [promoLoading, setPromoLoading] = useState(false);
 
+  // other_small: hazardous/waste question (null = unanswered)
+  const [involvesHazardous, setInvolvesHazardous] = useState<boolean | null>(null);
+
   // Size/weight confirmation
   const [agreedToSize, setAgreedToSize] = useState(false);
 
@@ -193,6 +196,20 @@ export default function PostJobScreen() {
       setError(t("pleaseEnterAddresses"));
       return;
     }
+    if (jobType === "other_small") {
+      if (involvesHazardous === null) {
+        setError(isSv
+          ? "Besvara frågan om farliga ämnen innan du fortsätter."
+          : "Please answer the hazardous materials question before continuing.");
+        return;
+      }
+      if (involvesHazardous === true) {
+        setError(isSv
+          ? "Bära kan inte transportera hushållsavfall eller farliga ämnen. Kontakta din kommun för avfallshantering."
+          : "Bära cannot transport household waste or hazardous materials. Please contact your local council for waste disposal.");
+        return;
+      }
+    }
     if (!weightPreset) {
       setError(isSv ? "Välj föremålets ungefärliga vikt." : "Please select the item's approximate weight.");
       return;
@@ -252,6 +269,7 @@ export default function PostJobScreen() {
           hasElevator: hasElevator,
           helpersNeeded: helpersNeeded ? parseInt(helpersNeeded, 10) : 0,
           weightPreset,
+          involvesHazardous: jobType === "other_small" ? involvesHazardous : null,
           promoCode: promoCode.trim() || null,
           discountAmount: promoDiscount,
         }),
@@ -340,6 +358,17 @@ export default function PostJobScreen() {
           </Text>
         </View>
 
+        {jobType === "other_small" && (
+          <View style={styles.otherSmallBanner}>
+            <Feather name="alert-triangle" size={14} color="#E05252" />
+            <Text style={styles.otherSmallBannerText}>
+              {isSv
+                ? "Övrigt litet — inget avfall, inga byggmaterial, inga farliga ämnen"
+                : "Other small items — no waste, no construction materials, no hazardous items"}
+            </Text>
+          </View>
+        )}
+
         <FormField label={t("pickupAddress")} icon="map-pin">
           <PlacesAutocomplete
             value={pickupAddress}
@@ -406,6 +435,53 @@ export default function PostJobScreen() {
             textAlignVertical="top"
           />
         </FormField>
+
+        {jobType === "other_small" && (
+          <View style={[styles.sectionBlock, { borderColor: involvesHazardous === true ? "#E0525240" : Colors.border }]}>
+            <View style={styles.sectionBlockHeader}>
+              <Feather name="alert-circle" size={14} color={involvesHazardous === true ? "#E05252" : Colors.textMuted} />
+              <Text style={[styles.sectionBlockTitle, involvesHazardous === true && { color: "#E05252" }]}>
+                {isSv ? "Farliga ämnen / Avfall" : "Hazardous Materials / Waste"}
+              </Text>
+            </View>
+            <Text style={[styles.miniLabel, { textTransform: "none", letterSpacing: 0, fontSize: 13, color: Colors.text, lineHeight: 19 }]}>
+              {isSv
+                ? "Innehåller detta jobb hushållsavfall eller farliga ämnen?"
+                : "Does this job involve household waste or hazardous materials?"}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              {([true, false] as const).map((v) => (
+                <TouchableOpacity
+                  key={String(v)}
+                  style={[
+                    styles.boolBtn,
+                    involvesHazardous === v && (v
+                      ? { borderColor: "#E05252", backgroundColor: "#E0525218" }
+                      : styles.boolBtnActive),
+                  ]}
+                  onPress={() => setInvolvesHazardous(involvesHazardous === v ? null : v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.boolBtnText,
+                    involvesHazardous === v && (v
+                      ? { color: "#E05252", fontFamily: "Inter_600SemiBold" }
+                      : styles.boolBtnTextActive),
+                  ]}>
+                    {v ? t("yes") : t("no")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {involvesHazardous === true && (
+              <Text style={{ color: "#E05252", fontSize: 12, fontFamily: "Inter_500Medium", lineHeight: 18 }}>
+                {isSv
+                  ? "Bära kan inte transportera hushållsavfall eller farliga ämnen. Kontakta din kommun för avfallshantering."
+                  : "Bära cannot transport household waste or hazardous materials. Please contact your local council for waste disposal."}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* Logistics details */}
         <View style={styles.sectionBlock}>
@@ -1154,6 +1230,24 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: "Inter_400Regular",
     color: Colors.error,
+  },
+  otherSmallBanner: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#E0525212",
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#E0525230",
+    paddingHorizontal: 14,
+    paddingVertical: 11,
+  },
+  otherSmallBannerText: {
+    flex: 1,
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: "#E05252",
+    lineHeight: 18,
   },
   errorBanner: {
     flexDirection: "row",
