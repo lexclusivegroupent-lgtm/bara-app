@@ -25,11 +25,17 @@ Status key: ✅ Complete | 🔄 In Progress | ⏳ Not Started | ⚖️ Legal Rev
 - post-job.tsx: non-collapsible "Not allowed" block placed directly before the submit button
 - Both show: household waste, construction debris, hazardous materials, over 25 kg, special permits, full household moves
 
-### 1D — F-tax (F-skatt) Driver Compliance ⏳ ⚖️
-- Add `ftaxRegistered` and `ftaxNumber` fields to driver profile
-- Require F-tax for payouts above 1000 SEK
-- Admin ability to mark drivers as F-tax verified
-- **Legal review needed**: independent contractor classification under Swedish law
+### 1D — F-tax (F-skatt) Driver Compliance ✅ ⚖️
+- DB: added `ftax_registered`, `ftax_number`, `ftax_verified_by_admin` columns to users table
+- API: `formatUser` exposes ftax fields; profile update endpoint accepts `ftaxRegistered` + `ftaxNumber`
+- API: job accept endpoint blocks drivers whose projected earnings exceed 1,000 SEK without F-tax registered
+- API: job complete endpoint now accumulates `annual_earnings` per driver
+- Admin: `PUT /admin/drivers/:id/ftax` endpoint for admin-verified F-tax marking; drivers list includes ftax fields
+- Frontend: driver edit-profile has F-tax toggle + number input + verified badge
+- Frontend: earnings screen shows warning banner when earnings approach 1,000 SEK
+- Contractor disclaimer shown in driver profile and earnings screens
+- **⚖️ Legal review needed**: independent contractor classification, F-skatt threshold accuracy, disclaimer wording
+- DB migration required: run `pnpm --filter @workspace/db push` before deploying
 
 ---
 

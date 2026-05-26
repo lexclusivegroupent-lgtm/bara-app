@@ -284,6 +284,21 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
       return;
     }
 
+    // F-tax requirement: once cumulative earnings exceed 1,000 SEK, F-skatt is required
+    const [driverRecord] = await db.select({
+      annualEarnings: usersTable.annualEarnings,
+      ftaxRegistered: usersTable.ftaxRegistered,
+    }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+
+    const projectedEarnings = (driverRecord?.annualEarnings ?? 0) + parseFloat(existing.driverPayout);
+    if (projectedEarnings > 1000 && !driverRecord?.ftaxRegistered) {
+      res.status(400).json({
+        error: "F-tax registration (F-skatt) is required once your earnings exceed 1,000 SEK. Please add your F-skatt number in your driver profile.",
+        code: "FTAX_REQUIRED",
+      });
+      return;
+    }
+
     await db.update(jobsTable).set({
       status: "accepted",
       driverId: req.userId!,
@@ -443,8 +458,10 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
       paymentStatus: "paid",
     }).where(eq(jobsTable.id, jobId));
 
+    const payout = Math.round(parseFloat(existing.driverPayout));
     await db.update(usersTable).set({
       totalJobs: sql`${usersTable.totalJobs} + 1`,
+      annualEarnings: sql`${usersTable.annualEarnings} + ${payout}`,
     }).where(eq(usersTable.id, req.userId!));
 
     const enriched = await getJobWithUsers(jobId);

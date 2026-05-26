@@ -28,6 +28,10 @@ export const usersTable = pgTable("users", {
   isDeactivated: boolean("is_deactivated").notNull().default(false),
   deactivationReason: text("deactivation_reason"),
   annualEarnings: integer("annual_earnings").notNull().default(0),
+  // ⚖️ F-skatt compliance — legal review required before launch (Swedish tax law)
+  ftaxRegistered: boolean("ftax_registered").notNull().default(false),
+  ftaxNumber: text("ftax_number"),
+  ftaxVerifiedByAdmin: boolean("ftax_verified_by_admin").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

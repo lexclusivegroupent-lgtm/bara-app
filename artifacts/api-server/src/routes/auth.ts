@@ -292,6 +292,11 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     totalJobs: user.totalJobs,
     vehicleType: user.vehicleType,
     vehicleDescription: user.vehicleDescription,
+    driverAgreementAccepted: user.driverAgreementAccepted,
+    annualEarnings: user.annualEarnings,
+    ftaxRegistered: user.ftaxRegistered,
+    ftaxNumber: user.ftaxNumber,
+    ftaxVerifiedByAdmin: user.ftaxVerifiedByAdmin,
     createdAt: user.createdAt.toISOString(),
   };
 }

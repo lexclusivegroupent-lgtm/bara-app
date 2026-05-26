@@ -23,7 +23,7 @@ router.put("/push-token", authenticate, async (req: AuthenticatedRequest, res) =
 });
 
 router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
-  const { fullName, city, vehicleType, vehicleDescription, isAvailable, profilePhoto, role } = req.body;
+  const { fullName, city, vehicleType, vehicleDescription, isAvailable, profilePhoto, role, ftaxRegistered, ftaxNumber } = req.body;
 
   try {
     const updateData: Partial<typeof usersTable.$inferInsert> = {};
@@ -33,6 +33,8 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     if (vehicleDescription !== undefined) updateData.vehicleDescription = vehicleDescription;
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
     if (profilePhoto !== undefined) updateData.profilePhoto = profilePhoto;
+    if (ftaxRegistered !== undefined) updateData.ftaxRegistered = Boolean(ftaxRegistered);
+    if (ftaxNumber !== undefined) updateData.ftaxNumber = ftaxNumber?.trim() || null;
 
     if (role !== undefined) {
       if (role !== "both") {

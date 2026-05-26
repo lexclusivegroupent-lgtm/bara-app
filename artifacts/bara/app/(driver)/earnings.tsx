@@ -24,7 +24,8 @@ import { BottomNav } from "@/components/BottomNav";
 
 export default function EarningsScreen() {
   const { token, user } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
 
   const { data: jobs = [], isLoading } = useQuery<Job[]>({
@@ -67,6 +68,28 @@ export default function EarningsScreen() {
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+          {/* F-tax warning: shown when earnings approach or exceed threshold */}
+          {!user?.ftaxRegistered && (user?.annualEarnings ?? 0) > 700 && (
+            <TouchableOpacity
+              style={styles.ftaxWarning}
+              onPress={() => router.push("/(driver)/edit-profile")}
+              activeOpacity={0.85}
+            >
+              <Feather name="alert-triangle" size={14} color="#E05252" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.ftaxWarningTitle}>
+                  {isSv ? "F-skatt krävs snart" : "F-tax registration required soon"}
+                </Text>
+                <Text style={styles.ftaxWarningSub}>
+                  {isSv
+                    ? "Dina intäkter närmar sig 1 000 kr. Registrera F-skatt i din profil för att fortsätta acceptera jobb."
+                    : "Your earnings are approaching 1,000 SEK. Add your F-tax number in your profile to keep accepting jobs."}
+                </Text>
+              </View>
+              <Feather name="chevron-right" size={14} color="#E05252" />
+            </TouchableOpacity>
+          )}
+
           {/* Driver rating card */}
           <View style={styles.ratingCard}>
             <View style={styles.ratingCardLeft}>
@@ -123,6 +146,16 @@ export default function EarningsScreen() {
               <EarningsRow key={job.id} job={job} t={t} />
             ))
           )}
+
+          {/* ⚖️ Contractor disclaimer — requires Swedish legal review before launch */}
+          <View style={styles.contractorNote}>
+            <Feather name="info" size={12} color={Colors.textMuted} />
+            <Text style={styles.contractorNoteText}>
+              {isSv
+                ? "Bära är en teknologiplattform. Förare är egenföretagare, inte anställda hos Bära."
+                : "Bära is a technology platform. Drivers are independent contractors, not employees of Bära."}
+            </Text>
+          </View>
 
           <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 90 }} />
         </ScrollView>
@@ -309,4 +342,40 @@ const styles = StyleSheet.create({
   rowTitle: { fontSize: 14, fontFamily: "Inter_500Medium", color: Colors.text },
   rowDate: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   rowPayout: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.gold },
+  ftaxWarning: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+    backgroundColor: "#E0525212",
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#E0525230",
+  },
+  ftaxWarningTitle: {
+    fontSize: 13,
+    fontFamily: "Inter_600SemiBold",
+    color: "#E05252",
+    marginBottom: 2,
+  },
+  ftaxWarningSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: "#C04040",
+    lineHeight: 18,
+  },
+  contractorNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+  contractorNoteText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 16,
+  },
 });

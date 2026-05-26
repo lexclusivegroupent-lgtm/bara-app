@@ -205,6 +205,9 @@ router.get("/drivers", async (req: Request, res: Response) => {
       driverLicenseStatus: usersTable.driverLicenseStatus, isAvailable: usersTable.isAvailable,
       cancellationsCount: usersTable.cancellationsCount, noShowCount: usersTable.noShowCount,
       vehicleDescription: usersTable.vehicleDescription, createdAt: usersTable.createdAt,
+      annualEarnings: usersTable.annualEarnings,
+      ftaxRegistered: usersTable.ftaxRegistered, ftaxNumber: usersTable.ftaxNumber,
+      ftaxVerifiedByAdmin: usersTable.ftaxVerifiedByAdmin,
     }).from(usersTable)
       .where(and(...conditions))
       .orderBy(desc(usersTable.createdAt))
@@ -237,6 +240,38 @@ router.put("/drivers/:id/verify", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Admin driver verify error:", err);
     res.status(500).json({ error: "Failed to update driver" });
+  }
+});
+
+// Mark a driver's F-tax registration as admin-verified (or revoke verification)
+router.put("/drivers/:id/ftax", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const { verified, ftaxNumber } = req.body as { verified: boolean; ftaxNumber?: string };
+    if (typeof verified !== "boolean") {
+      return res.status(400).json({ error: "verified (boolean) is required" });
+    }
+
+    const [updated] = await db.update(usersTable)
+      .set({
+        ftaxVerifiedByAdmin: verified,
+        ...(ftaxNumber !== undefined ? { ftaxNumber: ftaxNumber.trim() || null } : {}),
+      })
+      .where(eq(usersTable.id, id))
+      .returning({
+        id: usersTable.id,
+        fullName: usersTable.fullName,
+        ftaxRegistered: usersTable.ftaxRegistered,
+        ftaxNumber: usersTable.ftaxNumber,
+        ftaxVerifiedByAdmin: usersTable.ftaxVerifiedByAdmin,
+      });
+
+    if (!updated) return res.status(404).json({ error: "Driver not found" });
+    res.json({ success: true, driver: updated });
+  } catch (err: any) {
+    console.error("Admin ftax verify error:", err);
+    res.status(500).json({ error: "Failed to update F-tax status" });
   }
 });
 

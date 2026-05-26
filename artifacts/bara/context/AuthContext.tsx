@@ -24,6 +24,11 @@ export interface User {
   totalJobs: number;
   vehicleType?: string | null;
   vehicleDescription?: string | null;
+  driverAgreementAccepted?: boolean;
+  annualEarnings?: number;
+  ftaxRegistered?: boolean;
+  ftaxNumber?: string | null;
+  ftaxVerifiedByAdmin?: boolean;
   createdAt: string;
 }
 

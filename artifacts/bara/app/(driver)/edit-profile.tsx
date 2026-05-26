@@ -22,13 +22,17 @@ import { safeJson } from "@/utils/api";
 
 export default function DriverEditProfileScreen() {
   const { user, token, updateUser } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
+  const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
   const [fullName, setFullName] = useState(user?.fullName || "");
   const [city, setCity] = useState(user?.city || "Stockholm");
   const [vehicleDescription, setVehicleDescription] = useState(user?.vehicleDescription || "");
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  // F-tax (F-skatt) fields
+  const [ftaxRegistered, setFtaxRegistered] = useState(user?.ftaxRegistered ?? false);
+  const [ftaxNumber, setFtaxNumber] = useState(user?.ftaxNumber || "");
 
   async function handleSave() {
     if (!fullName.trim()) {
@@ -43,7 +47,13 @@ export default function DriverEditProfileScreen() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ fullName: fullName.trim(), city, vehicleDescription: vehicleDescription.trim() || null }),
+        body: JSON.stringify({
+          fullName: fullName.trim(),
+          city,
+          vehicleDescription: vehicleDescription.trim() || null,
+          ftaxRegistered,
+          ftaxNumber: ftaxNumber.trim() || null,
+        }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to update profile");
@@ -77,6 +87,16 @@ export default function DriverEditProfileScreen() {
           <View style={styles.avatar}>
             <Feather name="user" size={36} color={Colors.gold} />
           </View>
+        </View>
+
+        {/* ⚖️ Contractor disclaimer — requires Swedish legal review before launch */}
+        <View style={styles.contractorNote}>
+          <Feather name="info" size={13} color={Colors.textMuted} />
+          <Text style={styles.contractorNoteText}>
+            {isSv
+              ? "Bära är en teknologiplattform som kopplar ihop kunder med oberoende förare. Förare är egenföretagare, inte anställda hos Bära."
+              : "Bära is a technology platform connecting customers with independent drivers. Drivers are independent contractors, not employees of Bära."}
+          </Text>
         </View>
 
         <View style={styles.field}>
@@ -130,6 +150,69 @@ export default function DriverEditProfileScreen() {
               placeholderTextColor={Colors.textMuted}
             />
           </View>
+        </View>
+
+        {/* F-tax (F-skatt) section */}
+        <View style={styles.ftaxSection}>
+          <Text style={styles.ftaxSectionTitle}>
+            {isSv ? "F-skatt (F-tax)" : "F-tax Registration (F-skatt)"}
+          </Text>
+          <Text style={styles.ftaxSectionSub}>
+            {isSv
+              ? "F-skatt krävs när dina sammanlagda intäkter överstiger 1 000 kr. Kontakta Skatteverket för registrering."
+              : "F-tax is required once your total earnings exceed 1,000 SEK. Contact Skatteverket to register."}
+          </Text>
+
+          <View style={styles.ftaxToggleRow}>
+            <Text style={styles.ftaxToggleLabel}>
+              {isSv ? "Jag har F-skatt registrerad" : "I have F-tax registration"}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {([true, false] as const).map((v) => (
+                <TouchableOpacity
+                  key={String(v)}
+                  style={[
+                    styles.ftaxToggleBtn,
+                    ftaxRegistered === v && (v ? styles.ftaxToggleBtnYes : styles.ftaxToggleBtnNo),
+                  ]}
+                  onPress={() => setFtaxRegistered(v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.ftaxToggleBtnText,
+                    ftaxRegistered === v && { fontFamily: "Inter_600SemiBold", color: Colors.navy },
+                  ]}>
+                    {v ? (isSv ? "Ja" : "Yes") : (isSv ? "Nej" : "No")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {ftaxRegistered && (
+            <View style={styles.field}>
+              <Text style={styles.label}>{isSv ? "F-skattsedelnummer" : "F-tax number"}</Text>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={ftaxNumber}
+                  onChangeText={setFtaxNumber}
+                  placeholder={isSv ? "t.ex. 556XXX-XXXX" : "e.g. 556XXX-XXXX"}
+                  placeholderTextColor={Colors.textMuted}
+                  autoCapitalize="characters"
+                />
+              </View>
+            </View>
+          )}
+
+          {user?.ftaxVerifiedByAdmin && (
+            <View style={styles.ftaxVerifiedBadge}>
+              <Feather name="check-circle" size={13} color={Colors.success} />
+              <Text style={styles.ftaxVerifiedText}>
+                {isSv ? "F-skatt verifierad av Bära" : "F-tax verified by Bära"}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 20 }} />
@@ -195,4 +278,83 @@ const styles = StyleSheet.create({
   },
   cityOptionActive: { backgroundColor: `${Colors.gold}18` },
   cityOptionText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text },
+  contractorNote: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  contractorNoteText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 17,
+  },
+  ftaxSection: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 12,
+  },
+  ftaxSectionTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  ftaxSectionSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 18,
+  },
+  ftaxToggleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
+  },
+  ftaxToggleLabel: {
+    flex: 1,
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.text,
+  },
+  ftaxToggleBtn: {
+    paddingVertical: 7,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    backgroundColor: Colors.navy,
+  },
+  ftaxToggleBtnYes: { borderColor: Colors.gold, backgroundColor: Colors.gold },
+  ftaxToggleBtnNo: { borderColor: Colors.border, backgroundColor: Colors.surface },
+  ftaxToggleBtnText: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+  ftaxVerifiedBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: `${Colors.success}15`,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: `${Colors.success}30`,
+  },
+  ftaxVerifiedText: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.success,
+  },
 });
