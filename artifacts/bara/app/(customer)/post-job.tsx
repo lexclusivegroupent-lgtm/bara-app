@@ -70,7 +70,7 @@ export default function PostJobScreen() {
   const [floorNumber, setFloorNumber] = useState("");
   const [hasElevator, setHasElevator] = useState<boolean | null>(null);
   const [helpersNeeded, setHelpersNeeded] = useState("");
-  const [estimatedWeight, setEstimatedWeight] = useState("");
+  const [weightPreset, setWeightPreset] = useState<string | null>(null);
   // Promo code
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
@@ -193,6 +193,16 @@ export default function PostJobScreen() {
       setError(t("pleaseEnterAddresses"));
       return;
     }
+    if (!weightPreset) {
+      setError(isSv ? "Välj föremålets ungefärliga vikt." : "Please select the item's approximate weight.");
+      return;
+    }
+    if (weightPreset === "over_25kg") {
+      setError(isSv
+        ? "Bära är till för småföremål. För tyngre föremål, använd en flytt- eller transporttjänst."
+        : "Bära is for small items only. For heavier items, please use a moving service.");
+      return;
+    }
     if (!agreedToSize) {
       setError(isSv ? "Bekräfta föremålets storlek och vikt." : t("pleaseConfirmSize"));
       return;
@@ -241,7 +251,7 @@ export default function PostJobScreen() {
           floorNumber: floorNumber ? parseInt(floorNumber, 10) : null,
           hasElevator: hasElevator,
           helpersNeeded: helpersNeeded ? parseInt(helpersNeeded, 10) : 0,
-          estimatedWeightKg: estimatedWeight ? parseFloat(estimatedWeight) : null,
+          weightPreset,
           promoCode: promoCode.trim() || null,
           discountAmount: promoDiscount,
         }),
@@ -428,15 +438,45 @@ export default function PostJobScreen() {
             </View>
           </View>
           <View style={{ gap: 6, marginTop: 8 }}>
-            <Text style={styles.miniLabel}>{t("estimatedWeight")}</Text>
-            <TextInput
-              style={styles.input}
-              placeholder={t("weightPlaceholder")}
-              placeholderTextColor={Colors.textMuted}
-              value={estimatedWeight}
-              onChangeText={setEstimatedWeight}
-              keyboardType="decimal-pad"
-            />
+            <Text style={styles.miniLabel}>
+              {isSv ? "UNGEFÄRLIG VIKT *" : "APPROXIMATE WEIGHT *"}
+            </Text>
+            <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
+              {[
+                { value: "0_10kg", label: "0–10 kg" },
+                { value: "10_20kg", label: "10–20 kg" },
+                { value: "20_25kg", label: "20–25 kg" },
+                { value: "over_25kg", label: isSv ? "Över 25 kg" : "Over 25 kg" },
+              ].map((preset) => (
+                <TouchableOpacity
+                  key={preset.value}
+                  style={[
+                    styles.boolBtn,
+                    weightPreset === preset.value && (preset.value === "over_25kg"
+                      ? { borderColor: "#E05252", backgroundColor: "#E0525218" }
+                      : styles.boolBtnActive),
+                  ]}
+                  onPress={() => setWeightPreset(weightPreset === preset.value ? null : preset.value)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.boolBtnText,
+                    weightPreset === preset.value && (preset.value === "over_25kg"
+                      ? { color: "#E05252", fontFamily: "Inter_600SemiBold" }
+                      : styles.boolBtnTextActive),
+                  ]}>
+                    {preset.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            {weightPreset === "over_25kg" && (
+              <Text style={{ color: "#E05252", fontSize: 12, fontFamily: "Inter_500Medium", lineHeight: 18 }}>
+                {isSv
+                  ? "Bära är till för småföremål. För tyngre föremål, använd en flytt- eller transporttjänst."
+                  : "Bära is for small items only. For heavier items, please use a moving service."}
+              </Text>
+            )}
           </View>
           <View style={{ marginTop: 8, gap: 6 }}>
             <Text style={styles.miniLabel}>{t("elevatorAvailable")}</Text>

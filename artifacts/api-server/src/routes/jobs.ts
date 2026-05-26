@@ -41,6 +41,7 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     hasElevator: job.hasElevator,
     helpersNeeded: job.helpersNeeded,
     estimatedWeightKg: job.estimatedWeightKg,
+    weightPreset: job.weightPreset,
     // Promo
     promoCode: job.promoCode,
     discountAmount: job.discountAmount ? parseFloat(job.discountAmount) : null,
@@ -117,11 +118,22 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     itemDescription, preferredTime, distanceKm, priceTotal,
     driverPayout, platformFee, city, customerPhotos, customerPrice,
     floorNumber, hasElevator, helpersNeeded, estimatedWeightKg,
-    promoCode,
+    weightPreset, promoCode,
   } = req.body;
 
   if (!jobType || !itemDescription || !preferredTime || priceTotal == null) {
     res.status(400).json({ error: "Missing required fields: jobType, itemDescription, preferredTime, priceTotal" });
+    return;
+  }
+
+  // Enforce 25 kg limit — weightPreset is mandatory for all new jobs
+  const VALID_WEIGHT_PRESETS = ["0_10kg", "10_20kg", "20_25kg"];
+  if (!weightPreset) {
+    res.status(400).json({ error: "weightPreset is required. Must be one of: 0_10kg, 10_20kg, 20_25kg" });
+    return;
+  }
+  if (weightPreset === "over_25kg" || !VALID_WEIGHT_PRESETS.includes(weightPreset)) {
+    res.status(400).json({ error: "Bära is for small items only. For heavier items, please use a moving service." });
     return;
   }
   // City is optional — fall back to a default so drivers can still see the job
@@ -199,6 +211,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       hasElevator: hasElevator != null ? Boolean(hasElevator) : null,
       helpersNeeded: helpersNeeded != null ? parseInt(helpersNeeded) : null,
       estimatedWeightKg: estimatedWeightKg != null ? parseInt(estimatedWeightKg) : null,
+      weightPreset: weightPreset as "0_10kg" | "10_20kg" | "20_25kg",
       promoCode: appliedPromoCode,
       discountAmount: discountAmount != null ? discountAmount.toString() : null,
     }).returning();

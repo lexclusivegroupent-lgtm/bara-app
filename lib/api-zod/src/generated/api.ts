@@ -166,7 +166,11 @@ export const GetJobsResponse = zod.array(GetJobsResponseItem);
  * @summary Create a new job
  */
 export const CreateJobBody = zod.object({
-  jobType: zod.enum(["furniture_transport", "junk_pickup"]),
+  jobType: zod.enum([
+    "blocket_pickup", "facebook_pickup", "small_furniture",
+    "office_items", "children_items", "electronics", "other_small",
+    "furniture_transport", "bulky_delivery", "junk_pickup",
+  ]),
   pickupAddress: zod.string().nullish(),
   dropoffAddress: zod.string().nullish(),
   homeAddress: zod.string().nullish(),
@@ -177,6 +181,8 @@ export const CreateJobBody = zod.object({
   driverPayout: zod.number(),
   platformFee: zod.number(),
   city: zod.string(),
+  // Weight preset: required; "over_25kg" is rejected server-side
+  weightPreset: zod.enum(["0_10kg", "10_20kg", "20_25kg"]),
 });
 
 /**

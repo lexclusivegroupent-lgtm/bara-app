@@ -36,6 +36,8 @@ export const jobsTable = pgTable("jobs", {
   hasElevator: boolean("has_elevator"),
   helpersNeeded: integer("helpers_needed"),
   estimatedWeightKg: integer("estimated_weight_kg"),
+  // Weight preset: mandatory for new jobs; nullable so existing records are unaffected
+  weightPreset: text("weight_preset").$type<"0_10kg" | "10_20kg" | "20_25kg">(),
   // Promo codes
   promoCode: text("promo_code"),
   discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }),
