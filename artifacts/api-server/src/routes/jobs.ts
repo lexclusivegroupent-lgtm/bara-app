@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { db } from "@workspace/db";
-import { jobsTable, usersTable, ratingsTable, messagesTable, promoCodesTable } from "@workspace/db";
+import { jobsTable, usersTable, ratingsTable, messagesTable, promoCodesTable, pricingConfigTable } from "@workspace/db";
 import { eq, and, sql } from "drizzle-orm";
 import { authenticate, AuthenticatedRequest } from "../middlewares/auth";
 import { formatUser } from "./auth";
@@ -10,6 +10,10 @@ import { sendReceiptEmail } from "../utils/email";
 const router: IRouter = Router();
 
 function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTable.$inferSelect | null, driver?: typeof usersTable.$inferSelect | null) {
+  const surchargeAmount = job.surchargeAmount ? parseFloat(job.surchargeAmount) : 0;
+  const tipAmount = job.tipAmount ? parseFloat(job.tipAmount) : 0;
+  const grossJobValue = job.grossJobValue ? parseFloat(job.grossJobValue) : parseFloat(job.priceTotal) + surchargeAmount;
+
   return {
     id: job.id,
     customerId: job.customerId,
@@ -26,6 +30,9 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     priceTotal: parseFloat(job.priceTotal),
     driverPayout: parseFloat(job.driverPayout),
     platformFee: parseFloat(job.platformFee),
+    surchargeAmount,
+    tipAmount,
+    grossJobValue,
     customerPrice: job.customerPrice ? parseFloat(job.customerPrice) : null,
     cancellationFee: job.cancellationFee ? parseFloat(job.cancellationFee) : null,
     rating: job.rating ? parseFloat(job.rating) : null,
@@ -67,6 +74,31 @@ async function getJobWithUsers(jobId: number) {
 
   return formatJob(job, customer, driver);
 }
+
+/**
+ * Get pricing configuration for a city (public endpoint)
+ */
+router.get("/pricing/:city", async (req, res) => {
+  try {
+    const { city } = req.params;
+    const [config] = await db.select().from(pricingConfigTable)
+      .where(eq(pricingConfigTable.city, city as string));
+
+    if (!config) {
+      // Return default values if not found
+      return res.json({
+        city,
+        basePriceMin: "99",
+        basePriceMax: "299",
+        platformFeePercentage: "25",
+        active: true,
+      });
+    }
+    res.json(config);
+  } catch (err) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 router.get("/", authenticate, async (req: AuthenticatedRequest, res) => {
   const { city, status } = req.query;
@@ -758,6 +790,119 @@ router.post("/:id/messages", authenticate, async (req: AuthenticatedRequest, res
     }
   } catch (err) {
     req.log?.error(err, "Send message error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Carrier Surcharges and Tips ────────────────────────────────────────────
+
+/**
+ * Driver submits a surcharge request for an accepted job
+ * Surcharges are added extras (extra stairs, extra distance) that driver can request
+ */
+router.post("/:id/surcharge", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+
+  const { surchargeAmount, description } = req.body;
+  if (typeof surchargeAmount !== "number" || surchargeAmount < 0) {
+    return res.status(400).json({ error: "surchargeAmount must be a non-negative number" });
+  }
+
+  try {
+    const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+    if (job.driverId !== req.userId) {
+      res.status(403).json({ error: "Only the assigned driver can add a surcharge" });
+      return;
+    }
+
+    const newSurcharge = surchargeAmount;
+    const currentSurcharge = job.surchargeAmount ? parseFloat(job.surchargeAmount) : 0;
+    const updatedSurcharge = currentSurcharge + newSurcharge;
+
+    // Update gross job value to include surcharge
+    const newGrossValue = parseFloat(job.priceTotal) + updatedSurcharge;
+
+    const [updated] = await db.update(jobsTable)
+      .set({
+        surchargeAmount: updatedSurcharge.toString(),
+        grossJobValue: newGrossValue.toString(),
+      })
+      .where(eq(jobsTable.id, jobId))
+      .returning();
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+
+    // Notify customer of surcharge
+    const [customer] = await db.select({ pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, job.customerId)).limit(1).catch(() => []);
+    if (customer?.pushToken) {
+      sendPushToUser(customer.pushToken, "Surcharge added to your job", `Extra charges: +${Math.round(newSurcharge)} SEK`, {
+        screen: "customer-job",
+        jobId,
+      }).catch(() => {});
+    }
+  } catch (err) {
+    req.log?.error(err, "Add surcharge error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * Customer adds a tip after job completion
+ * 100% of tip goes to the driver — no platform commission on tips
+ */
+router.post("/:id/tip", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+
+  const { tipAmount } = req.body;
+  if (typeof tipAmount !== "number" || tipAmount < 0) {
+    return res.status(400).json({ error: "tipAmount must be a non-negative number" });
+  }
+
+  try {
+    const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+    if (job.customerId !== req.userId) {
+      res.status(403).json({ error: "Only the customer can add a tip" });
+      return;
+    }
+
+    const newTip = tipAmount;
+    const currentTip = job.tipAmount ? parseFloat(job.tipAmount) : 0;
+    const updatedTip = currentTip + newTip;
+
+    // Increase driver payout by the tip amount (100% of tip goes to driver)
+    const currentDriverPayout = parseFloat(job.driverPayout);
+    const newDriverPayout = currentDriverPayout + newTip;
+
+    const [updated] = await db.update(jobsTable)
+      .set({
+        tipAmount: updatedTip.toString(),
+        driverPayout: newDriverPayout.toString(),
+      })
+      .where(eq(jobsTable.id, jobId))
+      .returning();
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+
+    // Notify driver of tip
+    if (job.driverId) {
+      const [driver] = await db.select({ pushToken: usersTable.pushToken })
+        .from(usersTable).where(eq(usersTable.id, job.driverId)).limit(1).catch(() => []);
+      if (driver?.pushToken) {
+        sendPushToUser(driver.pushToken, "You received a tip!", `+${Math.round(newTip)} SEK from customer`, {
+          screen: "driver-job",
+          jobId,
+        }).catch(() => {});
+      }
+    }
+  } catch (err) {
+    req.log?.error(err, "Add tip error");
     res.status(500).json({ error: "Internal server error" });
   }
 });

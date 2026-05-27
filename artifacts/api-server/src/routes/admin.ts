@@ -293,6 +293,88 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
   }
 });
 
+// ─── Pricing Configuration ───────────────────────────────────────────────────
+
+/**
+ * Get pricing configuration for all cities
+ */
+router.get("/pricing/config", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const configs = await db.select().from(pricingConfigTable)
+      .orderBy(sql`${pricingConfigTable.city} asc`);
+    res.json(configs);
+  } catch (err: any) {
+    console.error("Pricing config fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch pricing config" });
+  }
+});
+
+/**
+ * Get pricing configuration for a specific city
+ */
+router.get("/pricing/config/:city", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const { city } = req.params;
+    const [config] = await db.select().from(pricingConfigTable)
+      .where(eq(pricingConfigTable.city, city as string));
+
+    if (!config) {
+      return res.status(404).json({ error: "Pricing config not found for city" });
+    }
+    res.json(config);
+  } catch (err: any) {
+    console.error("Pricing config fetch error:", err);
+    res.status(500).json({ error: "Failed to fetch pricing config" });
+  }
+});
+
+/**
+ * Create or update pricing configuration for a city
+ */
+router.put("/pricing/config/:city", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const { city } = req.params;
+    const { basePriceMin, basePriceMax, platformFeePercentage, active } = req.body;
+
+    if (typeof basePriceMin !== "number" || typeof basePriceMax !== "number" || typeof platformFeePercentage !== "number") {
+      return res.status(400).json({ error: "basePriceMin, basePriceMax, and platformFeePercentage must be numbers" });
+    }
+
+    const existing = await db.select().from(pricingConfigTable)
+      .where(eq(pricingConfigTable.city, city as string));
+
+    let result;
+    if (existing.length > 0) {
+      [result] = await db.update(pricingConfigTable)
+        .set({
+          basePriceMin: basePriceMin.toString(),
+          basePriceMax: basePriceMax.toString(),
+          platformFeePercentage: platformFeePercentage.toString(),
+          active: active !== undefined ? active : true,
+          updatedAt: new Date(),
+        })
+        .where(eq(pricingConfigTable.city, city as string))
+        .returning();
+    } else {
+      [result] = await db.insert(pricingConfigTable).values({
+        city: city as string,
+        basePriceMin: basePriceMin.toString(),
+        basePriceMax: basePriceMax.toString(),
+        platformFeePercentage: platformFeePercentage.toString(),
+        active: active !== undefined ? active : true,
+      }).returning();
+    }
+
+    res.json(result);
+  } catch (err: any) {
+    console.error("Pricing config update error:", err);
+    res.status(500).json({ error: "Failed to update pricing config" });
+  }
+});
+
 // ─── DAC7 Reporting ──────────────────────────────────────────────────────────
 
 /**
