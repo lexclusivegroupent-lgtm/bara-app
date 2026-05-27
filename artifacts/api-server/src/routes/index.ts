@@ -12,6 +12,7 @@ import supportRouter from "./support";
 import uploadRouter from "./upload";
 import waitlistRouter from "./waitlist";
 import appealsRouter from "./appeals";
+import referralsRouter from "./referrals";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/support", supportRouter);
 router.use("/upload", uploadRouter);
 router.use("/waitlist", waitlistRouter);
 router.use("/appeals", appealsRouter);
+router.use("/referrals", referralsRouter);
 
 export default router;
