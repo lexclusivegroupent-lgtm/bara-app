@@ -41,19 +41,25 @@ Status key: ✅ Complete | 🔄 In Progress | ⏳ Not Started | ⚖️ Legal Rev
 
 ## Priority 2 — Job Lifecycle UX
 
-### 2A — Cancellation Flow ⏳
-- Customer cancels before acceptance → no fee, immediate refund (server logic exists)
-- Customer cancels after acceptance → 150 SEK fee (server logic exists, needs UI)
-- Driver cancels → rating penalty + lockout after 3 in 30 days (needs lockout logic)
+### 2A — Cancellation Flow ✅
+- Customer cancels before acceptance → no fee (unchanged, works)
+- Customer cancels after acceptance → 150 SEK fee modal with corrected split: driver 100 kr / platform 50 kr
+- Driver cancels → `cancelledByDriverId` stored on job; accept endpoint blocks if 3+ cancellations in last 30 days (`DRIVER_LOCKED_OUT` error code)
+- Cancel confirm card in `active-job.tsx` warns driver about lockout threshold
+- `DRIVER_CANCEL_COMPENSATION = 100` constant added to `config.ts`
+- **DB migration needed**: `cancelledByDriverId` column added to jobs table
 
-### 2B — Dispute Flow UI ⏳
-- Build dispute screen: photos, description, timestamps
-- Admin quick-resolution buttons: "Refund customer", "Pay driver", "Split"
+### 2B — Dispute Flow UI ✅
+- Dispute modal in `job-status.tsx` upgraded: optional photo picker (up to 3 photos) + text description
+- Photos submitted to backend and stored in `disputePhotos` column (new)
+- Admin `POST /disputes/:id/resolve` now accepts `{ note, resolution: "refund_customer" | "pay_driver" | "split" }` — stores resolution type in `disputeResolution` column (new)
+- **DB migration needed**: `disputePhotos`, `disputeResolution` columns added to jobs table
 
-### 2C — Rating & Trust Signals ⏳
-- Driver rating + job count on every job offer card
-- "Top Driver" badge (4.8+ rating, 20+ jobs)
-- "BankID Verified" badge slot (Coming soon)
+### 2C — Rating & Trust Signals ✅
+- "Top Driver" badge added to `JobCard.tsx` driver row (shown when rating ≥ 4.8 AND totalJobs ≥ 20)
+- "BankID Verified Soon" placeholder badge added to `JobCard.tsx` driver row
+- Same badges added to driver detail card in `job-status.tsx`
+- `Job` interface in `JobCard.tsx` extended with `disputed`, `disputeReason`, `disputePhotos`, `disputeResolution`
 
 ---
 

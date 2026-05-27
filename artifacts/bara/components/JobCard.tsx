@@ -82,6 +82,10 @@ export interface Job {
   photosCustomer?: string[];
   photosPickup?: string[];
   photosDropoff?: string[];
+  disputed?: boolean;
+  disputeReason?: string | null;
+  disputePhotos?: string[];
+  disputeResolution?: string | null;
   customer?: any;
   driver?: any;
 }
@@ -130,16 +134,30 @@ export function JobCard({ job, onPress, showAcceptButton, onAccept, isAccepting,
       </View>
 
       {job.driver ? (
-        <View style={styles.driverRow}>
-          <Feather name="user" size={12} color={Colors.textMuted} />
-          <Text style={styles.driverName} numberOfLines={1}>{job.driver.fullName ?? "Driver"}</Text>
-          <StarRating
-            rating={job.driver.rating != null ? Number(job.driver.rating) : null}
-            totalJobs={job.driver.totalJobs ?? 0}
-            size={12}
-            showNew
-            showCount={false}
-          />
+        <View style={styles.driverSection}>
+          <View style={styles.driverRow}>
+            <Feather name="user" size={12} color={Colors.textMuted} />
+            <Text style={styles.driverName} numberOfLines={1}>{job.driver.fullName ?? "Driver"}</Text>
+            <StarRating
+              rating={job.driver.rating != null ? Number(job.driver.rating) : null}
+              totalJobs={job.driver.totalJobs ?? 0}
+              size={12}
+              showNew
+              showCount={false}
+            />
+          </View>
+          <View style={styles.driverBadgesRow}>
+            {Number(job.driver.rating) >= 4.8 && (job.driver.totalJobs ?? 0) >= 20 && (
+              <View style={styles.topDriverBadge}>
+                <Feather name="award" size={10} color={Colors.gold} />
+                <Text style={styles.topDriverBadgeText}>Top Driver</Text>
+              </View>
+            )}
+            <View style={styles.bankIdBadge}>
+              <Feather name="shield" size={10} color={Colors.textMuted} />
+              <Text style={styles.bankIdBadgeText}>BankID Soon</Text>
+            </View>
+          </View>
         </View>
       ) : null}
 
@@ -259,6 +277,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontFamily: "Inter_600SemiBold",
   },
+  driverSection: { gap: 4 },
   driverRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -268,6 +287,44 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 12,
     fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  driverBadgesRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingLeft: 18,
+  },
+  topDriverBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: `${Colors.gold}18`,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}40`,
+  },
+  topDriverBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
+  },
+  bankIdBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  bankIdBadgeText: {
+    fontSize: 10,
+    fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
   },
   cardDivider: {

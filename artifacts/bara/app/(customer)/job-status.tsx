@@ -19,7 +19,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
-import { BASE_URL, formatSEK, formatDate, getStatusColor, getStatusLabel, CANCELLATION_FEE } from "@/constants/config";
+import { BASE_URL, formatSEK, formatDate, getStatusColor, getStatusLabel, CANCELLATION_FEE, DRIVER_CANCEL_COMPENSATION } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { Job } from "@/components/JobCard";
 import { PhotoPicker } from "@/components/PhotoPicker";
@@ -51,6 +51,7 @@ export default function JobStatusScreen() {
   const [showCancelFeeModal, setShowCancelFeeModal] = useState(false);
   const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [disputeReason, setDisputeReason] = useState("");
+  const [disputePhotos, setDisputePhotos] = useState<string[]>([]);
   const [disputing, setDisputing] = useState(false);
   const [disputeError, setDisputeError] = useState<string | null>(null);
   const [rescheduleTime, setRescheduleTime] = useState<Date | null>(null);
@@ -88,13 +89,14 @@ export default function JobStatusScreen() {
       const res = await fetch(`${BASE_URL}/api/jobs/${id}/dispute`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ reason: disputeReason.trim() }),
+        body: JSON.stringify({ reason: disputeReason.trim(), photos: disputePhotos }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Could not flag dispute");
       queryClient.invalidateQueries({ queryKey: ["job", id] });
       setShowDisputeModal(false);
       setDisputeReason("");
+      setDisputePhotos([]);
     } catch (e: any) {
       setDisputeError(e.message || "Could not submit dispute. Please try again.");
     } finally {
@@ -233,6 +235,18 @@ export default function JobStatusScreen() {
                     showNew
                     showCount
                   />
+                </View>
+                <View style={styles.driverBadgesRow}>
+                  {Number(job.driver.rating) >= 4.8 && (job.driver.totalJobs ?? 0) >= 20 && (
+                    <View style={styles.topDriverBadge}>
+                      <Feather name="award" size={10} color={Colors.gold} />
+                      <Text style={styles.topDriverBadgeText}>Top Driver</Text>
+                    </View>
+                  )}
+                  <View style={styles.bankIdBadge}>
+                    <Feather name="shield" size={10} color={Colors.textMuted} />
+                    <Text style={styles.bankIdBadgeText}>BankID Soon</Text>
+                  </View>
                 </View>
                 {job.driver.vehicleType && (
                   <VehicleBadge vehicleType={job.driver.vehicleType} lang={lang} />
@@ -443,7 +457,11 @@ export default function JobStatusScreen() {
               </View>
               <View style={styles.feeBreakdownRow}>
                 <Text style={styles.feeBreakdownLabel}>{t("driverReceives")}</Text>
-                <Text style={[styles.feeBreakdownValue, { color: Colors.success }]}>{formatSEK(CANCELLATION_FEE)}</Text>
+                <Text style={[styles.feeBreakdownValue, { color: Colors.success }]}>{formatSEK(DRIVER_CANCEL_COMPENSATION)}</Text>
+              </View>
+              <View style={styles.feeBreakdownRow}>
+                <Text style={styles.feeBreakdownLabel}>{lang === "sv" ? "Plattformsavgift" : "Platform fee"}</Text>
+                <Text style={styles.feeBreakdownValue}>{formatSEK(CANCELLATION_FEE - DRIVER_CANCEL_COMPENSATION)}</Text>
               </View>
             </View>
             <Text style={styles.feeModalHint}>{t("youWontBeCharged")}</Text>
@@ -478,7 +496,7 @@ export default function JobStatusScreen() {
             <View style={styles.modalHandle} />
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>{t("reportIssue")}</Text>
-              <TouchableOpacity onPress={() => { setShowDisputeModal(false); setDisputeError(null); }} style={styles.modalClose}>
+              <TouchableOpacity onPress={() => { setShowDisputeModal(false); setDisputeError(null); setDisputePhotos([]); }} style={styles.modalClose}>
                 <Feather name="x" size={20} color={Colors.textMuted} />
               </TouchableOpacity>
             </View>
@@ -493,6 +511,17 @@ export default function JobStatusScreen() {
               numberOfLines={4}
               textAlignVertical="top"
             />
+            <View style={styles.disputePhotosSection}>
+              <Text style={styles.disputePhotosLabel}>
+                {lang === "sv" ? "Foton (valfritt)" : "Photos (optional)"}
+              </Text>
+              <PhotoPicker
+                photos={disputePhotos}
+                onChange={setDisputePhotos}
+                maxPhotos={3}
+                editable
+              />
+            </View>
             {disputeError && (
               <View style={styles.disputeError}>
                 <Feather name="alert-circle" size={14} color={Colors.error} />
@@ -672,6 +701,31 @@ const styles = StyleSheet.create({
   driverDetails: { flex: 1, gap: 3 },
   driverName: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.text },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
+  driverBadgesRow: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 2 },
+  topDriverBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: `${Colors.gold}18`,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}40`,
+  },
+  topDriverBadgeText: { fontSize: 10, fontFamily: "Inter_600SemiBold", color: Colors.gold },
+  bankIdBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  bankIdBadgeText: { fontSize: 10, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   ratingText: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.gold },
   vehicleText: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted },
   rateBtn: {
@@ -1113,4 +1167,12 @@ const styles = StyleSheet.create({
     color: Colors.navy,
   },
   disabled: { opacity: 0.5 },
+  disputePhotosSection: { gap: 6 },
+  disputePhotosLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+    letterSpacing: 0.3,
+    textTransform: "uppercase" as const,
+  },
 });

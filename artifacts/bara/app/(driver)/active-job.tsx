@@ -26,7 +26,7 @@ import { PhotoPicker } from "@/components/PhotoPicker";
 export default function DriverActiveJobScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const insets = useSafeAreaInsets();
   const [completing, setCompleting] = useState(false);
   const [completeError, setCompleteError] = useState<string | null>(null);
@@ -473,6 +473,11 @@ export default function DriverActiveJobScreen() {
           <View style={styles.cancelConfirmCard}>
             <Feather name="alert-triangle" size={18} color={Colors.error} />
             <Text style={styles.cancelConfirmText}>{t("cancelJobConfirm")}</Text>
+            <Text style={styles.cancelLockoutNote}>
+              {lang === "sv"
+                ? "⚠ 3 avbokningar på 30 dagar leder till tillfällig spärr"
+                : "⚠ 3 cancellations in 30 days = temporary lockout"}
+            </Text>
             <View style={styles.cancelConfirmBtns}>
               <TouchableOpacity style={styles.cancelConfirmNo} onPress={() => setShowCancelConfirm(false)}>
                 <Text style={styles.cancelConfirmNoText}>{t("cancel")}</Text>
@@ -852,6 +857,13 @@ const styles = StyleSheet.create({
     color: Colors.text,
     textAlign: "center",
     lineHeight: 20,
+  },
+  cancelLockoutNote: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.error,
+    textAlign: "center",
+    marginTop: -4,
   },
   cancelConfirmBtns: {
     flexDirection: "row",

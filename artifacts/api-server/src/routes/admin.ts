@@ -310,15 +310,23 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
   if (!checkAdminKey(req, res)) return;
   try {
     const id = Number(req.params.id);
-    const { note } = req.body as { note: string };
+    const { note, resolution } = req.body as { note: string; resolution?: "refund_customer" | "pay_driver" | "split" };
     if (!note || !note.trim()) {
       return res.status(400).json({ error: "Resolution note is required" });
     }
+    const VALID_RESOLUTIONS = ["refund_customer", "pay_driver", "split"];
+    if (resolution && !VALID_RESOLUTIONS.includes(resolution)) {
+      return res.status(400).json({ error: "resolution must be refund_customer, pay_driver, or split" });
+    }
 
     const [updated] = await db.update(jobsTable)
-      .set({ disputeResolvedNote: note.trim(), disputeResolvedAt: new Date() })
+      .set({
+        disputeResolvedNote: note.trim(),
+        disputeResolvedAt: new Date(),
+        ...(resolution ? { disputeResolution: resolution } : {}),
+      })
       .where(eq(jobsTable.id, id))
-      .returning({ id: jobsTable.id, disputeResolvedNote: jobsTable.disputeResolvedNote, disputeResolvedAt: jobsTable.disputeResolvedAt });
+      .returning({ id: jobsTable.id, disputeResolvedNote: jobsTable.disputeResolvedNote, disputeResolvedAt: jobsTable.disputeResolvedAt, disputeResolution: jobsTable.disputeResolution });
 
     if (!updated) return res.status(404).json({ error: "Job not found" });
     res.json({ success: true, job: updated });

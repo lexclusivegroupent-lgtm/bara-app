@@ -240,6 +240,8 @@ export function formatDate(dateStr: string): string {
 // Fee charged to customer when they cancel AFTER a driver has accepted.
 // Must match CANCELLATION_FEE_AFTER_ACCEPTANCE in the API server.
 export const CANCELLATION_FEE = 150;
+// How much of the 150 kr fee goes to the driver (the rest goes to the platform).
+export const DRIVER_CANCEL_COMPENSATION = 100;
 
 export function getStatusColor(status: string): string {
   switch (status) {

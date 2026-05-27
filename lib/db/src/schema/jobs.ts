@@ -47,7 +47,11 @@ export const jobsTable = pgTable("jobs", {
   completedAt: timestamp("completed_at"),
   disputedAt: timestamp("disputed_at"),
   cancelledByDriverAt: timestamp("cancelled_by_driver_at"),
+  cancelledByDriverId: integer("cancelled_by_driver_id"),
   startedAt: timestamp("started_at"),
+  // Dispute evidence and admin resolution
+  disputePhotos: text("dispute_photos").array(),
+  disputeResolution: text("dispute_resolution").$type<"refund_customer" | "pay_driver" | "split">(),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });

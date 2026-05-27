@@ -52,6 +52,9 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     completedAt: job.completedAt?.toISOString() || null,
     disputedAt: job.disputedAt?.toISOString() || null,
     cancelledByDriverAt: job.cancelledByDriverAt?.toISOString() || null,
+    cancelledByDriverId: job.cancelledByDriverId,
+    disputePhotos: job.disputePhotos || [],
+    disputeResolution: job.disputeResolution,
     customer: customer ? formatUser(customer) : null,
     driver: driver ? formatUser(driver) : null,
   };
@@ -299,6 +302,18 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
       return;
     }
 
+    // Driver lockout: block if 3+ cancellations in last 30 days
+    const [{ recentCancels }] = await db.select({
+      recentCancels: sql<number>`count(*) filter (where ${jobsTable.cancelledByDriverId} = ${req.userId} and ${jobsTable.cancelledByDriverAt} > now() - interval '30 days')`,
+    }).from(jobsTable);
+    if (Number(recentCancels) >= 3) {
+      res.status(400).json({
+        error: "You have cancelled 3 or more jobs in the past 30 days. Please wait before accepting new jobs.",
+        code: "DRIVER_LOCKED_OUT",
+      });
+      return;
+    }
+
     await db.update(jobsTable).set({
       status: "accepted",
       driverId: req.userId!,
@@ -513,7 +528,7 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
 router.post("/:id/dispute", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
-  const { reason } = req.body;
+  const { reason, photos } = req.body;
   if (!reason || !reason.trim()) {
     res.status(400).json({ error: "A reason is required to flag a dispute" });
     return;
@@ -538,6 +553,7 @@ router.post("/:id/dispute", authenticate, async (req: AuthenticatedRequest, res)
       disputed: true,
       disputeReason: reason.trim(),
       disputedAt: new Date(),
+      disputePhotos: Array.isArray(photos) ? photos : [],
     }).where(eq(jobsTable.id, jobId));
 
     const enriched = await getJobWithUsers(jobId);
@@ -708,6 +724,7 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
         status: "cancelled_by_driver",
         driverId: null,
         cancelledByDriverAt: new Date(),
+        cancelledByDriverId: req.userId!,
       }).where(eq(jobsTable.id, jobId));
 
       await db.update(usersTable).set({
