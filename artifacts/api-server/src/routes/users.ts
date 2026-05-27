@@ -105,6 +105,8 @@ router.get("/earnings", authenticate, async (req: AuthenticatedRequest, res) => 
     const completedJobs = await db.select({
       driverPayout: jobsTable.driverPayout,
       completedAt: jobsTable.completedAt,
+      acceptedAt: jobsTable.acceptedAt,
+      tipAmount: jobsTable.tipAmount,
     }).from(jobsTable).where(
       eq(jobsTable.driverId, req.userId!)
     );
@@ -114,16 +116,50 @@ router.get("/earnings", authenticate, async (req: AuthenticatedRequest, res) => 
     function sumFrom(from: Date) {
       return done
         .filter(j => j.completedAt! >= from)
-        .reduce((s, j) => s + Number(j.driverPayout), 0);
+        .reduce((s, j) => s + Number(j.driverPayout) + Number(j.tipAmount || 0), 0);
+    }
+
+    // Calculate effective hourly rate for last 7 days
+    const last7DaysStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const last7JobsWithTiming = completedJobs.filter(j =>
+      j.completedAt && j.completedAt >= last7DaysStart && j.acceptedAt
+    );
+
+    let effectiveHourlyRate: number | null = null;
+    if (last7JobsWithTiming.length > 0) {
+      const totalMinutes = last7JobsWithTiming.reduce((sum, j) => {
+        if (!j.acceptedAt || !j.completedAt) return sum;
+        return sum + (j.completedAt.getTime() - j.acceptedAt.getTime()) / (1000 * 60);
+      }, 0);
+
+      const last7Earnings = last7JobsWithTiming.reduce((s, j) =>
+        s + Number(j.driverPayout) + Number(j.tipAmount || 0), 0
+      );
+
+      if (totalMinutes > 0) {
+        effectiveHourlyRate = Math.round((last7Earnings / totalMinutes) * 60);
+      }
     }
 
     const yearEarnings = Math.round(sumFrom(startOfYear));
     const monthEarnings = Math.round(sumFrom(startOfMonth));
     const weekEarnings = Math.round(sumFrom(startOfWeek));
-    const totalEarnings = Math.round(done.reduce((s, j) => s + Number(j.driverPayout), 0));
+    const totalEarnings = Math.round(done.reduce((s, j) => s + Number(j.driverPayout) + Number(j.tipAmount || 0), 0));
     const avgPerJob = done.length > 0 ? Math.round(totalEarnings / done.length) : 0;
+    const jobsNeededForGoal = weekEarnings >= 1000 ? 0 : Math.max(0, Math.ceil((1000 - weekEarnings) / (avgPerJob || 100)));
 
-    res.json({ weekEarnings, monthEarnings, yearEarnings, totalEarnings, jobCount: done.length, avgPerJob });
+    res.json({
+      weekEarnings,
+      monthEarnings,
+      yearEarnings,
+      totalEarnings,
+      jobCount: done.length,
+      avgPerJob,
+      effectiveHourlyRate,
+      weeklyGoal: 1000,
+      jobsNeededForWeeklyGoal: jobsNeededForGoal,
+      lastUpdateAt: now.toISOString(),
+    });
   } catch (err) {
     req.log?.error(err, "Earnings error");
     res.status(500).json({ error: "Internal server error" });
