@@ -477,6 +477,136 @@ router.get("/dac7/export-csv", async (req: Request, res: Response) => {
   }
 });
 
+// ─── Admin KPI Dashboard ────────────────────────────────────────────────────
+
+/**
+ * Get comprehensive KPI data for admin dashboard
+ * Includes: job status distribution, top carriers, conversion funnel, metrics
+ */
+router.get("/kpis", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const last7DaysStart = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const last30DaysStart = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const yearStart = new Date(now.getFullYear(), 0, 1);
+
+    // Job status distribution by time period
+    async function getJobStatusCounts(since: Date) {
+      const results = await db.select({
+        status: jobsTable.status,
+        count: sql<number>`count(*)`,
+      })
+        .from(jobsTable)
+        .where(sql`${jobsTable.createdAt} >= ${since}`)
+        .groupBy(jobsTable.status);
+      return Object.fromEntries(results.map(r => [r.status, r.count]));
+    }
+
+    const [todayStats, last7Stats, last30Stats] = await Promise.all([
+      getJobStatusCounts(todayStart),
+      getJobStatusCounts(last7DaysStart),
+      getJobStatusCounts(last30DaysStart),
+    ]);
+
+    // Top 5 carriers by completed jobs (last 30 days)
+    const topCarriers = await db.select({
+      carrierId: jobsTable.driverId,
+      completedJobs: sql<number>`count(*)`,
+      avgRating: sql<number>`avg(${jobsTable.rating})`,
+    })
+      .from(jobsTable)
+      .where(and(
+        eq(jobsTable.status, "completed"),
+        sql`${jobsTable.completedAt} >= ${last30DaysStart}`
+      ))
+      .groupBy(jobsTable.driverId)
+      .orderBy(sql`count(*) DESC`)
+      .limit(5);
+
+    // Conversion funnel
+    const [totalCreated] = await db.select({
+      count: sql<number>`count(*)`,
+    }).from(jobsTable).where(sql`${jobsTable.createdAt} >= ${yearStart}`);
+
+    const [totalAccepted] = await db.select({
+      count: sql<number>`count(*)`,
+    }).from(jobsTable).where(and(
+      sql`${jobsTable.driverId} IS NOT NULL`,
+      sql`${jobsTable.createdAt} >= ${yearStart}`
+    ));
+
+    const [totalCompleted] = await db.select({
+      count: sql<number>`count(*)`,
+    }).from(jobsTable).where(and(
+      eq(jobsTable.status, "completed"),
+      sql`${jobsTable.createdAt} >= ${yearStart}`
+    ));
+
+    // Cancellation and dispute rates
+    const [totalCancelled] = await db.select({
+      count: sql<number>`count(*)`,
+    }).from(jobsTable).where(and(
+      sql`${jobsTable.status} IN ('cancelled', 'cancelled_by_driver', 'cancelled_by_customer')`,
+      sql`${jobsTable.createdAt} >= ${yearStart}`
+    ));
+
+    const [totalDisputed] = await db.select({
+      count: sql<number>`count(*)`,
+    }).from(jobsTable).where(and(
+      eq(jobsTable.disputed, true),
+      sql`${jobsTable.createdAt} >= ${yearStart}`
+    ));
+
+    // Platform revenue
+    const [platformRevenue] = await db.select({
+      total: sql<number>`sum(${jobsTable.platformFee})`,
+    }).from(jobsTable).where(and(
+      eq(jobsTable.status, "completed"),
+      sql`${jobsTable.completedAt} >= ${yearStart}`
+    ));
+
+    const totalJobs = totalCreated?.count || 0;
+    const acceptanceRate = totalJobs > 0 ? Math.round(((totalAccepted?.count || 0) / totalJobs) * 100) : 0;
+    const completionRate = totalAccepted?.count ? Math.round(((totalCompleted?.count || 0) / (totalAccepted.count)) * 100) : 0;
+    const cancellationRate = totalJobs > 0 ? Math.round(((totalCancelled?.count || 0) / totalJobs) * 100) : 0;
+    const disputeRate = totalJobs > 0 ? Math.round(((totalDisputed?.count || 0) / totalJobs) * 100) : 0;
+
+    res.json({
+      generatedAt: now.toISOString(),
+      jobStatusDistribution: {
+        today: todayStats,
+        last7Days: last7Stats,
+        last30Days: last30Stats,
+      },
+      topCarriers: topCarriers.map(tc => ({
+        carrierId: tc.carrierId,
+        completedJobs: tc.completedJobs,
+        avgRating: tc.avgRating ? parseFloat(tc.avgRating.toFixed(2)) : null,
+      })),
+      conversionFunnel: {
+        totalCreated,
+        totalAccepted: totalAccepted?.count || 0,
+        totalCompleted: totalCompleted?.count || 0,
+        acceptanceRate,
+        completionRate,
+      },
+      rates: {
+        cancellationRate,
+        disputeRate,
+      },
+      platformRevenue: {
+        yearToDate: Math.round(Number(platformRevenue?.total || 0)),
+        vatThreshold: 120000,
+      },
+    });
+  } catch (err: any) {
+    console.error("KPI dashboard error:", err);
+    res.status(500).json({ error: "Failed to fetch KPI data" });
+  }
+});
+
 // ─── VAT Threshold Tracker ───────────────────────────────────────────────────
 
 /**
