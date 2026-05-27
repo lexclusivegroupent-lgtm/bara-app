@@ -269,6 +269,7 @@ export default function DriverSettingsScreen() {
           <SettingsRow icon="bar-chart-2" label={lang === "sv" ? "Min status & rättigheter" : "My Status & Rights"} onPress={() => router.push("/driver-welfare")} />
           <SettingsRow icon="trending-up" label={t("myEarnings")} onPress={() => router.push("/(driver)/earnings")} />
           <SettingsRow icon="file-text" label={lang === "sv" ? "Föraravtal" : "Driver Agreement"} onPress={() => router.push("/driver-agreement")} />
+          <SettingsRow icon="percent" label={lang === "sv" ? "Skatt & ansvar" : "Tax & Responsibility"} onPress={() => router.push("/tax-info")} />
         </View>
 
         <View style={styles.section}>
