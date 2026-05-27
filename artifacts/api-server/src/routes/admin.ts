@@ -1,7 +1,7 @@
 import { Router, type IRouter, Request, Response } from "express";
 import { db } from "@workspace/db";
-import { jobsTable, usersTable } from "@workspace/db";
-import { eq, sql, count, desc, inArray, and } from "drizzle-orm";
+import { jobsTable, usersTable, dac7ReportsTable, pricingConfigTable } from "@workspace/db";
+import { eq, sql, count, desc, inArray, and, gte, lte } from "drizzle-orm";
 import { adminDashboardHtml } from "./admin-html";
 
 const router: IRouter = Router();
@@ -290,6 +290,160 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Admin dispute resolve error:", err);
     res.status(500).json({ error: "Failed to resolve dispute" });
+  }
+});
+
+// ─── DAC7 Reporting ──────────────────────────────────────────────────────────
+
+/**
+ * Get DAC7 reports for carriers in a given year
+ * Returns: carriers with 30+ jobs OR 22,000+ SEK gross earnings
+ */
+router.get("/dac7/reports", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const { year } = req.query;
+    const targetYear = year ? Number(year) : new Date().getFullYear();
+
+    const reports = await db.select().from(dac7ReportsTable)
+      .where(eq(dac7ReportsTable.year, targetYear))
+      .orderBy(desc(dac7ReportsTable.totalGrossEarningsSek));
+
+    if (reports.length === 0) return res.json([]);
+
+    const carrierIds = reports.map(r => r.carrierId);
+    const carriers = await db.select({
+      id: usersTable.id,
+      email: usersTable.email,
+      fullName: usersTable.fullName,
+      fullLegalName: usersTable.fullLegalName,
+      personnummer: usersTable.personnummer,
+      registeredAddress: usersTable.registeredAddress,
+      bankAccountNumber: usersTable.bankAccountNumber,
+    }).from(usersTable).where(inArray(usersTable.id, carrierIds));
+
+    const carrierMap = Object.fromEntries(carriers.map(c => [c.id, c]));
+
+    res.json(reports.map(r => ({
+      ...r,
+      carrier: carrierMap[r.carrierId] || null,
+    })));
+  } catch (err: any) {
+    console.error("DAC7 reports error:", err);
+    res.status(500).json({ error: "Failed to fetch DAC7 reports" });
+  }
+});
+
+/**
+ * Export DAC7 data as CSV for a given year
+ */
+router.get("/dac7/export-csv", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const { year } = req.query;
+    const targetYear = year ? Number(year) : new Date().getFullYear();
+
+    const reports = await db.select().from(dac7ReportsTable)
+      .where(and(
+        eq(dac7ReportsTable.year, targetYear),
+        sql`(${dac7ReportsTable.exceededJobThreshold} OR ${dac7ReportsTable.exceededEarningsThreshold})`
+      ))
+      .orderBy(desc(dac7ReportsTable.totalGrossEarningsSek));
+
+    if (reports.length === 0) {
+      res.setHeader("Content-Type", "text/csv; charset=utf-8");
+      res.send("No carriers exceeded DAC7 thresholds this year");
+      return;
+    }
+
+    const carrierIds = reports.map(r => r.carrierId);
+    const carriers = await db.select({
+      id: usersTable.id,
+      email: usersTable.email,
+      fullName: usersTable.fullName,
+      fullLegalName: usersTable.fullLegalName,
+      personnummer: usersTable.personnummer,
+      registeredAddress: usersTable.registeredAddress,
+      bankAccountNumber: usersTable.bankAccountNumber,
+    }).from(usersTable).where(inArray(usersTable.id, carrierIds));
+
+    const carrierMap = Object.fromEntries(carriers.map(c => [c.id, c]));
+
+    const csv = [
+      ["Namn", "Personnummer", "Registrerad adress", "Bankkonto", "Email", "Årets inkomst (SEK)", "Avslutade jobb", "Rapport datum"].join(","),
+      ...reports.map(r => {
+        const c = carrierMap[r.carrierId];
+        return [
+          `"${c?.fullLegalName || ""}"`,
+          c?.personnummer || "",
+          `"${c?.registeredAddress || ""}"`,
+          c?.bankAccountNumber || "",
+          c?.email || "",
+          r.totalGrossEarningsSek,
+          r.completedJobsCount,
+          r.createdAt?.toISOString().split("T")[0] || "",
+        ].join(",");
+      }),
+    ].join("\n");
+
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="dac7-report-${targetYear}.csv"`);
+    res.send(csv);
+  } catch (err: any) {
+    console.error("DAC7 CSV export error:", err);
+    res.status(500).json({ error: "Failed to export DAC7 data" });
+  }
+});
+
+// ─── VAT Threshold Tracker ───────────────────────────────────────────────────
+
+/**
+ * Track Bära's platform fee revenue against VAT threshold (120,000 SEK)
+ * Platform fee = 25% of job value (not the full job value)
+ */
+router.get("/vat/tracker", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const currentYear = new Date().getFullYear();
+    const startOfYear = new Date(currentYear, 0, 1);
+
+    // Sum all platform fees for this year
+    const [result] = await db.select({
+      totalPlatformFee: sql<number>`sum(${jobsTable.platformFee})`,
+    }).from(jobsTable).where(
+      and(
+        eq(jobsTable.status, "completed"),
+        gte(jobsTable.completedAt, startOfYear)
+      )
+    );
+
+    const totalPlatformFee = Number(result?.totalPlatformFee || 0);
+    const vatThreshold = 120000;
+    const warningThreshold = 80000;
+    const urgentThreshold = 115000;
+
+    let status = "green";
+    let message = "Well below VAT threshold";
+
+    if (totalPlatformFee >= urgentThreshold) {
+      status = "red";
+      message = `Register for VAT now — at ${Math.round(totalPlatformFee).toLocaleString("sv-SE")} SEK`;
+    } else if (totalPlatformFee >= warningThreshold) {
+      status = "orange";
+      message = `Warning: approaching VAT threshold — at ${Math.round(totalPlatformFee).toLocaleString("sv-SE")} SEK`;
+    }
+
+    res.json({
+      year: currentYear,
+      totalPlatformFeeThisYear: Math.round(totalPlatformFee),
+      vatThreshold,
+      status,
+      message,
+      percentOfThreshold: Math.round((totalPlatformFee / vatThreshold) * 100),
+    });
+  } catch (err: any) {
+    console.error("VAT tracker error:", err);
+    res.status(500).json({ error: "Failed to fetch VAT tracker" });
   }
 });
 

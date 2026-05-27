@@ -39,6 +39,10 @@ export const jobsTable = pgTable("jobs", {
   // Promo codes
   promoCode: text("promo_code"),
   discountAmount: numeric("discount_amount", { precision: 10, scale: 2 }),
+  // Carrier surcharges and tips
+  surchargeAmount: numeric("surcharge_amount", { precision: 10, scale: 2 }).default("0"),
+  tipAmount: numeric("tip_amount", { precision: 10, scale: 2 }).default("0"),
+  grossJobValue: numeric("gross_job_value", { precision: 10, scale: 2 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   acceptedAt: timestamp("accepted_at"),
   arrivedAt: timestamp("arrived_at"),

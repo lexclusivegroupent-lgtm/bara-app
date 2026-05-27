@@ -23,7 +23,7 @@ router.put("/push-token", authenticate, async (req: AuthenticatedRequest, res) =
 });
 
 router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
-  const { fullName, city, vehicleType, vehicleDescription, isAvailable, profilePhoto, role } = req.body;
+  const { fullName, city, vehicleType, vehicleDescription, isAvailable, profilePhoto, role, fullLegalName, personnummer, registeredAddress, bankAccountNumber } = req.body;
 
   try {
     const updateData: Partial<typeof usersTable.$inferInsert> = {};
@@ -33,6 +33,10 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     if (vehicleDescription !== undefined) updateData.vehicleDescription = vehicleDescription;
     if (isAvailable !== undefined) updateData.isAvailable = isAvailable;
     if (profilePhoto !== undefined) updateData.profilePhoto = profilePhoto;
+    if (fullLegalName !== undefined) updateData.fullLegalName = fullLegalName;
+    if (personnummer !== undefined) updateData.personnummer = personnummer;
+    if (registeredAddress !== undefined) updateData.registeredAddress = registeredAddress;
+    if (bankAccountNumber !== undefined) updateData.bankAccountNumber = bankAccountNumber;
 
     if (role !== undefined) {
       if (role !== "both") {
@@ -67,6 +71,24 @@ router.post("/accept-driver-agreement", authenticate, async (req: AuthenticatedR
     res.json(formatUser(user));
   } catch (err) {
     req.log?.error(err, "Accept driver agreement error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/dac7-consent", authenticate, async (req: AuthenticatedRequest, res) => {
+  const { consented } = req.body;
+  if (typeof consented !== "boolean") {
+    return res.status(400).json({ error: "consented must be a boolean" });
+  }
+
+  try {
+    const [user] = await db.update(usersTable)
+      .set({ dac7Consented: consented, dac7ConsentDate: consented ? new Date() : null })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+    res.json(formatUser(user));
+  } catch (err) {
+    req.log?.error(err, "DAC7 consent error");
     res.status(500).json({ error: "Internal server error" });
   }
 });

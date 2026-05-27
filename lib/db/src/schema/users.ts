@@ -28,6 +28,13 @@ export const usersTable = pgTable("users", {
   isDeactivated: boolean("is_deactivated").notNull().default(false),
   deactivationReason: text("deactivation_reason"),
   annualEarnings: integer("annual_earnings").notNull().default(0),
+  // KYC fields for DAC7 compliance
+  fullLegalName: text("full_legal_name"),
+  personnummer: text("personnummer"),
+  registeredAddress: text("registered_address"),
+  bankAccountNumber: text("bank_account_number"),
+  dac7Consented: boolean("dac7_consented").notNull().default(false),
+  dac7ConsentDate: timestamp("dac7_consent_date"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
