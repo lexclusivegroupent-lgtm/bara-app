@@ -482,6 +482,30 @@ const translations = {
     // Prohibited items collapsible (Fix 10)
     prohibitedItemsHeader: "⚠️ Prohibited Items",
     prohibitedItemsContact: "Questions? Contact hello@baraapp.se",
+
+    // Receipt screen (3A)
+    viewReceipt: "View Receipt",
+    receiptTitle: "Receipt",
+    jobRef: "Job Reference",
+    serviceType: "Service",
+    resendReceiptEmail: "Re-send Receipt Email",
+    resending: "Sending...",
+    receiptEmailSent: "Receipt sent to your email.",
+    openReceiptBrowser: "Open Printable Version",
+    receiptDistanceLabel: "Distance",
+    receiptPriceBreakdown: "Charges",
+    receiptSubtotal: "Subtotal",
+    receiptDiscount: "Promo discount",
+    receiptTotal: "Total",
+    receiptDriverLabel: "Driver",
+    receiptDateLabel: "Completed",
+    receiptNotFound: "Receipt not found",
+    receiptNotFoundSub: "This job does not have a receipt yet.",
+
+    // CSV export (3B)
+    exportCsv: "Export CSV",
+    thisWeek: "This week",
+    csvShared: "CSV ready to share.",
   },
 
   sv: {
@@ -965,6 +989,30 @@ const translations = {
     // Prohibited items collapsible (Fix 10)
     prohibitedItemsHeader: "⚠️ Förbjudna föremål",
     prohibitedItemsContact: "Frågor? Kontakta hello@baraapp.se",
+
+    // Receipt screen (3A)
+    viewReceipt: "Visa kvitto",
+    receiptTitle: "Kvitto",
+    jobRef: "Jobbreferens",
+    serviceType: "Tjänst",
+    resendReceiptEmail: "Skicka kvitto på nytt",
+    resending: "Skickar...",
+    receiptEmailSent: "Kvitto skickat till din e-post.",
+    openReceiptBrowser: "Öppna utskriftsversion",
+    receiptDistanceLabel: "Avstånd",
+    receiptPriceBreakdown: "Avgifter",
+    receiptSubtotal: "Delsumma",
+    receiptDiscount: "Rabattkod",
+    receiptTotal: "Totalt",
+    receiptDriverLabel: "Förare",
+    receiptDateLabel: "Slutförd",
+    receiptNotFound: "Kvitto hittades inte",
+    receiptNotFoundSub: "Det här jobbet har inget kvitto ännu.",
+
+    // CSV export (3B)
+    exportCsv: "Exportera CSV",
+    thisWeek: "Denna vecka",
+    csvShared: "CSV redo att dela.",
   },
 } as const;
 

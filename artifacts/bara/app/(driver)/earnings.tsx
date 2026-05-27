@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -7,6 +7,8 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Platform,
+  Share,
+  Alert,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -43,14 +45,45 @@ export default function EarningsScreen() {
   const stats = useMemo(() => {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    // ISO week starts on Monday
+    const dayOfWeek = now.getDay(); // 0=Sun
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() - daysToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
+
     const thisMonthJobs = jobs.filter((j) => new Date(j.completedAt || j.createdAt) >= startOfMonth);
+    const thisWeekJobs = jobs.filter((j) => new Date(j.completedAt || j.createdAt) >= startOfWeek);
 
     const totalEarned = jobs.reduce((sum, j) => sum + j.driverPayout, 0);
     const thisMonthEarned = thisMonthJobs.reduce((sum, j) => sum + j.driverPayout, 0);
+    const thisWeekEarned = thisWeekJobs.reduce((sum, j) => sum + j.driverPayout, 0);
     const avgPerJob = jobs.length > 0 ? totalEarned / jobs.length : 0;
 
-    return { totalEarned, thisMonthEarned, avgPerJob, count: jobs.length, thisMonthCount: thisMonthJobs.length };
+    return {
+      totalEarned, thisMonthEarned, thisWeekEarned,
+      avgPerJob, count: jobs.length,
+      thisMonthCount: thisMonthJobs.length,
+      thisWeekCount: thisWeekJobs.length,
+    };
   }, [jobs]);
+
+  async function handleExportCsv() {
+    if (jobs.length === 0) return;
+    const header = "Job ID,Date,Type,Address,Payout (SEK)";
+    const rows = jobs.map((j) => {
+      const date = new Date(j.completedAt || j.createdAt).toLocaleDateString("sv-SE");
+      const type = j.jobType.replace(/_/g, " ");
+      const address = (j.pickupAddress || j.homeAddress || j.city || "").replace(/,/g, " ");
+      return `${j.id},${date},${type},"${address}",${Math.round(j.driverPayout)}`;
+    });
+    const csv = [header, ...rows].join("\n");
+    try {
+      await Share.share({ message: csv, title: "Bära Earnings.csv" });
+    } catch {
+      Alert.alert("", t("csvShared"));
+    }
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
@@ -124,6 +157,13 @@ export default function EarningsScreen() {
               sub={`${stats.thisMonthCount} ${t("jobsDone").toLowerCase()}`}
             />
           </View>
+          <StatCard
+            icon="clock"
+            label={t("thisWeek")}
+            value={formatSEK(Math.round(stats.thisWeekEarned))}
+            sub={`${stats.thisWeekCount} ${t("jobsDone").toLowerCase()}`}
+            wide
+          />
           <View style={styles.avgCard}>
             <View style={styles.avgLeft}>
               <Feather name="bar-chart-2" size={18} color={Colors.gold} />
@@ -131,6 +171,18 @@ export default function EarningsScreen() {
             </View>
             <Text style={styles.avgValue}>{stats.count > 0 ? formatSEK(Math.round(stats.avgPerJob)) : "—"}</Text>
           </View>
+
+          {/* CSV export */}
+          {jobs.length > 0 && (
+            <TouchableOpacity
+              style={styles.csvBtn}
+              onPress={handleExportCsv}
+              activeOpacity={0.85}
+            >
+              <Feather name="download" size={15} color={Colors.navy} />
+              <Text style={styles.csvBtnText}>{t("exportCsv")}</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Per-job history */}
           <Text style={styles.sectionTitle}>{t("earningsHistory")}</Text>
@@ -165,9 +217,9 @@ export default function EarningsScreen() {
   );
 }
 
-function StatCard({ icon, label, value, sub }: { icon: any; label: string; value: string; sub: string }) {
+function StatCard({ icon, label, value, sub, wide }: { icon: any; label: string; value: string; sub: string; wide?: boolean }) {
   return (
-    <View style={styles.statCard}>
+    <View style={[styles.statCard, wide && styles.statCardWide]}>
       <View style={styles.statIcon}>
         <Feather name={icon} size={18} color={Colors.gold} />
       </View>
@@ -275,6 +327,9 @@ const styles = StyleSheet.create({
     borderColor: Colors.border,
     alignItems: "flex-start",
   },
+  statCardWide: {
+    flex: undefined,
+  },
   statIcon: {
     width: 36,
     height: 36,
@@ -363,6 +418,21 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: "#C04040",
     lineHeight: 18,
+  },
+  csvBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  csvBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
   },
   contractorNote: {
     flexDirection: "row",

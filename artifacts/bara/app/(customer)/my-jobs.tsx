@@ -45,11 +45,24 @@ export default function MyJobsScreen() {
   const safeJobs = Array.isArray(jobs) ? jobs : [];
 
   const renderItem = useCallback(({ item }: { item: Job }) => (
-    <JobCard
-      job={item}
-      onPress={() => router.push({ pathname: "/(customer)/job-status", params: { id: item.id } })}
-    />
-  ), []);
+    <View style={{ gap: 8 }}>
+      <JobCard
+        job={item}
+        onPress={() => router.push({ pathname: "/(customer)/job-status", params: { id: item.id } })}
+      />
+      {item.status === "completed" && (
+        <TouchableOpacity
+          style={receiptBtnStyle}
+          onPress={() => router.push({ pathname: "/(customer)/receipt", params: { id: item.id } })}
+          activeOpacity={0.85}
+        >
+          <Feather name="file-text" size={13} color={Colors.gold} />
+          <Text style={receiptBtnTextStyle}>{t("viewReceipt")}</Text>
+          <Feather name="chevron-right" size={13} color={Colors.textMuted} />
+        </TouchableOpacity>
+      )}
+    </View>
+  ), [t]);
 
   const keyExtractor = useCallback((item: Job) => item.id.toString(), []);
 
@@ -194,3 +207,22 @@ const styles = StyleSheet.create({
   },
   retryBtnText: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.navy },
 });
+
+const receiptBtnStyle = {
+  flexDirection: "row" as const,
+  alignItems: "center" as const,
+  gap: 8,
+  backgroundColor: Colors.surface,
+  borderRadius: 12,
+  paddingVertical: 10,
+  paddingHorizontal: 16,
+  borderWidth: 1,
+  borderColor: `${Colors.gold}30`,
+};
+
+const receiptBtnTextStyle = {
+  flex: 1,
+  fontSize: 13,
+  fontFamily: "Inter_500Medium",
+  color: Colors.gold,
+} as const;

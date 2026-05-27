@@ -273,10 +273,17 @@ export function getStatusLabel(status: string): string {
 
 export function getJobTypeLabel(jobType: string): string {
   switch (jobType) {
+    case "blocket_pickup":      return "Blocket Pickup";
+    case "facebook_pickup":     return "Facebook Marketplace";
+    case "small_furniture":     return "Small Furniture";
+    case "office_items":        return "Office Items";
+    case "children_items":      return "Children's Items";
+    case "electronics":         return "Electronics";
+    case "other_small":         return "Other Small Items";
     case "furniture_transport": return "Furniture Transport";
     case "bulky_delivery":      return "Bulky Item Delivery";
     case "junk_pickup":         return "Junk & Trash Pickup";
-    default:                    return jobType;
+    default:                    return jobType.replace(/_/g, " ");
   }
 }
 

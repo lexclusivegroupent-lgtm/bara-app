@@ -65,15 +65,18 @@ Status key: ✅ Complete | 🔄 In Progress | ⏳ Not Started | ⚖️ Legal Rev
 
 ## Priority 3 — Receipts & Documentation
 
-### 3A — Customer Receipt ⏳
+### 3A — Customer Receipt ✅
 - Post-completion receipt: addresses, distance, prices, driver, date/time
-- In-app view under My Jobs → Completed → View Receipt
-- Auto-send via Resend email (partial: sendReceiptEmail already exists)
-- PDF download button
+- In-app view: My Jobs → Completed → "View Receipt" button → `/(customer)/receipt`
+- Auto-send via Resend email at job completion (already wired)
+- "Re-send Receipt Email" button on receipt screen
+- "Open Printable Version" button opens `GET /api/jobs/:id/receipt` (HTML) in browser for print/save as PDF
+- `GET /api/jobs/:id/receipt` and `POST /api/jobs/:id/resend-receipt` added to API
 
-### 3B — Driver Payout Summary ⏳
-- "My Earnings" screen: this week, this month, all time
-- Per-job breakdown with CSV export
+### 3B — Driver Payout Summary ✅
+- "My Earnings" screen: this week, this month, all time — 3-card layout
+- Per-job breakdown (already existed)
+- "Export CSV" button uses RN Share sheet (cross-platform, no new packages)
 
 ---
 

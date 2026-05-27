@@ -833,5 +833,81 @@ router.post("/:id/messages", authenticate, async (req: AuthenticatedRequest, res
   }
 });
 
+// Serve receipt HTML for a completed job (used by "Open in browser / print" button)
+router.get("/:id/receipt", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const job = await getJobWithUsers(jobId);
+    if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+    if (job.customerId !== req.userId && job.driverId !== req.userId) {
+      res.status(403).json({ error: "Access denied" }); return;
+    }
+    if (job.status !== "completed") {
+      res.status(400).json({ error: "Receipt is only available for completed jobs" }); return;
+    }
+    if (!job.customer?.email) {
+      res.status(400).json({ error: "Customer email not found" }); return;
+    }
+    const { buildReceiptHtml } = await import("../utils/email");
+    const finalPrice = job.customerPrice ?? job.priceTotal;
+    const html = buildReceiptHtml({
+      jobId,
+      jobType: job.jobType,
+      completedAt: job.completedAt ?? new Date().toISOString(),
+      pickupAddress: job.pickupAddress,
+      dropoffAddress: job.dropoffAddress,
+      homeAddress: job.homeAddress,
+      priceTotal: finalPrice,
+      driverName: job.driver?.fullName ?? "Your driver",
+      driverRating: job.driver?.rating,
+      customerName: job.customer.fullName,
+      customerEmail: job.customer.email,
+    });
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
+  } catch (err) {
+    req.log?.error(err, "Get receipt error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Re-send receipt email on demand
+router.post("/:id/resend-receipt", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const job = await getJobWithUsers(jobId);
+    if (!job) { res.status(404).json({ error: "Job not found" }); return; }
+    if (job.customerId !== req.userId) {
+      res.status(403).json({ error: "Only the customer can re-send their receipt" }); return;
+    }
+    if (job.status !== "completed") {
+      res.status(400).json({ error: "Receipt is only available for completed jobs" }); return;
+    }
+    if (!job.customer?.email) {
+      res.status(400).json({ error: "Customer email not found" }); return;
+    }
+    const finalPrice = job.customerPrice ?? job.priceTotal;
+    await sendReceiptEmail({
+      jobId,
+      jobType: job.jobType,
+      completedAt: job.completedAt ?? new Date().toISOString(),
+      pickupAddress: job.pickupAddress,
+      dropoffAddress: job.dropoffAddress,
+      homeAddress: job.homeAddress,
+      priceTotal: finalPrice,
+      driverName: job.driver?.fullName ?? "Your driver",
+      driverRating: job.driver?.rating,
+      customerName: job.customer.fullName,
+      customerEmail: job.customer.email,
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    req.log?.error(err, "Resend receipt error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export { formatJob };
 export default router;

@@ -86,6 +86,8 @@ export interface Job {
   disputeReason?: string | null;
   disputePhotos?: string[];
   disputeResolution?: string | null;
+  promoCode?: string | null;
+  discountAmount?: number | null;
   customer?: any;
   driver?: any;
 }

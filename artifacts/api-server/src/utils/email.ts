@@ -43,7 +43,7 @@ interface ReceiptData {
   customerEmail: string;
 }
 
-function buildReceiptHtml(data: ReceiptData): string {
+export function buildReceiptHtml(data: ReceiptData): string {
   const {
     jobId, jobType, completedAt, pickupAddress, dropoffAddress,
     homeAddress, priceTotal, driverName, driverRating,
