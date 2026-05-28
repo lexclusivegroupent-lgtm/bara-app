@@ -55,6 +55,11 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     cancelledByDriverId: job.cancelledByDriverId,
     disputePhotos: job.disputePhotos || [],
     disputeResolution: job.disputeResolution,
+    surchargeStairs: job.surchargeStairs ?? 0,
+    surchargeDistance: job.surchargeDistance ?? 0,
+    surchargeTotalSek: job.surchargeTotalSek ?? 0,
+    surchargeApprovedAt: job.surchargeApprovedAt?.toISOString() || null,
+    tipAmount: job.tipAmount ?? 0,
     customer: customer ? formatUser(customer) : null,
     driver: driver ? formatUser(driver) : null,
   };
@@ -129,14 +134,14 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  // Enforce 25 kg limit — weightPreset is mandatory for all new jobs
-  const VALID_WEIGHT_PRESETS = ["0_10kg", "10_20kg", "20_25kg"];
+  // Enforce 15 kg limit — weightPreset is mandatory for all new jobs
+  const VALID_WEIGHT_PRESETS = ["0_5kg", "5_10kg", "10_15kg"];
   if (!weightPreset) {
-    res.status(400).json({ error: "weightPreset is required. Must be one of: 0_10kg, 10_20kg, 20_25kg" });
+    res.status(400).json({ error: "weightPreset is required. Must be one of: 0_5kg, 5_10kg, 10_15kg" });
     return;
   }
-  if (weightPreset === "over_25kg" || !VALID_WEIGHT_PRESETS.includes(weightPreset)) {
-    res.status(400).json({ error: "Bära is for small items only. For heavier items, please use a moving service." });
+  if (weightPreset === "over_15kg" || !VALID_WEIGHT_PRESETS.includes(weightPreset)) {
+    res.status(400).json({ error: "Bära is for small, light items only (max 15kg). For heavier items, please use a moving service." });
     return;
   }
   // City is optional — fall back to a default so drivers can still see the job
@@ -238,7 +243,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       hasElevator: hasElevator != null ? Boolean(hasElevator) : null,
       helpersNeeded: helpersNeeded != null ? parseInt(helpersNeeded) : null,
       estimatedWeightKg: estimatedWeightKg != null ? parseInt(estimatedWeightKg) : null,
-      weightPreset: weightPreset as "0_10kg" | "10_20kg" | "20_25kg",
+      weightPreset: weightPreset as "0_5kg" | "5_10kg" | "10_15kg",
       promoCode: appliedPromoCode,
       discountAmount: discountAmount != null ? discountAmount.toString() : null,
     }).returning();
@@ -291,7 +296,16 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
     const [driverRecord] = await db.select({
       annualEarnings: usersTable.annualEarnings,
       ftaxRegistered: usersTable.ftaxRegistered,
+      driverOnboardingComplete: usersTable.driverOnboardingComplete,
     }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+
+    if (!driverRecord?.driverOnboardingComplete) {
+      res.status(400).json({
+        error: "Please complete your driver onboarding checklist before accepting jobs.",
+        code: "ONBOARDING_INCOMPLETE",
+      });
+      return;
+    }
 
     const projectedEarnings = (driverRecord?.annualEarnings ?? 0) + parseFloat(existing.driverPayout);
     if (projectedEarnings > 1000 && !driverRecord?.ftaxRegistered) {
@@ -314,28 +328,89 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
       return;
     }
 
+    const { surchargeStairs = 0, surchargeDistance = 0 } = req.body;
+    const stairsFee = surchargeStairs ? 50 : 0;
+    const distanceFee = surchargeDistance ? 25 : 0;
+    const surchargeTotalSek = stairsFee + distanceFee;
+    const hasSurcharge = surchargeTotalSek > 0;
+
     await db.update(jobsTable).set({
-      status: "accepted",
+      status: hasSurcharge ? "surcharge_requested" : "accepted",
       driverId: req.userId!,
-      acceptedAt: new Date(),
+      acceptedAt: hasSurcharge ? null : new Date(),
+      surchargeStairs: stairsFee,
+      surchargeDistance: distanceFee,
+      surchargeTotalSek,
     }).where(eq(jobsTable.id, jobId));
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
 
-    // Notify customer that driver accepted
     const [customer] = await db.select({ pushToken: usersTable.pushToken, fullName: usersTable.fullName })
       .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
     const [driver] = await db.select({ fullName: usersTable.fullName })
       .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1).catch(() => []);
-    sendPushToUser(
-      customer?.pushToken,
-      "Driver on the way! 🚛",
-      `${driver?.fullName ?? "Your driver"} has accepted your job and is heading over.`,
-      { screen: "customer-job", jobId }
-    ).catch(() => {});
+
+    if (hasSurcharge) {
+      sendPushToUser(
+        customer?.pushToken,
+        "Tilläggsavgift begärd 💬",
+        `${driver?.fullName ?? "Din bärare"} vill lägga till en avgift på ${surchargeTotalSek} kr. Godkänn i appen.`,
+        { screen: "customer-job", jobId }
+      ).catch(() => {});
+    } else {
+      sendPushToUser(
+        customer?.pushToken,
+        "Bärare på väg! 🚛",
+        `${driver?.fullName ?? "Din bärare"} har accepterat ditt jobb och är på väg.`,
+        { screen: "customer-job", jobId }
+      ).catch(() => {});
+    }
   } catch (err) {
     req.log?.error(err, "Accept job error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Customer approves carrier surcharge → job moves to accepted
+router.post("/:id/approve-surcharge", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
+    if (existing.customerId !== req.userId) { res.status(403).json({ error: "Only the customer can approve a surcharge" }); return; }
+    if (existing.status !== "surcharge_requested") { res.status(400).json({ error: "No surcharge pending" }); return; }
+
+    await db.update(jobsTable).set({ status: "accepted", acceptedAt: new Date(), surchargeApprovedAt: new Date() }).where(eq(jobsTable.id, jobId));
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+
+    if (existing.driverId) {
+      const [driver] = await db.select({ pushToken: usersTable.pushToken }).from(usersTable).where(eq(usersTable.id, existing.driverId)).limit(1).catch(() => []);
+      sendPushToUser(driver?.pushToken, "Tilläggsavgift godkänd ✅", "Kunden har godkänt tilläggsavgiften. Jobbet är bekräftat.", { screen: "driver-job", jobId }).catch(() => {});
+    }
+  } catch (err) {
+    req.log?.error(err, "Approve surcharge error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Customer declines surcharge → driver removed, job back to pending
+router.post("/:id/decline-surcharge", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
+    if (existing.customerId !== req.userId) { res.status(403).json({ error: "Only the customer can decline a surcharge" }); return; }
+    if (existing.status !== "surcharge_requested") { res.status(400).json({ error: "No surcharge pending" }); return; }
+
+    await db.update(jobsTable).set({ status: "pending", driverId: null, surchargeStairs: 0, surchargeDistance: 0, surchargeTotalSek: 0 }).where(eq(jobsTable.id, jobId));
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+  } catch (err) {
+    req.log?.error(err, "Decline surcharge error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -567,7 +642,7 @@ router.post("/:id/dispute", authenticate, async (req: AuthenticatedRequest, res)
 router.post("/:id/rate", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
-  const { score, comment, ratedUserId } = req.body;
+  const { score, comment, ratedUserId, tipAmount } = req.body;
 
   if (!score || !ratedUserId) {
     res.status(400).json({ error: "score and ratedUserId are required" });
@@ -617,7 +692,8 @@ router.post("/:id/rate", authenticate, async (req: AuthenticatedRequest, res) =>
       rating: avgRating.toFixed(2),
     }).where(eq(usersTable.id, parsedRatedUserId));
 
-    await db.update(jobsTable).set({ rating: score.toString() }).where(eq(jobsTable.id, jobId));
+    const tipSek = (tipAmount && Number.isInteger(tipAmount) && tipAmount > 0 && existing.customerId === req.userId) ? tipAmount : 0;
+    await db.update(jobsTable).set({ rating: score.toString(), ...(tipSek > 0 ? { tipAmount: tipSek } : {}) }).where(eq(jobsTable.id, jobId));
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
@@ -676,6 +752,8 @@ router.post("/:id/reschedule", authenticate, async (req: AuthenticatedRequest, r
 });
 
 const CANCELLATION_FEE_AFTER_ACCEPTANCE = 150;
+// Maximum job value — keeps platform clearly in small/informal service territory
+const MAX_JOB_VALUE_SEK = 299;
 
 router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id);

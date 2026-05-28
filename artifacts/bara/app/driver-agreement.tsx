@@ -19,11 +19,14 @@ import { Colors } from "@/constants/colors";
 import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 
+// ⚖️ Updated to reflect EU Platform Work Directive (compliance ahead of Dec 2026 deadline)
 const RIGHTS = {
   sv: [
     "Du bestämmer dina egna arbetstider — Bära kräver inga minimitimmar",
-    "Du kan arbeta för andra plattformar samtidigt",
-    "Du kan tacka nej till vilket jobb som helst utan påföljd",
+    "Du kan arbeta för andra plattformar samtidigt — Bära kräver ingen exklusivitet",
+    "Du kan tacka nej till vilket jobb som helst utan påföljd — det finns inga straff för att tacka nej",
+    "Du ansvarar för din egen bil, bränsle och telefon",
+    "Priset sätts av Bära som utgångspunkt, men du kan lägga till tilläggsavgifter för trappor eller extra avstånd",
     "Din provisionssats ändras aldrig utan 60 dagars varsel",
     "Du kan överklaga varje avstängning inom 14 dagar",
     "Du får betalning inom 7 dagar efter slutfört jobb",
@@ -31,8 +34,10 @@ const RIGHTS = {
   ],
   en: [
     "You set your own hours — Bära requires no minimum hours",
-    "You can work for other platforms simultaneously",
-    "You can decline any job without penalty",
+    "You can work for other platforms simultaneously — Bära requires no exclusivity",
+    "You can decline any job without penalty — there are no consequences for declining",
+    "You are responsible for your own vehicle, fuel and phone",
+    "Job pricing is set by Bära as a baseline, but you may add surcharges for stairs or extra distance",
     "Your commission rate never changes without 60 days notice",
     "You can appeal any deactivation within 14 days",
     "You receive payment within 7 days of job completion",

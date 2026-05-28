@@ -237,11 +237,13 @@ export function formatDate(dateStr: string): string {
   return d.toLocaleDateString("sv-SE", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-// Fee charged to customer when they cancel AFTER a driver has accepted.
+// Fee charged to customer when they cancel AFTER a carrier has accepted.
 // Must match CANCELLATION_FEE_AFTER_ACCEPTANCE in the API server.
 export const CANCELLATION_FEE = 150;
-// How much of the 150 kr fee goes to the driver (the rest goes to the platform).
+// How much of the 150 kr fee goes to the carrier (the rest goes to the platform).
 export const DRIVER_CANCEL_COMPENSATION = 100;
+// Maximum job value for launch — keeps transactions in small/informal service territory.
+export const MAX_JOB_VALUE_SEK = 299;
 
 export function getStatusColor(status: string): string {
   switch (status) {
@@ -295,7 +297,11 @@ function getBaseUrl(): string {
 }
 export const BASE_URL = getBaseUrl();
 
-export const GOOGLE_MAPS_KEY = process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || "";
+export const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || "";
+
+// Platform identity — Bära is a technology marketplace, not a transport company.
+export const PLATFORM_TAGLINE_EN = "Connect with independent carriers for small item pickup and delivery";
+export const PLATFORM_TAGLINE_SV = "Koppla ihop med oberoende bärare för upphämtning och leverans av små föremål";
 
 export const CITY_COORDINATES: Record<string, { latitude: number; longitude: number }> = {
   // Stockholms län
@@ -490,14 +496,15 @@ const geocodeCache = new Map<string, { latitude: number; longitude: number } | n
 
 export async function geocodeAddress(address: string): Promise<{ latitude: number; longitude: number } | null> {
   if (geocodeCache.has(address)) return geocodeCache.get(address)!;
-  if (!GOOGLE_MAPS_KEY || GOOGLE_MAPS_KEY === "YOUR_GOOGLE_MAPS_API_KEY_HERE") return null;
+  if (!MAPBOX_TOKEN) return null;
   try {
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${GOOGLE_MAPS_KEY}`;
+    const query = encodeURIComponent(`${address}, Sweden`);
+    const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${MAPBOX_TOKEN}&country=se&language=sv&limit=1`;
     const res = await fetch(url);
     const data = await res.json();
-    if (data.status === "OK" && data.results[0]) {
-      const loc = data.results[0].geometry.location;
-      const result = { latitude: loc.lat, longitude: loc.lng };
+    if (data.features?.length > 0) {
+      const [lng, lat] = data.features[0].geometry.coordinates;
+      const result = { latitude: lat, longitude: lng };
       geocodeCache.set(address, result);
       return result;
     }

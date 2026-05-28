@@ -56,8 +56,10 @@
     "zod-validation-error": "^3.4.0"
   },
   "dependencies": {
+    "@rnmapbox/maps": "^10.1.36",
     "expo-device": "~8.0.10",
     "expo-notifications": "~0.32.16",
-    "react-native-maps": "1.20.1"
+    "mapbox-gl": "^3.9.4",
+    "@mapbox/search-js-react": "^1.0.0-beta.22"
   }
 }

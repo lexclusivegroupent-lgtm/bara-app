@@ -1,10 +1,27 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { authenticate } from "../middlewares/auth";
+import { db } from "@workspace/db";
+import { mapsApiCallsTable } from "@workspace/db";
+import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
-function getKey(): string | null {
-  return process.env.GOOGLE_MAPS_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY || null;
+function getToken(): string | null {
+  return process.env.MAPBOX_SECRET_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_TOKEN || null;
+}
+
+function trackCall(callType: string): void {
+  const yearMonth = new Date().toISOString().slice(0, 7);
+  db.insert(mapsApiCallsTable)
+    .values({ yearMonth, callType, callCount: 1 })
+    .onConflictDoUpdate({
+      target: [mapsApiCallsTable.yearMonth, mapsApiCallsTable.callType],
+      set: {
+        callCount: sql`${mapsApiCallsTable.callCount} + 1`,
+        updatedAt: sql`now()`,
+      },
+    })
+    .catch(() => {});
 }
 
 // GET /api/places/autocomplete?input=Kungsgatan
@@ -15,39 +32,44 @@ router.get("/autocomplete", authenticate, async (req: Request, res: Response) =>
     return;
   }
 
-  const key = getKey();
-  if (!key) {
-    res.status(503).json({ error: "Places API not configured" });
+  const token = getToken();
+  if (!token) {
+    res.status(503).json({ error: "Mapbox token not configured" });
     return;
   }
 
   try {
-    const url = new URL("https://maps.googleapis.com/maps/api/place/autocomplete/json");
-    url.searchParams.set("input", input);
-    url.searchParams.set("key", key);
-    url.searchParams.set("components", "country:se");
+    const url = new URL(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(input)}.json`);
+    url.searchParams.set("access_token", token);
+    url.searchParams.set("country", "se");
     url.searchParams.set("language", "sv");
-    url.searchParams.set("types", "address");
+    url.searchParams.set("types", "address,place,locality,neighborhood");
+    url.searchParams.set("autocomplete", "true");
+    url.searchParams.set("limit", "5");
 
-    const googleRes = await fetch(url.toString());
-    if (!googleRes.ok) {
-      res.status(502).json({ error: "Places API error" });
+    const mapboxRes = await fetch(url.toString());
+    if (!mapboxRes.ok) {
+      res.status(502).json({ error: "Geocoding API error" });
       return;
     }
 
-    const data = await googleRes.json();
+    const data = await mapboxRes.json() as any;
+    trackCall("autocomplete");
 
-    if (data.status === "REQUEST_DENIED") {
-      res.status(403).json({ error: "Places API key invalid or restricted" });
-      return;
-    }
-
-    const predictions = (data.predictions || []).slice(0, 5).map((p: any) => ({
-      placeId: p.place_id,
-      description: p.description,
-      mainText: p.structured_formatting?.main_text ?? p.description,
-      secondaryText: p.structured_formatting?.secondary_text ?? "",
-    }));
+    const predictions = (data.features || []).map((f: any) => {
+      const parts = (f.place_name as string).split(", ");
+      const mainText = f.text || parts[0];
+      const secondaryText = parts.length > 1 ? parts.slice(1).join(", ") : "";
+      const [lng, lat] = f.geometry?.coordinates ?? [null, null];
+      return {
+        placeId: f.id,
+        description: f.place_name,
+        mainText,
+        secondaryText,
+        lat: lat ?? undefined,
+        lng: lng ?? undefined,
+      };
+    });
 
     res.json({ predictions });
   } catch (err) {
@@ -56,7 +78,9 @@ router.get("/autocomplete", authenticate, async (req: Request, res: Response) =>
   }
 });
 
-// GET /api/places/details?placeId=ChIJ...
+// GET /api/places/details?placeId=<mapbox-feature-id-or-address>
+// Coordinates are already returned with autocomplete predictions.
+// This endpoint is a fallback for clients that didn't receive coordinates.
 router.get("/details", authenticate, async (req: Request, res: Response) => {
   const placeId = (req.query.placeId as string || "").trim();
   if (!placeId) {
@@ -64,36 +88,40 @@ router.get("/details", authenticate, async (req: Request, res: Response) => {
     return;
   }
 
-  const key = getKey();
-  if (!key) {
-    res.status(503).json({ error: "Places API not configured" });
+  const token = getToken();
+  if (!token) {
+    res.status(503).json({ error: "Mapbox token not configured" });
     return;
   }
 
   try {
-    const url = new URL("https://maps.googleapis.com/maps/api/place/details/json");
-    url.searchParams.set("place_id", placeId);
-    url.searchParams.set("key", key);
-    url.searchParams.set("fields", "geometry,formatted_address");
+    // Use placeId as search text — reliable for any address string
+    const url = new URL(`https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(placeId)}.json`);
+    url.searchParams.set("access_token", token);
+    url.searchParams.set("country", "se");
     url.searchParams.set("language", "sv");
+    url.searchParams.set("limit", "1");
 
-    const googleRes = await fetch(url.toString());
-    if (!googleRes.ok) {
-      res.status(502).json({ error: "Places API error" });
+    const mapboxRes = await fetch(url.toString());
+    if (!mapboxRes.ok) {
+      res.status(502).json({ error: "Geocoding API error" });
       return;
     }
 
-    const data = await googleRes.json();
-    if (data.status !== "OK" || !data.result) {
+    const data = await mapboxRes.json() as any;
+    if (!data.features?.length) {
       res.status(404).json({ error: "Place not found" });
       return;
     }
 
-    const loc = data.result.geometry?.location;
+    trackCall("details");
+
+    const feature = data.features[0];
+    const [lng, lat] = feature.geometry.coordinates;
     res.json({
-      address: data.result.formatted_address,
-      lat: loc?.lat ?? null,
-      lng: loc?.lng ?? null,
+      address: feature.place_name,
+      lat,
+      lng,
     });
   } catch (err) {
     (req as any).log?.error(err, "Places details error");

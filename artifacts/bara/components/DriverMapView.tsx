@@ -2,10 +2,12 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import MapView, { Marker, Callout, PROVIDER_GOOGLE } from "react-native-maps";
+import MapboxGL from "@rnmapbox/maps";
 import { Colors } from "@/constants/colors";
-import { CITY_COORDINATES, geocodeAddress } from "@/constants/config";
+import { CITY_COORDINATES, MAPBOX_TOKEN, geocodeAddress } from "@/constants/config";
 import { Job } from "@/components/JobCard";
+
+MapboxGL.setAccessToken(MAPBOX_TOKEN);
 
 interface Props {
   city: string;
@@ -52,28 +54,29 @@ export function DriverMapView({ city, jobs, onAccept, accepting, isAvailable }: 
   }
 
   const center = driverLocation || cityCoords;
+  const selectedMarker = selectedJob ? jobMarkers.find(m => m.job.id === selectedJob) ?? null : null;
 
   return (
     <View style={styles.container}>
-      <MapView
+      <MapboxGL.MapView
         style={styles.map}
-        provider={PROVIDER_GOOGLE}
-        initialRegion={{
-          latitude: center.latitude,
-          longitude: center.longitude,
-          latitudeDelta: 0.08,
-          longitudeDelta: 0.08,
-        }}
-        showsUserLocation
-        showsMyLocationButton={false}
-        showsCompass={false}
-        customMapStyle={darkMapStyle}
+        styleURL="mapbox://styles/mapbox/dark-v11"
+        compassEnabled={false}
+        scaleBarEnabled={false}
       >
+        <MapboxGL.Camera
+          zoomLevel={12}
+          centerCoordinate={[center.longitude, center.latitude]}
+          animationMode="none"
+        />
+        <MapboxGL.UserLocation visible={true} />
         {jobMarkers.map(({ job, coords }) => (
-          <Marker
-            key={job.id}
-            coordinate={coords}
-            onPress={() => setSelectedJob(selectedJob === job.id ? null : job.id)}
+          <MapboxGL.PointAnnotation
+            key={`job-${job.id}`}
+            id={`job-${job.id}`}
+            coordinate={[coords.longitude, coords.latitude]}
+            onSelected={() => setSelectedJob(selectedJob === job.id ? null : job.id)}
+            onDeselected={() => setSelectedJob(null)}
           >
             <View style={[styles.jobMarker, selectedJob === job.id && styles.jobMarkerSelected]}>
               <MaterialCommunityIcons
@@ -82,32 +85,35 @@ export function DriverMapView({ city, jobs, onAccept, accepting, isAvailable }: 
                 color={selectedJob === job.id ? Colors.navy : Colors.gold}
               />
             </View>
-            <Callout tooltip>
-              <View style={styles.callout}>
-                <Text style={styles.calloutTitle}>
-                  {job.jobType?.replace(/_/g, " ") ?? "Small Item"}
-                </Text>
-                <Text style={styles.calloutAddress} numberOfLines={2}>
-                  {job.pickupAddress || job.homeAddress}
-                </Text>
-                <Text style={styles.calloutPrice}>{job.driverPayout} kr earnings</Text>
-                {isAvailable && (
-                  <TouchableOpacity
-                    style={[styles.acceptBtn, accepting === job.id && styles.acceptBtnDisabled]}
-                    onPress={() => onAccept(job.id)}
-                    disabled={!!accepting}
-                  >
-                    {accepting === job.id
-                      ? <ActivityIndicator size="small" color={Colors.navy} />
-                      : <Text style={styles.acceptText}>Accept Job</Text>
-                    }
-                  </TouchableOpacity>
-                )}
-              </View>
-            </Callout>
-          </Marker>
+          </MapboxGL.PointAnnotation>
         ))}
-      </MapView>
+      </MapboxGL.MapView>
+
+      {selectedMarker && (
+        <View style={styles.calloutOverlay}>
+          <View style={styles.callout}>
+            <Text style={styles.calloutTitle}>
+              {selectedMarker.job.jobType?.replace(/_/g, " ") ?? "Small Item"}
+            </Text>
+            <Text style={styles.calloutAddress} numberOfLines={2}>
+              {selectedMarker.job.pickupAddress || selectedMarker.job.homeAddress}
+            </Text>
+            <Text style={styles.calloutPrice}>{selectedMarker.job.driverPayout} kr earnings</Text>
+            {isAvailable && (
+              <TouchableOpacity
+                style={[styles.acceptBtn, accepting === selectedMarker.job.id && styles.acceptBtnDisabled]}
+                onPress={() => onAccept(selectedMarker.job.id)}
+                disabled={!!accepting}
+              >
+                {accepting === selectedMarker.job.id
+                  ? <ActivityIndicator size="small" color={Colors.navy} />
+                  : <Text style={styles.acceptText}>Accept Job</Text>
+                }
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+      )}
 
       <View style={styles.overlayPills}>
         <View style={[styles.pill, { borderColor: driverLocation ? `${Colors.success}40` : Colors.border }]}>
@@ -134,19 +140,6 @@ export function DriverMapView({ city, jobs, onAccept, accepting, isAvailable }: 
   );
 }
 
-const darkMapStyle = [
-  { elementType: "geometry", stylers: [{ color: "#1B2A4A" }] },
-  { elementType: "labels.text.fill", stylers: [{ color: "#8B9CBD" }] },
-  { elementType: "labels.text.stroke", stylers: [{ color: "#0F1A2E" }] },
-  { featureType: "administrative", elementType: "geometry", stylers: [{ color: "#2D3F60" }] },
-  { featureType: "road", elementType: "geometry", stylers: [{ color: "#243252" }] },
-  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#2D3F60" }] },
-  { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#2D3F60" }] },
-  { featureType: "water", elementType: "geometry", stylers: [{ color: "#0F1A2E" }] },
-  { featureType: "poi", stylers: [{ visibility: "off" }] },
-  { featureType: "transit", stylers: [{ visibility: "off" }] },
-];
-
 const styles = StyleSheet.create({
   container: {
     height: 260,
@@ -171,12 +164,16 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   jobMarkerSelected: { backgroundColor: Colors.gold, transform: [{ scale: 1.2 }] },
+  calloutOverlay: {
+    position: "absolute",
+    bottom: 60,
+    left: 12,
+    right: 12,
+  },
   callout: {
     backgroundColor: Colors.surface,
     borderRadius: 14,
     padding: 12,
-    minWidth: 180,
-    maxWidth: 220,
     borderWidth: 1,
     borderColor: Colors.border,
     gap: 4,

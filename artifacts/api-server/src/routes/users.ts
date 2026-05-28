@@ -73,6 +73,42 @@ router.post("/accept-driver-agreement", authenticate, async (req: AuthenticatedR
   }
 });
 
+router.post("/complete-driver-onboarding", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const [user] = await db.update(usersTable)
+      .set({ driverOnboardingComplete: true })
+      .where(eq(usersTable.id, req.userId!))
+      .returning();
+    res.json(formatUser(user));
+  } catch (err) {
+    req.log?.error(err, "Complete driver onboarding error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ⚖️ DAC7 EU directive — carrier consent to annual Skatteverket reporting
+router.post("/dac7-consent", authenticate, async (req: AuthenticatedRequest, res) => {
+  const { personnummer, fullLegalName, registeredAddress, bankAccountNumber } = req.body;
+  if (!personnummer || !fullLegalName) {
+    res.status(400).json({ error: "personnummer and fullLegalName are required for DAC7 consent" });
+    return;
+  }
+  try {
+    const [user] = await db.update(usersTable).set({
+      dac7Consented: true,
+      dac7ConsentDate: new Date(),
+      personnummer: personnummer.trim(),
+      fullLegalName: fullLegalName.trim(),
+      registeredAddress: registeredAddress?.trim() || null,
+      bankAccountNumber: bankAccountNumber?.trim() || null,
+    }).where(eq(usersTable.id, req.userId!)).returning();
+    res.json(formatUser(user));
+  } catch (err) {
+    req.log?.error(err, "DAC7 consent error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/earnings", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const now = new Date();

@@ -214,10 +214,10 @@ export default function PostJobScreen() {
       setError(isSv ? "Välj föremålets ungefärliga vikt." : "Please select the item's approximate weight.");
       return;
     }
-    if (weightPreset === "over_25kg") {
+    if (weightPreset === "over_15kg") {
       setError(isSv
-        ? "Bära är till för småföremål. För tyngre föremål, använd en flytt- eller transporttjänst."
-        : "Bära is for small items only. For heavier items, please use a moving service.");
+        ? "Bära är för små, lätta föremål (max 15 kg). För tyngre föremål, använd en flytt- eller transporttjänst."
+        : "Bära is for small, light items only (max 15 kg). For heavier items, please use a moving service.");
       return;
     }
     if (!agreedToSize) {
@@ -325,8 +325,8 @@ export default function PostJobScreen() {
             <View style={styles.sizeGuideBody}>
               <Text style={styles.sizeGuideSubtitle}>
                 {isSv
-                  ? "Föremål mindre än en liten byrå · Under 25 kg · En person kan bära det"
-                  : "Smaller than a small dresser · Under 25 kg · One person can carry it"}
+                  ? "Föremål mindre än en liten byrå · Under 15 kg · En person kan bära det"
+                  : "Smaller than a small dresser · Under 15 kg · One person can carry it"}
               </Text>
               <View style={styles.sizeGuideColumns}>
                 <View style={styles.sizeGuideCol}>
@@ -519,16 +519,16 @@ export default function PostJobScreen() {
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {[
-                { value: "0_10kg", label: "0–10 kg" },
-                { value: "10_20kg", label: "10–20 kg" },
-                { value: "20_25kg", label: "20–25 kg" },
-                { value: "over_25kg", label: isSv ? "Över 25 kg" : "Over 25 kg" },
+                { value: "0_5kg", label: "0–5 kg" },
+                { value: "5_10kg", label: "5–10 kg" },
+                { value: "10_15kg", label: "10–15 kg" },
+                { value: "over_15kg", label: isSv ? "Över 15 kg" : "Over 15 kg" },
               ].map((preset) => (
                 <TouchableOpacity
                   key={preset.value}
                   style={[
                     styles.boolBtn,
-                    weightPreset === preset.value && (preset.value === "over_25kg"
+                    weightPreset === preset.value && (preset.value === "over_15kg"
                       ? { borderColor: "#E05252", backgroundColor: "#E0525218" }
                       : styles.boolBtnActive),
                   ]}
@@ -537,7 +537,7 @@ export default function PostJobScreen() {
                 >
                   <Text style={[
                     styles.boolBtnText,
-                    weightPreset === preset.value && (preset.value === "over_25kg"
+                    weightPreset === preset.value && (preset.value === "over_15kg"
                       ? { color: "#E05252", fontFamily: "Inter_600SemiBold" }
                       : styles.boolBtnTextActive),
                   ]}>
@@ -546,11 +546,11 @@ export default function PostJobScreen() {
                 </TouchableOpacity>
               ))}
             </View>
-            {weightPreset === "over_25kg" && (
+            {weightPreset === "over_15kg" && (
               <Text style={{ color: "#E05252", fontSize: 12, fontFamily: "Inter_500Medium", lineHeight: 18 }}>
                 {isSv
-                  ? "Bära är till för småföremål. För tyngre föremål, använd en flytt- eller transporttjänst."
-                  : "Bära is for small items only. For heavier items, please use a moving service."}
+                  ? "Bära är för små, lätta föremål (max 15 kg). För tyngre föremål, använd en flytt- eller transporttjänst."
+                  : "Bära is for small, light items only (max 15 kg). For heavier items, please use a moving service."}
               </Text>
             )}
           </View>
@@ -728,14 +728,14 @@ export default function PostJobScreen() {
               "Hushållsavfall",
               "Byggskräp",
               "Farliga ämnen",
-              "Föremål över 25 kg",
+              "Föremål över 15 kg",
               "Föremål med specialtillstånd",
               "Hel hemmaflytt",
             ] : [
               "Household waste",
               "Construction debris",
               "Hazardous materials",
-              "Items over 25 kg",
+              "Items over 15 kg",
               "Items requiring special permits",
               "Full household moves",
             ]).map((item) => (
@@ -755,8 +755,8 @@ export default function PostJobScreen() {
           </View>
           <Text style={styles.ownershipText}>
             {isSv
-              ? "Jag bekräftar att föremålet är mindre än en liten byrå och väger under 25 kg"
-              : "I confirm the item is smaller than a small dresser and weighs under 25 kg"}
+              ? "Jag bekräftar att föremålet är mindre än en liten byrå och väger under 15 kg"
+              : "I confirm the item is smaller than a small dresser and weighs under 15 kg"}
           </Text>
         </TouchableOpacity>
 
@@ -772,6 +772,16 @@ export default function PostJobScreen() {
             {t("ownershipConfirm")}
           </Text>
         </TouchableOpacity>
+
+        {/* ⚖️ Customer job posting disclaimer */}
+        <View style={styles.legalDisclaimerBlock}>
+          <Feather name="info" size={13} color={Colors.textMuted} />
+          <Text style={styles.legalDisclaimerText}>
+            {isSv
+              ? "Genom att lägga upp detta jobb ingår du ett direkt avtal med din valda bärare. Bära underlättar denna kontakt men är inte part i transportavtalet."
+              : "By posting this job, you are entering into a direct agreement with your chosen carrier. Bära facilitates this connection but is not a party to the transport contract."}
+          </Text>
+        </View>
 
         {error ? (
           <View style={styles.errorBanner}>
@@ -1291,6 +1301,24 @@ const styles = StyleSheet.create({
     color: "#C04040",
     lineHeight: 20,
     width: "48%",
+  },
+  legalDisclaimerBlock: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  legalDisclaimerText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 17,
   },
   otherSmallBanner: {
     flexDirection: "row",

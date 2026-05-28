@@ -15,21 +15,13 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.bara.app",
-      "config": {
-        "googleMapsApiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
-      }
+      "bundleIdentifier": "com.bara.app"
     },
     "android": {
       "package": "com.bara.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/icon.png",
         "backgroundColor": "#1B2A4A"
-      },
-      "config": {
-        "googleMaps": {
-          "apiKey": "YOUR_GOOGLE_MAPS_API_KEY_HERE"
-        }
       }
     },
     "web": {
@@ -58,6 +50,12 @@
         {
           "locationAlwaysAndWhenInUsePermission": "Bära needs your location to show nearby jobs on the map.",
           "locationWhenInUsePermission": "Bära needs your location to show nearby jobs on the map."
+        }
+      ],
+      [
+        "@rnmapbox/maps",
+        {
+          "RNMapboxMapsDownloadToken": "MAPBOX_SECRET_TOKEN_PLACEHOLDER"
         }
       ]
     ],

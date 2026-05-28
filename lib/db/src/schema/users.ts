@@ -25,6 +25,7 @@ export const usersTable = pgTable("users", {
   passwordChangedAt: timestamp("password_changed_at"),
   driverAgreementAccepted: boolean("driver_agreement_accepted").notNull().default(false),
   driverAgreementAcceptedAt: timestamp("driver_agreement_accepted_at"),
+  driverOnboardingComplete: boolean("driver_onboarding_complete").notNull().default(false),
   isDeactivated: boolean("is_deactivated").notNull().default(false),
   deactivationReason: text("deactivation_reason"),
   annualEarnings: integer("annual_earnings").notNull().default(0),
@@ -32,6 +33,18 @@ export const usersTable = pgTable("users", {
   ftaxRegistered: boolean("ftax_registered").notNull().default(false),
   ftaxNumber: text("ftax_number"),
   ftaxVerifiedByAdmin: boolean("ftax_verified_by_admin").notNull().default(false),
+  // ⚖️ DAC7 EU directive — KYC data required for annual Skatteverket reporting
+  personnummer: text("personnummer"),
+  fullLegalName: text("full_legal_name"),
+  registeredAddress: text("registered_address"),
+  bankAccountNumber: text("bank_account_number"),
+  dac7Consented: boolean("dac7_consented").notNull().default(false),
+  dac7ConsentDate: timestamp("dac7_consent_date"),
+  // Referral programme
+  referralCode: text("referral_code"),
+  referredBy: text("referred_by"),
+  referralCount: integer("referral_count").notNull().default(0),
+  referralBonusEarned: integer("referral_bonus_earned").notNull().default(0),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 

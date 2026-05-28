@@ -162,7 +162,7 @@ export function buildReceiptHtml(data: ReceiptData): string {
                       style="background:#f8f7f4;border-radius:8px;overflow:hidden;">
                       <tr>
                         <td style="padding:16px 20px;">
-                          <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#8B9CBD;letter-spacing:0.8px;text-transform:uppercase;">Driver</p>
+                          <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#8B9CBD;letter-spacing:0.8px;text-transform:uppercase;">Carrier</p>
                           <p style="margin:0 0 4px;font-size:15px;font-weight:600;color:#1B2A4A;">${driverName}</p>
                           <p style="margin:0;font-size:13px;color:#C9A84C;font-weight:500;">${starRating(driverRating)}</p>
                         </td>
@@ -217,7 +217,7 @@ export function buildReceiptHtml(data: ReceiptData): string {
           <tr>
             <td style="padding:24px 0 0;text-align:center;">
               <p style="margin:0 0 4px;font-size:12px;color:#999;">© ${new Date().getFullYear()} Bära · Sverige</p>
-              <p style="margin:0;font-size:11px;color:#bbb;">You're receiving this because you completed a job on Bära.</p>
+              <p style="margin:0;font-size:11px;color:#bbb;">You're receiving this because you completed a job on Bära. Carriers on Bära are independent service providers. The transport contract is between you and your carrier directly.</p>
             </td>
           </tr>
 

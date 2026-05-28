@@ -36,6 +36,20 @@ router.post("/register", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
+    const referralCode = randomBytes(4).toString("hex").toUpperCase();
+    const { referralCode: usedReferralCode } = req.body;
+
+    // Validate referral code if provided
+    let referredBy: string | null = null;
+    if (usedReferralCode) {
+      const [referrer] = await db.select({ id: usersTable.id, referralCount: usersTable.referralCount })
+        .from(usersTable).where(eq(usersTable.referralCode, usedReferralCode.toUpperCase())).limit(1);
+      if (referrer) {
+        referredBy = usedReferralCode.toUpperCase();
+        await db.update(usersTable).set({ referralCount: referrer.referralCount + 1 }).where(eq(usersTable.id, referrer.id)).catch(() => {});
+      }
+    }
+
     const [user] = await db.insert(usersTable).values({
       email: email.toLowerCase(),
       passwordHash,
@@ -46,6 +60,8 @@ router.post("/register", async (req, res) => {
       vehicleType: vehicleType || null,
       isAvailable: true,
       totalJobs: 0,
+      referralCode,
+      referredBy,
     }).returning();
 
     const token = signToken(user.id, user.role);
@@ -293,10 +309,17 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     vehicleType: user.vehicleType,
     vehicleDescription: user.vehicleDescription,
     driverAgreementAccepted: user.driverAgreementAccepted,
+    driverOnboardingComplete: user.driverOnboardingComplete,
     annualEarnings: user.annualEarnings,
     ftaxRegistered: user.ftaxRegistered,
     ftaxNumber: user.ftaxNumber,
     ftaxVerifiedByAdmin: user.ftaxVerifiedByAdmin,
+    dac7Consented: user.dac7Consented,
+    personnummer: user.personnummer,
+    fullLegalName: user.fullLegalName,
+    referralCode: user.referralCode,
+    referralCount: user.referralCount,
+    referralBonusEarned: user.referralBonusEarned,
     createdAt: user.createdAt.toISOString(),
   };
 }

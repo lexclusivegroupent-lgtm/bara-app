@@ -25,7 +25,10 @@ export default function RateScreen() {
   const insets = useSafeAreaInsets();
   const [rating, setRating] = useState(0);
   const [comment, setComment] = useState("");
+  const [tip, setTip] = useState(0);
   const [loading, setLoading] = useState(false);
+  const isCustomer = activeMode === "customer";
+  const TIP_OPTIONS = [0, 10, 20, 50];
 
   const ratingLabels = [t("poor"), t("fair"), t("good"), t("great"), t("excellent")];
 
@@ -42,7 +45,7 @@ export default function RateScreen() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ score: rating, comment: comment.trim() || null, ratedUserId: parseInt(userId) }),
+        body: JSON.stringify({ score: rating, comment: comment.trim() || null, ratedUserId: parseInt(userId), tipAmount: tip > 0 ? tip : undefined }),
       });
       if (!res.ok) throw new Error("Failed to submit rating");
       router.replace(activeMode === "driver" ? "/(driver)/map" : "/(customer)/home");
@@ -102,6 +105,26 @@ export default function RateScreen() {
             textAlignVertical="top"
           />
         </View>
+
+        {isCustomer && (
+          <View style={styles.tipSection}>
+            <Text style={styles.tipLabel}>{user?.role !== "driver" ? "Add a tip? (goes 100% to carrier)" : ""}</Text>
+            <View style={styles.tipRow}>
+              {TIP_OPTIONS.map((opt) => (
+                <TouchableOpacity
+                  key={opt}
+                  style={[styles.tipBtn, tip === opt && styles.tipBtnActive]}
+                  onPress={() => setTip(opt)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[styles.tipBtnText, tip === opt && styles.tipBtnTextActive]}>
+                    {opt === 0 ? "No tip" : `+${opt} kr`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        )}
 
         <TouchableOpacity
           style={[styles.submitBtn, loading && styles.disabled]}
@@ -199,4 +222,18 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
   },
   disabled: { opacity: 0.7 },
+  tipSection: { width: "100%", gap: 8 },
+  tipLabel: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.textMuted, textAlign: "center" },
+  tipRow: { flexDirection: "row", gap: 8, justifyContent: "center" },
+  tipBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    backgroundColor: Colors.surface,
+  },
+  tipBtnActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  tipBtnText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  tipBtnTextActive: { color: Colors.navy },
 });

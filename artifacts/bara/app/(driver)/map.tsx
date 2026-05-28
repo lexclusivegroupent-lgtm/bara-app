@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   RefreshControl,
   Platform,
   Switch,
+  Modal,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
@@ -26,11 +27,21 @@ import { DriverMapView } from "@/components/DriverMapView";
 
 export default function DriverMapScreen() {
   const { user, token, updateUser, activeMode, setActiveMode } = useAuth();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [accepting, setAccepting] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [surchargeJob, setSurchargeJob] = useState<Job | null>(null);
+  const [surchargeStairs, setSurchargeStairs] = useState(false);
+  const [surchargeDistance, setSurchargeDistance] = useState(false);
+  const isSv = lang === "sv";
+
+  useEffect(() => {
+    if (user && !user.driverOnboardingComplete) {
+      router.replace("/driver-onboarding-checklist");
+    }
+  }, [user?.driverOnboardingComplete]);
 
   const { data: jobs, isLoading, refetch, isRefetching } = useQuery<Job[]>({
     queryKey: ["availableJobs", user?.city],
@@ -44,13 +55,24 @@ export default function DriverMapScreen() {
     refetchInterval: 20000,
   });
 
-  async function handleAccept(jobId: number) {
+  function openSurchargeSheet(job: Job) {
+    setSurchargeStairs(false);
+    setSurchargeDistance(false);
+    setSurchargeJob(job);
+  }
+
+  async function handleAccept(jobId: number, surcharges?: { stairs: boolean; distance: boolean }) {
     setAccepting(jobId);
+    setSurchargeJob(null);
     setErrorMsg(null);
     try {
+      const body: Record<string, unknown> = {};
+      if (surcharges?.stairs) body.surchargeStairs = 50;
+      if (surcharges?.distance) body.surchargeDistance = 25;
       const res = await fetch(`${BASE_URL}/api/jobs/${jobId}/accept`, {
         method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify(body),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to accept job");
@@ -176,7 +198,7 @@ export default function DriverMapScreen() {
             <JobCard
               job={item}
               showAcceptButton={!!user?.isAvailable}
-              onAccept={() => handleAccept(item.id)}
+              onAccept={() => openSurchargeSheet(item)}
               isAccepting={accepting === item.id}
               showDriverEarnings
             />
@@ -210,6 +232,98 @@ export default function DriverMapScreen() {
       </View>
 
       <BottomNav />
+
+      <Modal
+        visible={!!surchargeJob}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setSurchargeJob(null)}
+      >
+        <View style={styles.surchargeOverlay}>
+          <View style={styles.surchargeSheet}>
+            <View style={styles.surchargeSheetHandle} />
+            <Text style={styles.surchargeSheetTitle}>
+              {isSv ? "Lägg till tilläggsavgift?" : "Add a surcharge?"}
+            </Text>
+            <Text style={styles.surchargeSheetSub}>
+              {isSv
+                ? "Kunden måste godkänna tillägget innan jobbet bekräftas."
+                : "Customer must approve before the job is confirmed."}
+            </Text>
+
+            <TouchableOpacity
+              style={[styles.surchargeOption, surchargeStairs && styles.surchargeOptionActive]}
+              onPress={() => setSurchargeStairs(!surchargeStairs)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.surchargeCheck, surchargeStairs && styles.surchargeCheckActive]}>
+                {surchargeStairs && <Feather name="check" size={12} color={Colors.navy} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.surchargeOptionTitle}>
+                  {isSv ? "Extra för trappor" : "Stairs surcharge"}
+                </Text>
+                <Text style={styles.surchargeOptionDesc}>
+                  {isSv ? "Inga hiss, 2+ våningar" : "No lift, 2+ floors"}
+                </Text>
+              </View>
+              <Text style={styles.surchargeOptionPrice}>+50 kr</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.surchargeOption, surchargeDistance && styles.surchargeOptionActive]}
+              onPress={() => setSurchargeDistance(!surchargeDistance)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.surchargeCheck, surchargeDistance && styles.surchargeCheckActive]}>
+                {surchargeDistance && <Feather name="check" size={12} color={Colors.navy} />}
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.surchargeOptionTitle}>
+                  {isSv ? "Extra avstånd" : "Extra distance"}
+                </Text>
+                <Text style={styles.surchargeOptionDesc}>
+                  {isSv ? "Mer än 5 km extra körning" : "More than 5 km extra driving"}
+                </Text>
+              </View>
+              <Text style={styles.surchargeOptionPrice}>+25 kr</Text>
+            </TouchableOpacity>
+
+            {(surchargeStairs || surchargeDistance) && (
+              <View style={styles.surchargeTotalRow}>
+                <Text style={styles.surchargeTotalLabel}>
+                  {isSv ? "Totalt tillägg:" : "Total surcharge:"}
+                </Text>
+                <Text style={styles.surchargeTotalAmount}>
+                  +{(surchargeStairs ? 50 : 0) + (surchargeDistance ? 25 : 0)} kr
+                </Text>
+              </View>
+            )}
+
+            <View style={styles.surchargeSheetActions}>
+              <TouchableOpacity
+                style={styles.surchargeSkipBtn}
+                onPress={() => surchargeJob && handleAccept(surchargeJob.id, { stairs: false, distance: false })}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.surchargeSkipBtnText}>
+                  {isSv ? "Acceptera utan tillägg" : "Accept without surcharge"}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.surchargeConfirmBtn, !(surchargeStairs || surchargeDistance) && styles.surchargeConfirmBtnDisabled]}
+                onPress={() => surchargeJob && handleAccept(surchargeJob.id, { stairs: surchargeStairs, distance: surchargeDistance })}
+                disabled={!(surchargeStairs || surchargeDistance)}
+                activeOpacity={0.85}
+              >
+                <Text style={[styles.surchargeConfirmBtnText, !(surchargeStairs || surchargeDistance) && styles.surchargeConfirmBtnTextDisabled]}>
+                  {isSv ? "Skicka tillägg till kund" : "Send surcharge to customer"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -327,5 +441,130 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.error,
+  },
+  surchargeOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "flex-end",
+  },
+  surchargeSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    padding: 24,
+    paddingBottom: 36,
+    gap: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  surchargeSheetHandle: {
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  surchargeSheetTitle: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+  },
+  surchargeSheetSub: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 19,
+    marginTop: -6,
+  },
+  surchargeOption: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: Colors.navy,
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+  },
+  surchargeOptionActive: {
+    borderColor: Colors.gold,
+    backgroundColor: `${Colors.gold}10`,
+  },
+  surchargeCheck: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    backgroundColor: Colors.navy,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  surchargeCheckActive: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  surchargeOptionTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  surchargeOptionDesc: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    marginTop: 1,
+  },
+  surchargeOptionPrice: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  surchargeTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    paddingHorizontal: 4,
+  },
+  surchargeTotalLabel: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  surchargeTotalAmount: {
+    fontSize: 17,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  surchargeSheetActions: { gap: 10, marginTop: 4 },
+  surchargeSkipBtn: {
+    paddingVertical: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    alignItems: "center",
+  },
+  surchargeSkipBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  surchargeConfirmBtn: {
+    paddingVertical: 15,
+    borderRadius: 12,
+    backgroundColor: Colors.gold,
+    alignItems: "center",
+  },
+  surchargeConfirmBtnDisabled: {
+    backgroundColor: Colors.border,
+  },
+  surchargeConfirmBtnText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.navy,
+  },
+  surchargeConfirmBtnTextDisabled: {
+    color: Colors.textMuted,
   },
 });

@@ -110,12 +110,12 @@ export default function CustomerHome() {
         <View style={styles.heroBanner}>
           <View style={styles.heroBannerLeft}>
             <Text style={styles.heroBannerTitle}>
-              {isSv ? "Litet föremål?" : "Small item?"}
+              {isSv ? "Det enkla sättet att hämta ditt Blocket-fynd" : "The easy way to pick up your Blocket find"}
             </Text>
             <Text style={styles.heroBannerSub}>
               {isSv
-                ? "Vi hämtar vad som helst som ryms i en vanlig bil — från 99 kr."
-                : "We pick up anything that fits in a regular car — from 99 SEK."}
+                ? "Koppla ihop med oberoende bärare — från 99 kr, klart på 30 min."
+                : "Connect with independent carriers — from 99 SEK, done in 30 min."}
             </Text>
           </View>
           <View style={styles.heroPriceBadge}>
@@ -123,6 +123,19 @@ export default function CustomerHome() {
             <Text style={styles.heroPriceAmount}>99 kr</Text>
           </View>
         </View>
+
+        {/* Featured Blocket quick-launch */}
+        <TouchableOpacity
+          style={styles.blocketBtn}
+          onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "blocket_pickup" } })}
+          activeOpacity={0.85}
+        >
+          <MaterialCommunityIcons name="tag-outline" size={20} color={Colors.navy} />
+          <Text style={styles.blocketBtnText}>
+            {isSv ? "Hämta Blocket/Facebook-fynd snabbt" : "Quick Blocket / Facebook pickup"}
+          </Text>
+          <Feather name="arrow-right" size={16} color={Colors.navy} />
+        </TouchableOpacity>
 
         {/* Feature pills */}
         <View style={styles.pillRow}>
@@ -146,14 +159,14 @@ export default function CustomerHome() {
               "Hushållsavfall",
               "Byggskräp",
               "Farliga ämnen",
-              "Föremål över 25 kg",
+              "Föremål över 15 kg",
               "Föremål med specialtillstånd",
               "Hel hemmaflytt",
             ] : [
               "Household waste",
               "Construction debris",
               "Hazardous materials",
-              "Items over 25 kg",
+              "Items over 15 kg",
               "Items requiring special permits",
               "Full household moves",
             ]).map((item) => (
@@ -211,6 +224,18 @@ export default function CustomerHome() {
             <Text style={styles.emptySubtext}>{t("postFirstJob")}</Text>
           </View>
         )}
+
+        <TouchableOpacity
+          style={styles.safetyLink}
+          onPress={() => router.push("/insurance-safety")}
+          activeOpacity={0.8}
+        >
+          <Feather name="shield" size={14} color={Colors.textMuted} />
+          <Text style={styles.safetyLinkText}>
+            {isSv ? "Försäkring och säkerhet" : "Insurance & Safety"}
+          </Text>
+          <Feather name="chevron-right" size={13} color={Colors.textMuted} />
+        </TouchableOpacity>
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -419,4 +444,32 @@ const styles = StyleSheet.create({
   emptyCard: { alignItems: "center", padding: 32, gap: 8 },
   emptyText: { fontSize: 15, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
   emptySubtext: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, textAlign: "center" },
+  safetyLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  safetyLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+  },
+  blocketBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+    marginBottom: 16,
+  },
+  blocketBtnText: {
+    flex: 1,
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.navy,
+  },
 });

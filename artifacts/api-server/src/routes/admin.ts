@@ -1,8 +1,12 @@
 import { Router, type IRouter, Request, Response } from "express";
 import { db } from "@workspace/db";
-import { jobsTable, usersTable } from "@workspace/db";
+import { jobsTable, usersTable, mapsApiCallsTable } from "@workspace/db";
 import { eq, sql, count, desc, inArray, and } from "drizzle-orm";
 import { adminDashboardHtml } from "./admin-html";
+
+const VAT_WARNING_SEK = 80_000;
+const VAT_URGENT_SEK = 115_000;
+const VAT_THRESHOLD_SEK = 120_000;
 
 const router: IRouter = Router();
 
@@ -333,6 +337,165 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Admin dispute resolve error:", err);
     res.status(500).json({ error: "Failed to resolve dispute" });
+  }
+});
+
+// ⚖️ DAC7 EU directive — annual carrier earnings export for Skatteverket submission
+router.get("/dac7/report/:year", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const year = parseInt(req.params.year);
+    if (isNaN(year) || year < 2024 || year > 2100) {
+      return res.status(400).json({ error: "year must be a valid 4-digit year (2024+)" });
+    }
+
+    const startOfYear = new Date(year, 0, 1);
+    const endOfYear = new Date(year + 1, 0, 1);
+
+    const completedJobs = await db.select({
+      driverId: jobsTable.driverId,
+      driverPayout: jobsTable.driverPayout,
+      platformFee: jobsTable.platformFee,
+      priceTotal: jobsTable.priceTotal,
+    }).from(jobsTable).where(
+      and(
+        eq(jobsTable.status, "completed"),
+        sql`${jobsTable.completedAt} >= ${startOfYear}`,
+        sql`${jobsTable.completedAt} < ${endOfYear}`,
+        sql`${jobsTable.driverId} is not null`
+      )
+    );
+
+    // Aggregate per carrier
+    const byCarrier: Record<number, { jobs: number; gross: number; fees: number; net: number }> = {};
+    for (const j of completedJobs) {
+      if (!j.driverId) continue;
+      if (!byCarrier[j.driverId]) byCarrier[j.driverId] = { jobs: 0, gross: 0, fees: 0, net: 0 };
+      byCarrier[j.driverId].jobs++;
+      byCarrier[j.driverId].gross += Number(j.priceTotal);
+      byCarrier[j.driverId].fees += Number(j.platformFee);
+      byCarrier[j.driverId].net += Number(j.driverPayout);
+    }
+
+    const carrierIds = Object.keys(byCarrier).map(Number);
+    const carriers = carrierIds.length > 0
+      ? await db.select({
+          id: usersTable.id, fullName: usersTable.fullName, email: usersTable.email,
+          fullLegalName: usersTable.fullLegalName, personnummer: usersTable.personnummer,
+          registeredAddress: usersTable.registeredAddress,
+        }).from(usersTable).where(inArray(usersTable.id, carrierIds))
+      : [];
+    const carrierMap = Object.fromEntries(carriers.map(c => [c.id, c]));
+
+    const rows = carrierIds.map(id => {
+      const c = carrierMap[id];
+      const e = byCarrier[id];
+      return {
+        carrierId: id,
+        fullLegalName: c?.fullLegalName ?? c?.fullName ?? "",
+        personnummer: c?.personnummer ?? "",
+        email: c?.email ?? "",
+        registeredAddress: c?.registeredAddress ?? "",
+        year,
+        totalJobs: e.jobs,
+        totalGrossEarningsSEK: Math.round(e.gross),
+        totalPlatformFeesSEK: Math.round(e.fees),
+        totalNetPaidSEK: Math.round(e.net),
+      };
+    });
+
+    // Return CSV
+    const format = (req.query.format as string) || "json";
+    if (format === "csv") {
+      const header = "carrierId,fullLegalName,personnummer,email,registeredAddress,year,totalJobs,totalGrossEarningsSEK,totalPlatformFeesSEK,totalNetPaidSEK";
+      const csvRows = rows.map(r =>
+        `${r.carrierId},"${r.fullLegalName}","${r.personnummer}","${r.email}","${r.registeredAddress}",${r.year},${r.totalJobs},${r.totalGrossEarningsSEK},${r.totalPlatformFeesSEK},${r.totalNetPaidSEK}`
+      );
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="dac7_${year}.csv"`);
+      return res.send([header, ...csvRows].join("\n"));
+    }
+
+    res.json({ year, carrierCount: rows.length, generatedAt: new Date().toISOString(), carriers: rows });
+  } catch (err: any) {
+    console.error("DAC7 report error:", err);
+    res.status(500).json({ error: "Failed to generate DAC7 report" });
+  }
+});
+
+// VAT threshold tracking — platform fee revenue vs 120,000 SEK (2025 threshold)
+router.get("/vat/status", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const year = new Date().getFullYear();
+    const startOfYear = new Date(year, 0, 1);
+
+    const [{ totalFees }] = await db.select({
+      totalFees: sql<string>`coalesce(sum(${jobsTable.platformFee}), 0)`,
+    }).from(jobsTable).where(
+      and(eq(jobsTable.status, "completed"), sql`${jobsTable.completedAt} >= ${startOfYear}`)
+    );
+
+    const feeRevenueSEK = Math.round(Number(totalFees));
+    const pct = Math.round((feeRevenueSEK / VAT_THRESHOLD_SEK) * 100);
+    let alert: "ok" | "warning" | "urgent" = "ok";
+    if (feeRevenueSEK >= VAT_URGENT_SEK) alert = "urgent";
+    else if (feeRevenueSEK >= VAT_WARNING_SEK) alert = "warning";
+
+    res.json({
+      year,
+      feeRevenueSEK,
+      vatThresholdSEK: VAT_THRESHOLD_SEK,
+      percentOfThreshold: pct,
+      alert,
+      message: alert === "urgent"
+        ? `URGENT: Platform fees are at ${feeRevenueSEK} SEK (${pct}% of threshold). Register for VAT immediately.`
+        : alert === "warning"
+        ? `WARNING: Platform fees are at ${feeRevenueSEK} SEK (${pct}% of threshold). Prepare VAT registration.`
+        : `OK: Platform fees are at ${feeRevenueSEK} SEK (${pct}% of threshold). No action needed.`,
+      note: "VAT applies to platform fee (25% of job value), not full job value. Threshold is 120,000 SEK for 2025.",
+    });
+  } catch (err: any) {
+    console.error("VAT status error:", err);
+    res.status(500).json({ error: "Failed to fetch VAT status" });
+  }
+});
+
+// Mapbox API usage and cost tracking
+router.get("/maps/usage", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const currentMonth = new Date().toISOString().slice(0, 7); // e.g. "2026-05"
+    const FREE_TIER_LIMIT = 100_000;
+    const COST_PER_1000 = 0.50;
+
+    const rows = await db
+      .select()
+      .from(mapsApiCallsTable)
+      .where(eq(mapsApiCallsTable.yearMonth, currentMonth));
+
+    const totalCalls = rows.reduce((sum, r) => sum + r.callCount, 0);
+    const breakdown = Object.fromEntries(rows.map(r => [r.callType, r.callCount]));
+    const billableCalls = Math.max(0, totalCalls - FREE_TIER_LIMIT);
+    const estimatedCostUSD = Math.round((billableCalls / 1000) * COST_PER_1000 * 100) / 100;
+    const freeCallsRemaining = Math.max(0, FREE_TIER_LIMIT - totalCalls);
+    const percentUsed = Math.min(100, Math.round((totalCalls / FREE_TIER_LIMIT) * 100));
+
+    res.json({
+      month: currentMonth,
+      provider: "Mapbox",
+      totalCalls,
+      breakdown,
+      freeTierLimit: FREE_TIER_LIMIT,
+      freeCallsRemaining,
+      percentUsed,
+      billableCalls,
+      estimatedCostUSD,
+      pricing: "$0.50 per 1,000 calls after 100,000 free/month",
+    });
+  } catch (err: any) {
+    console.error("Maps usage error:", err);
+    res.status(500).json({ error: "Failed to fetch maps usage" });
   }
 });
 

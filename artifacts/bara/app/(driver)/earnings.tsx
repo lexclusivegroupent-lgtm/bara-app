@@ -184,6 +184,58 @@ export default function EarningsScreen() {
             </TouchableOpacity>
           )}
 
+          {/* Tax responsibility card — replaces hobby income framing ⚖️ */}
+          <TouchableOpacity
+            style={styles.taxCard}
+            onPress={() => router.push("/tax-info")}
+            activeOpacity={0.85}
+          >
+            <View style={styles.taxCardHeader}>
+              <Feather name="alert-circle" size={15} color={Colors.gold} />
+              <Text style={styles.taxCardTitle}>
+                {isSv ? "Skatt & ansvar" : "Tax & Responsibility"}
+              </Text>
+              <Feather name="chevron-right" size={14} color={Colors.gold} />
+            </View>
+            <Text style={styles.taxCardBody}>
+              {isSv
+                ? "All inkomst från Bära är skattepliktig från första kronan. Du ansvarar för att deklarera och betala egenavgifter. Sätt undan 30–35% av varje utbetalning."
+                : "All income from Bära is taxable from the first krona. You are responsible for declaring earnings and paying egenavgifter. Set aside 30–35% of each payment."}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Hourly rate & weekly goal */}
+          {stats.count > 0 && (
+            <View style={styles.insightsRow}>
+              <View style={styles.insightCard}>
+                <Feather name="clock" size={16} color={Colors.gold} />
+                <Text style={styles.insightLabel}>
+                  {isSv ? "Senaste 7 dagarna" : "Last 7 days"}
+                </Text>
+                <Text style={styles.insightValue}>
+                  {stats.thisWeekEarned > 0
+                    ? `~${formatSEK(Math.round(stats.thisWeekEarned / Math.max(stats.thisWeekCount, 1) / 0.5))} /h`
+                    : "—"}
+                </Text>
+                <Text style={styles.insightSub}>{isSv ? "ca SEK/timme" : "approx SEK/hr"}</Text>
+              </View>
+              <View style={styles.insightCard}>
+                <Feather name="target" size={16} color={Colors.gold} />
+                <Text style={styles.insightLabel}>
+                  {isSv ? "Veckamål 1 000 kr" : "Weekly goal 1,000 SEK"}
+                </Text>
+                <Text style={styles.insightValue}>
+                  {Math.max(0, Math.ceil((1000 - stats.thisWeekEarned) / 150))} {isSv ? "jobb" : "jobs"}
+                </Text>
+                <Text style={styles.insightSub}>
+                  {stats.thisWeekEarned >= 1000
+                    ? (isSv ? "Mål uppnått! 🎉" : "Goal reached! 🎉")
+                    : (isSv ? "kvar denna vecka" : "left this week")}
+                </Text>
+              </View>
+            </View>
+          )}
+
           {/* Per-job history */}
           <Text style={styles.sectionTitle}>{t("earningsHistory")}</Text>
 
@@ -199,13 +251,25 @@ export default function EarningsScreen() {
             ))
           )}
 
+          <TouchableOpacity
+            style={styles.safetyLink}
+            onPress={() => router.push("/insurance-safety")}
+            activeOpacity={0.8}
+          >
+            <Feather name="shield" size={14} color={Colors.textMuted} />
+            <Text style={styles.safetyLinkText}>
+              {isSv ? "Försäkring och säkerhet" : "Insurance & Safety"}
+            </Text>
+            <Feather name="chevron-right" size={13} color={Colors.textMuted} />
+          </TouchableOpacity>
+
           {/* ⚖️ Contractor disclaimer — requires Swedish legal review before launch */}
           <View style={styles.contractorNote}>
             <Feather name="info" size={12} color={Colors.textMuted} />
             <Text style={styles.contractorNoteText}>
               {isSv
-                ? "Bära är en teknologiplattform. Förare är egenföretagare, inte anställda hos Bära."
-                : "Bära is a technology platform. Drivers are independent contractors, not employees of Bära."}
+                ? "Bära är en teknologiplattform. Bärare är oberoende uppdragstagare, inte anställda hos Bära."
+                : "Bära is a technology platform. Carriers are independent contractors, not employees of Bära."}
             </Text>
           </View>
 
@@ -434,6 +498,63 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.navy,
   },
+  taxCard: {
+    backgroundColor: `${Colors.gold}10`,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: `${Colors.gold}35`,
+    gap: 8,
+  },
+  taxCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  taxCardTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  taxCardBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 19,
+  },
+  insightsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  insightCard: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    gap: 4,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: "center",
+  },
+  insightLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
+  insightValue: {
+    fontSize: 18,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+    textAlign: "center",
+  },
+  insightSub: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+  },
   contractorNote: {
     flexDirection: "row",
     alignItems: "flex-start",
@@ -447,5 +568,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     lineHeight: 16,
+  },
+  safetyLink: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    justifyContent: "center",
+    paddingVertical: 12,
+  },
+  safetyLinkText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
   },
 });

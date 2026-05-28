@@ -34,19 +34,19 @@ async function geocodeNominatim(address: string): Promise<{ lat: number; lon: nu
   }
 }
 
-async function geocodeGoogleMaps(address: string): Promise<{ lat: number; lon: number } | null> {
-  const key = process.env.GOOGLE_MAPS_KEY || process.env.EXPO_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!key) return null;
+async function geocodeMapbox(address: string): Promise<{ lat: number; lon: number } | null> {
+  const token = process.env.MAPBOX_SECRET_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_TOKEN;
+  if (!token) return null;
 
   const query = encodeURIComponent(`${address}, Sweden`);
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${key}&region=se&language=sv`;
+  const url = `https://api.mapbox.com/geocoding/v5/mapbox.places/${query}.json?access_token=${token}&country=se&language=sv&limit=1`;
 
   try {
     const res = await fetch(url);
     if (!res.ok) return null;
-    const data = await res.json();
-    if (data.status === "OK" && data.results?.[0]) {
-      const { lat, lng } = data.results[0].geometry.location;
+    const data = await res.json() as any;
+    if (data.features?.length > 0) {
+      const [lng, lat] = data.features[0].geometry.coordinates;
       return { lat, lon: lng };
     }
     return null;
@@ -56,9 +56,10 @@ async function geocodeGoogleMaps(address: string): Promise<{ lat: number; lon: n
 }
 
 async function geocodeAddress(address: string): Promise<{ lat: number; lon: number } | null> {
+  // Nominatim is free and handles Swedish addresses well; Mapbox is the paid fallback
   const nominatim = await geocodeNominatim(address);
   if (nominatim) return nominatim;
-  return geocodeGoogleMaps(address);
+  return geocodeMapbox(address);
 }
 
 function calcPrice(distanceKm: number, jobType?: string): { priceBase: number; pricePerKm: number; priceTotal: number } {

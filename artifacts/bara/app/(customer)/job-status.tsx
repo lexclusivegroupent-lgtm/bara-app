@@ -44,6 +44,7 @@ export default function JobStatusScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { token } = useAuth();
   const { t, lang } = useLanguage();
+  const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const [cancelling, setCancelling] = useState(false);
@@ -58,6 +59,7 @@ export default function JobStatusScreen() {
   const [rescheduling, setRescheduling] = useState(false);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
   const [rescheduleSuccess, setRescheduleSuccess] = useState(false);
+  const [surchargeLoading, setSurchargeLoading] = useState<"approve" | "decline" | null>(null);
 
   const { data: job, isLoading } = useQuery<Job>({
     queryKey: ["job", id],
@@ -124,6 +126,20 @@ export default function JobStatusScreen() {
     }
   }
 
+  async function handleSurcharge(action: "approve" | "decline") {
+    setSurchargeLoading(action);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${id}/${action}-surcharge`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error);
+      queryClient.invalidateQueries({ queryKey: ["job", id] });
+    } catch {}
+    setSurchargeLoading(null);
+  }
+
   async function handleReschedule(newTime: Date) {
     setRescheduling(true);
     setRescheduleError(null);
@@ -161,6 +177,44 @@ export default function JobStatusScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+
+        {/* Surcharge approval banner */}
+        {job.status === "surcharge_requested" && (job as any).surchargeTotalSek > 0 && (
+          <View style={styles.surchargeCard}>
+            <View style={styles.surchargeHeader}>
+              <Feather name="alert-circle" size={16} color={Colors.gold} />
+              <Text style={styles.surchargeTitle}>
+                {isSv ? "Bäraren vill lägga till tilläggsavgift" : "Carrier wants to add a surcharge"}
+              </Text>
+            </View>
+            <Text style={styles.surchargeBody}>
+              {(job as any).surchargeStairs > 0 && (isSv ? `• Extra för trappor: +${(job as any).surchargeStairs} kr\n` : `• Extra for stairs: +${(job as any).surchargeStairs} SEK\n`)}
+              {(job as any).surchargeDistance > 0 && (isSv ? `• Extra avstånd: +${(job as any).surchargeDistance} kr` : `• Extra distance: +${(job as any).surchargeDistance} SEK`)}
+            </Text>
+            <Text style={styles.surchargeTotalText}>
+              {isSv ? `Totalt tillägg: +${(job as any).surchargeTotalSek} kr` : `Total surcharge: +${(job as any).surchargeTotalSek} SEK`}
+            </Text>
+            <View style={styles.surchargeActions}>
+              <TouchableOpacity
+                style={styles.surchargeDeclineBtn}
+                onPress={() => handleSurcharge("decline")}
+                disabled={!!surchargeLoading}
+                activeOpacity={0.8}
+              >
+                {surchargeLoading === "decline" ? <ActivityIndicator size="small" color={Colors.error} /> : <Text style={styles.surchargeDeclineBtnText}>{isSv ? "Neka" : "Decline"}</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.surchargeApproveBtn}
+                onPress={() => handleSurcharge("approve")}
+                disabled={!!surchargeLoading}
+                activeOpacity={0.85}
+              >
+                {surchargeLoading === "approve" ? <ActivityIndicator size="small" color={Colors.navy} /> : <Text style={styles.surchargeApproveBtnText}>{isSv ? "Godkänn" : "Approve"}</Text>}
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         <View style={styles.statusTracker}>
           {STEP_KEYS.map((step, idx) => {
             const isComplete = idx < currentStep;
@@ -434,6 +488,16 @@ export default function JobStatusScreen() {
             <Text style={styles.disputeBtnText}>{t("reportIssue")}</Text>
           </TouchableOpacity>
         )}
+
+        {/* ⚖️ Customer-facing legal disclaimer */}
+        <View style={styles.customerDisclaimer}>
+          <Feather name="info" size={12} color={Colors.textMuted} />
+          <Text style={styles.customerDisclaimerText}>
+            {isSv
+              ? "Bärare på Bära är oberoende tjänsteleverantörer. Transportavtalet är direkt mellan dig och din bärare. Bära är enbart en teknologiplattform."
+              : "Carriers on Bära are independent service providers. The transport contract is between you and your carrier directly. Bära is a technology platform only."}
+          </Text>
+        </View>
 
         <View style={{ height: Platform.OS === "web" ? 34 : insets.bottom + 20 }} />
       </ScrollView>
@@ -1174,5 +1238,82 @@ const styles = StyleSheet.create({
     color: Colors.textMuted,
     letterSpacing: 0.3,
     textTransform: "uppercase" as const,
+  },
+  customerDisclaimer: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 7,
+    paddingHorizontal: 4,
+    paddingVertical: 8,
+  },
+  customerDisclaimerText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 16,
+  },
+  surchargeCard: {
+    backgroundColor: `${Colors.gold}12`,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1.5,
+    borderColor: `${Colors.gold}40`,
+    gap: 10,
+    marginBottom: 4,
+  },
+  surchargeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  surchargeTitle: {
+    fontSize: 14,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+    flex: 1,
+  },
+  surchargeBody: {
+    fontSize: 13,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 20,
+  },
+  surchargeTotalText: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  surchargeActions: {
+    flexDirection: "row",
+    gap: 10,
+    marginTop: 4,
+  },
+  surchargeDeclineBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: Colors.error,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  surchargeDeclineBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.error,
+  },
+  surchargeApproveBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 10,
+    backgroundColor: Colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  surchargeApproveBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
   },
 });

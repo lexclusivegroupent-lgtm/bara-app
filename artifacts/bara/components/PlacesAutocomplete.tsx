@@ -23,6 +23,8 @@ interface Prediction {
   description: string;
   mainText: string;
   secondaryText: string;
+  lat?: number;
+  lng?: number;
 }
 
 interface Props {
@@ -30,6 +32,16 @@ interface Props {
   onSelect: (result: PlaceResult) => void;
   placeholder: string;
   token: string | null;
+}
+
+// LRU-style cache: keep last 20 query results
+const queryCache = new Map<string, Prediction[]>();
+function cacheSet(key: string, value: Prediction[]) {
+  if (queryCache.size >= 20) {
+    const oldest = queryCache.keys().next().value;
+    if (oldest) queryCache.delete(oldest);
+  }
+  queryCache.set(key, value);
 }
 
 export function PlacesAutocomplete({ value, onSelect, placeholder, token }: Props) {
@@ -57,6 +69,15 @@ export function PlacesAutocomplete({ value, onSelect, placeholder, token }: Prop
       return;
     }
 
+    // Return cached result immediately
+    const cached = queryCache.get(query);
+    if (cached) {
+      setPredictions(cached);
+      setShowSuggestions(true);
+      setLoading(false);
+      return;
+    }
+
     abortRef.current?.abort();
     abortRef.current = new AbortController();
 
@@ -70,7 +91,9 @@ export function PlacesAutocomplete({ value, onSelect, placeholder, token }: Prop
       );
       if (!res.ok) throw new Error("API error");
       const data = await res.json();
-      setPredictions(data.predictions ?? []);
+      const results: Prediction[] = data.predictions ?? [];
+      cacheSet(query, results);
+      setPredictions(results);
       setShowSuggestions(true);
     } catch (e: any) {
       if (e.name !== "AbortError") {
@@ -96,7 +119,7 @@ export function PlacesAutocomplete({ value, onSelect, placeholder, token }: Prop
     }
 
     setLoading(true);
-    debounceRef.current = setTimeout(() => fetchPredictions(text), 320);
+    debounceRef.current = setTimeout(() => fetchPredictions(text), 500);
   }
 
   async function handleSelectPrediction(prediction: Prediction) {
@@ -105,10 +128,14 @@ export function PlacesAutocomplete({ value, onSelect, placeholder, token }: Prop
     setShowSuggestions(false);
     setSelected(true);
 
-    // Notify parent immediately with address text (coordinates come async)
-    onSelect({ address: prediction.description });
+    // If Mapbox returned coordinates with the prediction, use them directly
+    if (prediction.lat !== undefined && prediction.lng !== undefined) {
+      onSelect({ address: prediction.description, lat: prediction.lat, lng: prediction.lng });
+      return;
+    }
 
-    // Fetch coordinates in background
+    // Fallback: fetch details separately
+    onSelect({ address: prediction.description });
     try {
       const res = await fetch(
         `${BASE_URL}/api/places/details?placeId=${encodeURIComponent(prediction.placeId)}`,

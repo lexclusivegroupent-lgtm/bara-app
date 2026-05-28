@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Colors } from "@/constants/colors";
-import { CITY_COORDINATES, GOOGLE_MAPS_KEY, geocodeAddress } from "@/constants/config";
+import { CITY_COORDINATES, MAPBOX_TOKEN, geocodeAddress } from "@/constants/config";
 import { Job } from "@/components/JobCard";
 
 interface Props {
@@ -16,14 +16,25 @@ interface Props {
 interface Coords { latitude: number; longitude: number; }
 interface JobMarker { job: Job; coords: Coords; }
 
+function buildStaticMapUrl(center: Coords, markers: JobMarker[], token: string): string {
+  // Mapbox Static Images API — pin-s-{icon}+{color}({lng},{lat})
+  const overlays = markers
+    .slice(0, 8)
+    .map(m => `pin-s-package+C9A84C(${m.coords.longitude.toFixed(5)},${m.coords.latitude.toFixed(5)})`)
+    .join(",");
+  const path = overlays ? `${overlays}/` : "";
+  return (
+    `https://api.mapbox.com/styles/v1/mapbox/dark-v11/static/` +
+    `${path}${center.longitude.toFixed(5)},${center.latitude.toFixed(5)},12,0/` +
+    `800x440@2x?access_token=${token}`
+  );
+}
+
 export function DriverMapView({ city, jobs }: Props) {
   const [jobMarkers, setJobMarkers] = useState<JobMarker[]>([]);
   const cityCoords = CITY_COORDINATES[city] || CITY_COORDINATES["Stockholm"];
-  const hasKey = !!GOOGLE_MAPS_KEY && GOOGLE_MAPS_KEY !== "YOUR_GOOGLE_MAPS_API_KEY_HERE";
 
-  useEffect(() => {
-    geocodeJobs();
-  }, [jobs]);
+  useEffect(() => { geocodeJobs(); }, [jobs]);
 
   async function geocodeJobs() {
     const markers: JobMarker[] = [];
@@ -36,28 +47,24 @@ export function DriverMapView({ city, jobs }: Props) {
     setJobMarkers(markers);
   }
 
-  if (!hasKey) {
+  if (!MAPBOX_TOKEN) {
     return (
       <View style={styles.placeholder}>
         <MaterialCommunityIcons name="map-outline" size={32} color={Colors.textMuted} />
         <Text style={styles.cityText}>{city} — Live Map</Text>
-        <Text style={styles.noteText}>Add EXPO_PUBLIC_GOOGLE_MAPS_KEY to enable interactive map</Text>
+        <Text style={styles.noteText}>Add EXPO_PUBLIC_MAPBOX_TOKEN to enable map</Text>
       </View>
     );
   }
 
-  const center = `${cityCoords.latitude},${cityCoords.longitude}`;
-  const markerParams = jobMarkers
-    .map(m => `&markers=color:gold%7C${m.coords.latitude},${m.coords.longitude}`)
-    .join("");
-  const embedUrl = `https://www.google.com/maps/embed/v1/view?key=${GOOGLE_MAPS_KEY}&center=${center}&zoom=13&maptype=roadmap${markerParams}`;
+  const mapUrl = buildStaticMapUrl(cityCoords, jobMarkers, MAPBOX_TOKEN);
 
   return (
     <View style={styles.container}>
-      {React.createElement("iframe", {
-        src: embedUrl,
-        style: { width: "100%", height: "100%", border: "none" },
-        loading: "lazy",
+      {React.createElement("img", {
+        src: mapUrl,
+        style: { width: "100%", height: "100%", objectFit: "cover", display: "block" },
+        alt: `Map of ${city}`,
       })}
       {jobMarkers.length > 0 && (
         <View style={styles.badge}>

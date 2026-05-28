@@ -27,7 +27,7 @@ export default function OnboardingScreen() {
   const [currentSlide, setCurrentSlide] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
 
-  const totalSlides = 3;
+  const totalSlides = 4;
 
   async function handleGetStarted() {
     await AsyncStorage.setItem("bara_onboarding_complete", "1");
@@ -91,7 +91,62 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        {/* Slide 2 — How it works */}
+        {/* Slide 2 — What you can send */}
+        <View style={[styles.slide, { paddingTop: insets.top + (Platform.OS === "web" ? 87 : 60) }]}>
+          <View style={styles.iconCircle}>
+            <MaterialCommunityIcons name="check-circle-outline" size={56} color={Colors.gold} />
+          </View>
+          <Text style={styles.slideTitle}>
+            {isSv ? "Vad du kan skicka" : "What you can send"}
+          </Text>
+          <Text style={styles.slideSubtitle}>
+            {isSv
+              ? "Föremål som ryms i vilken vanlig bil som helst — max 15 kg."
+              : "Items that fit in any regular car — max 15 kg."}
+          </Text>
+          <View style={styles.allowedGrid}>
+            <View style={styles.allowedColumn}>
+              <Text style={styles.allowedHeader}>✅ {isSv ? "Tillåtet" : "Allowed"}</Text>
+              {(isSv ? [
+                "Blocket-fynd",
+                "Facebook Marketplace",
+                "Liten möbel",
+                "Elektronik",
+                "Barnprylar",
+                "Kontorsföremål",
+              ] : [
+                "Blocket picks",
+                "Facebook Marketplace",
+                "Small furniture",
+                "Electronics",
+                "Children's items",
+                "Office items",
+              ]).map((item) => (
+                <Text key={item} style={styles.allowedItem}>{item}</Text>
+              ))}
+            </View>
+            <View style={styles.allowedColumn}>
+              <Text style={styles.prohibitedHeader}>❌ {isSv ? "Inte tillåtet" : "Not allowed"}</Text>
+              {(isSv ? [
+                "Hushållsavfall",
+                "Byggskräp",
+                "Farliga ämnen",
+                "Över 15 kg",
+                "Hel flytt",
+              ] : [
+                "Household waste",
+                "Construction debris",
+                "Hazardous materials",
+                "Over 15 kg",
+                "Full house moves",
+              ]).map((item) => (
+                <Text key={item} style={styles.prohibitedItem}>{item}</Text>
+              ))}
+            </View>
+          </View>
+        </View>
+
+        {/* Slide 3 — How it works */}
         <View style={[styles.slide, { paddingTop: insets.top + (Platform.OS === "web" ? 87 : 60) }]}>
           <Text style={styles.slideTitle}>
             {isSv ? "Så fungerar det" : "How it works"}
@@ -104,8 +159,8 @@ export default function OnboardingScreen() {
             />
             <Step
               number="2"
-              title={isSv ? "En förare accepterar" : "A driver accepts"}
-              desc={isSv ? "En förare nära dig tar jobbet med sin vanliga bil — ingen skåpbil behövs." : "A driver near you takes the job in their regular car — no van needed."}
+              title={isSv ? "En bärare accepterar" : "A carrier accepts"}
+              desc={isSv ? "En oberoende bärare nära dig tar jobbet med sin vanliga bil — ingen skåpbil behövs." : "An independent carrier near you takes the job in their regular car — no van needed."}
             />
             <Step
               number="3"
@@ -115,24 +170,32 @@ export default function OnboardingScreen() {
           </View>
         </View>
 
-        {/* Slide 3 — Drive with any car */}
+        {/* Slide 4 — Earn as a carrier */}
         <View style={[styles.slide, { paddingTop: insets.top + (Platform.OS === "web" ? 87 : 60) }]}>
           <View style={styles.iconCircle}>
             <MaterialCommunityIcons name="car-hatchback" size={56} color={Colors.gold} />
           </View>
           <Text style={styles.slideTitle}>
-            {isSv ? "Kör med din vanliga bil" : "Drive with any car"}
+            {isSv ? "Tjäna som oberoende bärare" : "Earn as an independent carrier"}
           </Text>
           <Text style={styles.slideSubtitle}>
             {isSv
-              ? "Ingen skåpbil eller trailer behövs. Alla föremål ryms i en vanlig personbil."
-              : "No van or trailer needed. All items fit in a regular passenger car."}
+              ? "Välj jobb som passar dig. Du är din egen chef — Bära är bara marknadsplatsen."
+              : "Pick jobs that suit you. You're your own boss — Bära is just the marketplace."}
           </Text>
           <View style={styles.bulletList}>
             <BulletPoint text={isSv ? "Vanlig bil, SUV, kombi eller bil med takbox" : "Regular car, SUV, estate or car with roof box"} />
             <BulletPoint text={isSv ? "Tjäna 75% av varje jobb" : "Earn 75% of every job"} />
-            <BulletPoint text={isSv ? "Du bestämmer dina egna tider" : "You set your own hours"} />
-            <BulletPoint text={isSv ? "Inga minimikrav eller garantier" : "No minimum requirements"} />
+            <BulletPoint text={isSv ? "Du väljer dina egna tider och jobb" : "You set your own hours and choose your jobs"} />
+            <BulletPoint text={isSv ? "Oberoende uppdragstagare — ej anställd" : "Independent contractor — not an employee"} />
+          </View>
+          {/* ⚖️ Independent contractor disclaimer */}
+          <View style={styles.contractorNote}>
+            <Text style={styles.contractorNoteText}>
+              {isSv
+                ? "Bärare på Bära är oberoende uppdragstagare, inte anställda. Du kan arbeta med flera plattformar samtidigt."
+                : "Carriers on Bära are independent contractors, not employees. You may work with multiple platforms simultaneously."}
+            </Text>
           </View>
         </View>
       </ScrollView>
@@ -261,6 +324,40 @@ const styles = StyleSheet.create({
     gap: 16,
     marginTop: 24,
   },
+  allowedGrid: {
+    flexDirection: "row",
+    gap: 12,
+    width: "100%",
+    marginTop: 8,
+  },
+  allowedColumn: {
+    flex: 1,
+    gap: 6,
+  },
+  allowedHeader: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: Colors.success,
+    marginBottom: 4,
+  },
+  prohibitedHeader: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: "#E05252",
+    marginBottom: 4,
+  },
+  allowedItem: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+    lineHeight: 19,
+  },
+  prohibitedItem: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 19,
+  },
   dotsRow: {
     flexDirection: "row",
     justifyContent: "center",
@@ -277,6 +374,23 @@ const styles = StyleSheet.create({
   dotActive: {
     width: 24,
     backgroundColor: Colors.gold,
+  },
+  contractorNote: {
+    marginTop: 20,
+    backgroundColor: `${Colors.gold}10`,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}25`,
+    width: "100%",
+  },
+  contractorNoteText: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 17,
   },
   bottomArea: {
     paddingHorizontal: 24,

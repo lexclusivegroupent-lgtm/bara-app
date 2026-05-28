@@ -25,10 +25,19 @@ export interface User {
   vehicleType?: string | null;
   vehicleDescription?: string | null;
   driverAgreementAccepted?: boolean;
+  driverOnboardingComplete?: boolean;
   annualEarnings?: number;
   ftaxRegistered?: boolean;
   ftaxNumber?: string | null;
   ftaxVerifiedByAdmin?: boolean;
+  // DAC7
+  dac7Consented?: boolean;
+  personnummer?: string | null;
+  fullLegalName?: string | null;
+  // Referral
+  referralCode?: string | null;
+  referralCount?: number;
+  referralBonusEarned?: number;
   createdAt: string;
 }
 

@@ -8,7 +8,7 @@ export const jobsTable = pgTable("jobs", {
   customerId: integer("customer_id").notNull().references(() => usersTable.id),
   driverId: integer("driver_id").references(() => usersTable.id),
   jobType: text("job_type").notNull().$type<"furniture_transport" | "bulky_delivery" | "junk_pickup">(),
-  status: text("status").notNull().default("pending").$type<"pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "cancelled_by_driver" | "disputed">(),
+  status: text("status").notNull().default("pending").$type<"pending" | "surcharge_requested" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "cancelled_by_driver" | "disputed">(),
   pickupAddress: text("pickup_address"),
   dropoffAddress: text("dropoff_address"),
   homeAddress: text("home_address"),
@@ -52,6 +52,13 @@ export const jobsTable = pgTable("jobs", {
   // Dispute evidence and admin resolution
   disputePhotos: text("dispute_photos").array(),
   disputeResolution: text("dispute_resolution").$type<"refund_customer" | "pay_driver" | "split">(),
+  // EU Platform Work Directive: optional carrier surcharges, customer-approved
+  surchargeStairs: integer("surcharge_stairs").default(0),
+  surchargeDistance: integer("surcharge_distance").default(0),
+  surchargeTotalSek: integer("surcharge_total_sek").default(0),
+  surchargeApprovedAt: timestamp("surcharge_approved_at"),
+  // Customer tip (100% to carrier)
+  tipAmount: integer("tip_amount").default(0),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });
