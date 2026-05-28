@@ -319,6 +319,11 @@ async function parseSuccessBody(
   }
 }
 
+export async function getAuthToken(): Promise<string | null> {
+  if (!_authTokenGetter) return null;
+  return _authTokenGetter();
+}
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},

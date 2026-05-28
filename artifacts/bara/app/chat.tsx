@@ -198,6 +198,7 @@ const styles = StyleSheet.create({
     borderColor: `${Colors.gold}40`,
     alignSelf: "flex-end",
   },
+  bubbleOther: {},
   senderName: { fontSize: 11, fontFamily: "Inter_600SemiBold", color: Colors.gold },
   bubbleText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text, lineHeight: 20 },
   bubbleTextMine: { color: Colors.text },

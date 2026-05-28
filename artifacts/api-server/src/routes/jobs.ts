@@ -105,7 +105,7 @@ router.get("/", authenticate, async (req: AuthenticatedRequest, res) => {
 });
 
 router.get("/:id", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const job = await getJobWithUsers(jobId);
@@ -134,14 +134,14 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  // Enforce 15 kg limit — weightPreset is mandatory for all new jobs
-  const VALID_WEIGHT_PRESETS = ["0_5kg", "5_10kg", "10_15kg"];
+  // Enforce weight limit — weightPreset is mandatory for all new jobs
+  const VALID_WEIGHT_PRESETS = ["0_10kg", "10_20kg", "20_25kg"];
   if (!weightPreset) {
-    res.status(400).json({ error: "weightPreset is required. Must be one of: 0_5kg, 5_10kg, 10_15kg" });
+    res.status(400).json({ error: "weightPreset is required. Must be one of: 0_10kg, 10_20kg, 20_25kg" });
     return;
   }
-  if (weightPreset === "over_15kg" || !VALID_WEIGHT_PRESETS.includes(weightPreset)) {
-    res.status(400).json({ error: "Bära is for small, light items only (max 15kg). For heavier items, please use a moving service." });
+  if (!VALID_WEIGHT_PRESETS.includes(weightPreset)) {
+    res.status(400).json({ error: "Bära is for small, light items only (max 25kg). For heavier items, please use a moving service." });
     return;
   }
   // City is optional — fall back to a default so drivers can still see the job
@@ -243,7 +243,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       hasElevator: hasElevator != null ? Boolean(hasElevator) : null,
       helpersNeeded: helpersNeeded != null ? parseInt(helpersNeeded) : null,
       estimatedWeightKg: estimatedWeightKg != null ? parseInt(estimatedWeightKg) : null,
-      weightPreset: weightPreset as "0_5kg" | "5_10kg" | "10_15kg",
+      weightPreset: weightPreset as "0_10kg" | "10_20kg" | "20_25kg",
       promoCode: appliedPromoCode,
       discountAmount: discountAmount != null ? discountAmount.toString() : null,
     }).returning();
@@ -275,7 +275,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
 });
 
 router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -374,7 +374,7 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
 
 // Customer approves carrier surcharge → job moves to accepted
 router.post("/:id/approve-surcharge", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -398,7 +398,7 @@ router.post("/:id/approve-surcharge", authenticate, async (req: AuthenticatedReq
 
 // Customer declines surcharge → driver removed, job back to pending
 router.post("/:id/decline-surcharge", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -416,7 +416,7 @@ router.post("/:id/decline-surcharge", authenticate, async (req: AuthenticatedReq
 });
 
 router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -453,7 +453,7 @@ router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res)
 });
 
 router.post("/:id/start", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -490,7 +490,7 @@ router.post("/:id/start", authenticate, async (req: AuthenticatedRequest, res) =
 });
 
 router.post("/:id/photos", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   const { pickupPhotos, dropoffPhotos } = req.body;
   try {
@@ -517,7 +517,7 @@ router.post("/:id/photos", authenticate, async (req: AuthenticatedRequest, res) 
 });
 
 router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -601,7 +601,7 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
 });
 
 router.post("/:id/dispute", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   const { reason, photos } = req.body;
   if (!reason || !reason.trim()) {
@@ -640,7 +640,7 @@ router.post("/:id/dispute", authenticate, async (req: AuthenticatedRequest, res)
 });
 
 router.post("/:id/rate", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   const { score, comment, ratedUserId, tipAmount } = req.body;
 
@@ -705,7 +705,7 @@ router.post("/:id/rate", authenticate, async (req: AuthenticatedRequest, res) =>
 
 // Reschedule a job (customer only, ≥1 hour in the future)
 router.post("/:id/reschedule", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   const { preferredTime } = req.body;
   if (!preferredTime) { res.status(400).json({ error: "preferredTime is required" }); return; }
@@ -756,7 +756,7 @@ const CANCELLATION_FEE_AFTER_ACCEPTANCE = 150;
 const MAX_JOB_VALUE_SEK = 299;
 
 router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -829,7 +829,7 @@ router.post("/:id/cancel", authenticate, async (req: AuthenticatedRequest, res) 
 
 // In-app chat messages for a job
 router.get("/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
@@ -863,7 +863,7 @@ router.get("/:id/messages", authenticate, async (req: AuthenticatedRequest, res)
 });
 
 router.post("/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   const { text } = req.body;
   if (!text || !text.trim()) {
@@ -913,7 +913,7 @@ router.post("/:id/messages", authenticate, async (req: AuthenticatedRequest, res
 
 // Serve receipt HTML for a completed job (used by "Open in browser / print" button)
 router.get("/:id/receipt", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const job = await getJobWithUsers(jobId);
@@ -952,7 +952,7 @@ router.get("/:id/receipt", authenticate, async (req: AuthenticatedRequest, res) 
 
 // Re-send receipt email on demand
 router.post("/:id/resend-receipt", authenticate, async (req: AuthenticatedRequest, res) => {
-  const jobId = parseInt(req.params.id);
+  const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
   try {
     const job = await getJobWithUsers(jobId);

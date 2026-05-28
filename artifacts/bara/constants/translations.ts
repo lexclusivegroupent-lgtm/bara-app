@@ -30,10 +30,6 @@ const translations = {
     pleaseConfirmSize: "Please confirm the item size and weight.",
     vehiclePlaceholderSmall: "e.g. Volvo V60, Toyota Corolla, Kia Sportage",
     vehicleHintSmall: "Any car qualifies — no van or trailer needed. Regular car, SUV, estate or car with roof box.",
-    pickupDropoff: "From Blocket or Facebook",
-    largeItems: "Small furniture & items",
-    homePickup: "Any small item",
-    newJob: "What needs picking up?",
 
     // Auth — login
     welcomeBack: "Welcome back",
@@ -245,17 +241,14 @@ const translations = {
 
     // Earnings screen
     myEarnings: "My Earnings",
-    totalEarned: "Total Earned",
     thisMonth: "This month",
     allTime: "All time",
     avgPerJob: "Avg. per job",
     earningsHistory: "Earnings History",
-    noEarningsYet: "No completed jobs yet",
     startAcceptingJobs: "Accept jobs on the map to start earning",
     earningsPayout: "Your payout (75%)",
 
     // Support screen
-    contactSupport: "Contact Support",
     supportSubtitle: "We're here to help. Send us a message and we'll get back to you within 24 hours.",
     subject: "Subject",
     subjectPlaceholder: "What is this about?",
@@ -476,6 +469,7 @@ const translations = {
     subtotal: "Subtotal",
     promoDiscountLabel: "Promo discount",
     totalPrice: "Total",
+    platformFee: "Platform fee",
     driverEarns: "Carrier earns (75%)",
     finalPriceNote: "Final price confirmed when carrier accepts the job.",
 
@@ -553,10 +547,6 @@ const translations = {
     pleaseConfirmSize: "Bekräfta föremålets storlek och vikt.",
     vehiclePlaceholderSmall: "t.ex. Volvo V60, Toyota Corolla, Kia Sportage",
     vehicleHintSmall: "Alla bilar är välkomna — ingen skåpbil eller trailer behövs. Vanlig bil, SUV, kombi eller bil med takbox.",
-    pickupDropoff: "Från Blocket eller Facebook",
-    largeItems: "Liten möbel & föremål",
-    homePickup: "Vilket litet föremål som helst",
-    newJob: "Vad ska hämtas?",
 
     // Auth — login
     welcomeBack: "Välkommen tillbaka",
@@ -768,17 +758,14 @@ const translations = {
 
     // Earnings screen
     myEarnings: "Mina intäkter",
-    totalEarned: "Totalt tjänat",
     thisMonth: "Denna månad",
     allTime: "Totalt",
     avgPerJob: "Snitt per jobb",
     earningsHistory: "Intäktshistorik",
-    noEarningsYet: "Inga slutförda jobb än",
     startAcceptingJobs: "Acceptera jobb på kartan för att börja tjäna",
     earningsPayout: "Din utbetalning (75%)",
 
     // Support screen
-    contactSupport: "Kontakta support",
     supportSubtitle: "Vi är här för att hjälpa. Skicka ett meddelande så återkommer vi inom 24 timmar.",
     subject: "Ämne",
     subjectPlaceholder: "Vad handlar det om?",
@@ -999,6 +986,7 @@ const translations = {
     subtotal: "Delsumma",
     promoDiscountLabel: "Rabattkod",
     totalPrice: "Totalt",
+    platformFee: "Plattformsavgift",
     driverEarns: "Bäraren tjänar (75%)",
     finalPriceNote: "Slutpriset bekräftas när bäraren accepterar jobbet.",
 

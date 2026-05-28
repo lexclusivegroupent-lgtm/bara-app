@@ -171,7 +171,7 @@ export default function RegisterScreen() {
             <>
               {/* Any car qualifies banner */}
               <View style={styles.anyCarBanner}>
-                <MaterialCommunityIcons name="car-check" size={18} color={Colors.gold} />
+                <MaterialCommunityIcons name="cart-check" size={18} color={Colors.gold} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.anyCarTitle}>
                     {isSv ? "Vilken bil som helst kvalificerar" : "Any car qualifies"}

@@ -895,5 +895,4 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
   },
-  disabled: { opacity: 0.7 },
 });

@@ -68,7 +68,7 @@ router.put("/:id", authenticateAdmin, async (req, res) => {
         adminNotes: adminNotes?.trim() || null,
         resolvedAt: new Date(),
       })
-      .where(eq(appealsTable.id, parseInt(req.params.id)))
+      .where(eq(appealsTable.id, parseInt(req.params.id as string)))
       .returning();
     if (!appeal) { res.status(404).json({ error: "Appeal not found" }); return; }
     res.json(appeal);

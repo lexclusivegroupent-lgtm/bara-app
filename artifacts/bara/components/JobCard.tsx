@@ -61,7 +61,7 @@ export interface Job {
   customerId: number;
   driverId?: number | null;
   jobType: string;
-  status: "pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "disputed";
+  status: "pending" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "disputed" | "surcharge_requested";
   pickupAddress?: string | null;
   dropoffAddress?: string | null;
   homeAddress?: string | null;

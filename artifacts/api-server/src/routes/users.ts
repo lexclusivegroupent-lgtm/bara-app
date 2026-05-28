@@ -38,11 +38,11 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
 
     if (role !== undefined) {
       if (role !== "both") {
-        return res.status(400).json({ error: "Role can only be upgraded to 'both'" });
+        res.status(400).json({ error: "Role can only be upgraded to 'both'" }); return;
       }
       const [current] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
       if (current.role === "both") {
-        return res.status(400).json({ error: "Account is already a Customer and Driver" });
+        res.status(400).json({ error: "Account is already a Customer and Driver" }); return;
       }
       updateData.role = "both";
     }

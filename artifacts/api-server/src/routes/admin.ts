@@ -94,7 +94,7 @@ router.get("/jobs", async (req: Request, res: Response) => {
       .orderBy(desc(jobsTable.createdAt))
       .limit(200);
 
-    if (jobs.length === 0) return res.json([]);
+    if (jobs.length === 0) { res.json([]); return; }
 
     const userIds = [...new Set([
       ...jobs.map(j => j.customerId).filter(Boolean),
@@ -124,7 +124,7 @@ router.get("/jobs/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, id));
-    if (!job) return res.status(404).json({ error: "Job not found" });
+    if (!job) { res.status(404).json({ error: "Job not found" }); return; }
 
     const userIds = [job.customerId, job.driverId].filter(Boolean) as number[];
     const users = userIds.length > 0
@@ -173,7 +173,7 @@ router.get("/users/:id", async (req: Request, res: Response) => {
   try {
     const id = Number(req.params.id);
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, id));
-    if (!user) return res.status(404).json({ error: "User not found" });
+    if (!user) { res.status(404).json({ error: "User not found" }); return; }
 
     const jobsAsCustomer = await db.select({
       id: jobsTable.id, jobType: jobsTable.jobType, status: jobsTable.status,
@@ -230,7 +230,7 @@ router.put("/drivers/:id/verify", async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const { action } = req.body as { action: "approve" | "reject" };
     if (!["approve", "reject"].includes(action)) {
-      return res.status(400).json({ error: "action must be 'approve' or 'reject'" });
+      res.status(400).json({ error: "action must be 'approve' or 'reject'" }); return;
     }
 
     const newStatus = action === "approve" ? "verified" : "rejected";
@@ -239,7 +239,7 @@ router.put("/drivers/:id/verify", async (req: Request, res: Response) => {
       .where(eq(usersTable.id, id))
       .returning({ id: usersTable.id, verificationStatus: usersTable.verificationStatus, fullName: usersTable.fullName });
 
-    if (!updated) return res.status(404).json({ error: "Driver not found" });
+    if (!updated) { res.status(404).json({ error: "Driver not found" }); return; }
     res.json({ success: true, driver: updated });
   } catch (err: any) {
     console.error("Admin driver verify error:", err);
@@ -254,7 +254,7 @@ router.put("/drivers/:id/ftax", async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const { verified, ftaxNumber } = req.body as { verified: boolean; ftaxNumber?: string };
     if (typeof verified !== "boolean") {
-      return res.status(400).json({ error: "verified (boolean) is required" });
+      res.status(400).json({ error: "verified (boolean) is required" }); return;
     }
 
     const [updated] = await db.update(usersTable)
@@ -271,7 +271,7 @@ router.put("/drivers/:id/ftax", async (req: Request, res: Response) => {
         ftaxVerifiedByAdmin: usersTable.ftaxVerifiedByAdmin,
       });
 
-    if (!updated) return res.status(404).json({ error: "Driver not found" });
+    if (!updated) { res.status(404).json({ error: "Driver not found" }); return; }
     res.json({ success: true, driver: updated });
   } catch (err: any) {
     console.error("Admin ftax verify error:", err);
@@ -287,7 +287,7 @@ router.get("/disputes", async (req: Request, res: Response) => {
       .orderBy(desc(jobsTable.createdAt))
       .limit(200);
 
-    if (jobs.length === 0) return res.json([]);
+    if (jobs.length === 0) { res.json([]); return; }
 
     const userIds = [...new Set([
       ...jobs.map(j => j.customerId).filter(Boolean),
@@ -316,11 +316,11 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
     const id = Number(req.params.id);
     const { note, resolution } = req.body as { note: string; resolution?: "refund_customer" | "pay_driver" | "split" };
     if (!note || !note.trim()) {
-      return res.status(400).json({ error: "Resolution note is required" });
+      res.status(400).json({ error: "Resolution note is required" }); return;
     }
     const VALID_RESOLUTIONS = ["refund_customer", "pay_driver", "split"];
     if (resolution && !VALID_RESOLUTIONS.includes(resolution)) {
-      return res.status(400).json({ error: "resolution must be refund_customer, pay_driver, or split" });
+      res.status(400).json({ error: "resolution must be refund_customer, pay_driver, or split" }); return;
     }
 
     const [updated] = await db.update(jobsTable)
@@ -332,7 +332,7 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
       .where(eq(jobsTable.id, id))
       .returning({ id: jobsTable.id, disputeResolvedNote: jobsTable.disputeResolvedNote, disputeResolvedAt: jobsTable.disputeResolvedAt, disputeResolution: jobsTable.disputeResolution });
 
-    if (!updated) return res.status(404).json({ error: "Job not found" });
+    if (!updated) { res.status(404).json({ error: "Job not found" }); return; }
     res.json({ success: true, job: updated });
   } catch (err: any) {
     console.error("Admin dispute resolve error:", err);
@@ -344,9 +344,9 @@ router.post("/disputes/:id/resolve", async (req: Request, res: Response) => {
 router.get("/dac7/report/:year", async (req: Request, res: Response) => {
   if (!checkAdminKey(req, res)) return;
   try {
-    const year = parseInt(req.params.year);
+    const year = parseInt(req.params.year as string);
     if (isNaN(year) || year < 2024 || year > 2100) {
-      return res.status(400).json({ error: "year must be a valid 4-digit year (2024+)" });
+      res.status(400).json({ error: "year must be a valid 4-digit year (2024+)" }); return;
     }
 
     const startOfYear = new Date(year, 0, 1);
@@ -413,7 +413,7 @@ router.get("/dac7/report/:year", async (req: Request, res: Response) => {
       );
       res.setHeader("Content-Type", "text/csv");
       res.setHeader("Content-Disposition", `attachment; filename="dac7_${year}.csv"`);
-      return res.send([header, ...csvRows].join("\n"));
+      res.send([header, ...csvRows].join("\n")); return;
     }
 
     res.json({ year, carrierCount: rows.length, generatedAt: new Date().toISOString(), carriers: rows });
@@ -517,6 +517,7 @@ router.post("/seed-demo", async (req: Request, res: Response) => {
         email: "demo@baraapp.se",
         fullName: "Demo Kund",
         role: "customer",
+        city: "Stockholm",
         passwordHash: hash,
         isAvailable: false,
         totalJobs: 0,
@@ -534,13 +535,12 @@ router.post("/seed-demo", async (req: Request, res: Response) => {
         email: "demo.driver@baraapp.se",
         fullName: "Demo Förare",
         role: "driver",
+        city: "Stockholm",
         passwordHash: hash,
         isAvailable: true,
         totalJobs: 12,
-        vehicleType: "van",
+        vehicleType: "large_van",
         vehicleDescription: "VW Transporter 2021",
-        lat: 59.3293,
-        lng: 18.0686,
       }).returning();
       demoDriverId = driver.id;
     }
@@ -548,11 +548,11 @@ router.post("/seed-demo", async (req: Request, res: Response) => {
     // Seed 5 sample jobs
     const now = new Date();
     const sampleJobs = [
-      { customerId: demoUserId, driverId: demoDriverId, status: "completed" as const, jobType: "furniture_transport" as const, pickupAddress: "Drottninggatan 1, Stockholm", dropoffAddress: "Södermalm, Stockholm", itemDescription: "3-sits soffa + kaffebord", distanceKm: 4.2, priceTotal: 890, driverPayout: 668, platformFee: 222, preferredTime: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000) },
-      { customerId: demoUserId, driverId: null, status: "pending" as const, jobType: "junk_pickup" as const, pickupAddress: null, dropoffAddress: null, homeAddress: "Vasagatan 10, Stockholm", itemDescription: "Gammal tvättmaskin + tre IKEA-stolar", distanceKm: 0, priceTotal: 599, driverPayout: 449, platformFee: 150, preferredTime: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000) },
-      { customerId: demoUserId, driverId: demoDriverId, status: "in_progress" as const, jobType: "bulky_delivery" as const, pickupAddress: "IKEA Kungens Kurva, Huddinge", dropoffAddress: "Nacka, Stockholm", itemDescription: "PAX garderob 236cm", distanceKm: 18.5, priceTotal: 1290, driverPayout: 968, platformFee: 322, preferredTime: now },
-      { customerId: demoUserId, driverId: demoDriverId, status: "completed" as const, jobType: "furniture_transport" as const, pickupAddress: "Gamla Stan, Stockholm", dropoffAddress: "Östermalm, Stockholm", itemDescription: "Skrivbord + kontorsstol + 4 kartonger", distanceKm: 2.8, priceTotal: 749, driverPayout: 562, platformFee: 187, preferredTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-      { customerId: demoUserId, driverId: null, status: "pending" as const, jobType: "furniture_transport" as const, pickupAddress: "Kungsholmen, Stockholm", dropoffAddress: "Bromma, Stockholm", itemDescription: "Dubbelsäng med resårmadrass", distanceKm: 7.1, priceTotal: 999, driverPayout: 749, platformFee: 250, preferredTime: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000) },
+      { city: "Stockholm", customerId: demoUserId, driverId: demoDriverId, status: "completed" as const, jobType: "furniture_transport" as const, pickupAddress: "Drottninggatan 1, Stockholm", dropoffAddress: "Södermalm, Stockholm", itemDescription: "3-sits soffa + kaffebord", distanceKm: "4.2", priceTotal: "890", driverPayout: "668", platformFee: "222", preferredTime: new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString() },
+      { city: "Stockholm", customerId: demoUserId, driverId: null, status: "pending" as const, jobType: "junk_pickup" as const, pickupAddress: null, dropoffAddress: null, homeAddress: "Vasagatan 10, Stockholm", itemDescription: "Gammal tvättmaskin + tre IKEA-stolar", distanceKm: "0", priceTotal: "599", driverPayout: "449", platformFee: "150", preferredTime: new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString() },
+      { city: "Stockholm", customerId: demoUserId, driverId: demoDriverId, status: "in_progress" as const, jobType: "bulky_delivery" as const, pickupAddress: "IKEA Kungens Kurva, Huddinge", dropoffAddress: "Nacka, Stockholm", itemDescription: "PAX garderob 236cm", distanceKm: "18.5", priceTotal: "1290", driverPayout: "968", platformFee: "322", preferredTime: now.toISOString() },
+      { city: "Stockholm", customerId: demoUserId, driverId: demoDriverId, status: "completed" as const, jobType: "furniture_transport" as const, pickupAddress: "Gamla Stan, Stockholm", dropoffAddress: "Östermalm, Stockholm", itemDescription: "Skrivbord + kontorsstol + 4 kartonger", distanceKm: "2.8", priceTotal: "749", driverPayout: "562", platformFee: "187", preferredTime: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString() },
+      { city: "Stockholm", customerId: demoUserId, driverId: null, status: "pending" as const, jobType: "furniture_transport" as const, pickupAddress: "Kungsholmen, Stockholm", dropoffAddress: "Bromma, Stockholm", itemDescription: "Dubbelsäng med resårmadrass", distanceKm: "7.1", priceTotal: "999", driverPayout: "749", platformFee: "250", preferredTime: new Date(now.getTime() + 1 * 24 * 60 * 60 * 1000).toISOString() },
     ];
 
     const inserted = await db.insert(jobsTable).values(sampleJobs).returning({ id: jobsTable.id });

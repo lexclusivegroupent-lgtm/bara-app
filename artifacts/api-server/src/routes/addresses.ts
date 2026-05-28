@@ -45,7 +45,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
 });
 
 router.delete("/:id", authenticate, async (req: AuthenticatedRequest, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id as string);
   if (isNaN(id)) { res.status(400).json({ error: "Invalid ID" }); return; }
   try {
     await db.delete(savedAddressesTable)

@@ -14,9 +14,8 @@ export {
   // Legacy exports kept for backward compatibility
   authenticate,
   signToken,
-  AuthenticatedRequest,
 } from "./auth";
-export type { Role, JWTPayload } from "./auth";
+export type { Role, JWTPayload, AuthenticatedRequest } from "./auth";
 
 // Layer 2 — RBAC
 export {
