@@ -138,6 +138,9 @@ export default function DriverOnboardingChecklistScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+          <Feather name="arrow-left" size={22} color={Colors.text} />
+        </TouchableOpacity>
         <View style={styles.iconCircle}>
           <Feather name="clipboard" size={22} color={Colors.gold} />
         </View>
@@ -243,6 +246,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
   iconCircle: {
     width: 44,
     height: 44,

@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   View,
   Text,
@@ -196,7 +196,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn: { width: 40, height: 40, justifyContent: "center" },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 18, fontFamily: "Inter_700Bold", color: Colors.text },
   listContent: { padding: 16, flexGrow: 1 },
   separator: { height: 1, backgroundColor: Colors.border, marginHorizontal: 16 },

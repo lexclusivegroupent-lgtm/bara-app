@@ -92,9 +92,14 @@ export default function DriverAgreementScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <Text style={styles.title}>
-          {isSv ? "Föraravtal — Bära AB" : "Driver Agreement — Bära AB"}
-        </Text>
+        <View style={styles.headerTop}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+            <Feather name="arrow-left" size={22} color={Colors.text} />
+          </TouchableOpacity>
+          <Text style={styles.title}>
+            {isSv ? "Föraravtal — Bära AB" : "Driver Agreement — Bära AB"}
+          </Text>
+        </View>
         <View style={styles.langRow}>
           {(["sv", "en"] as const).map((l) => (
             <TouchableOpacity
@@ -222,7 +227,9 @@ const styles = StyleSheet.create({
     borderBottomColor: Colors.border,
     gap: 10,
   },
-  title: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
+  headerTop: { flexDirection: "row", alignItems: "center", gap: 8 },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
+  title: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text, flex: 1 },
   langRow: { flexDirection: "row", gap: 8 },
   langBtn: {
     paddingHorizontal: 14,

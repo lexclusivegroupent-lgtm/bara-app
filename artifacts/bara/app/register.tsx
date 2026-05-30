@@ -23,11 +23,15 @@ import { LanguageToggle } from "@/components/LanguageToggle";
 
 type Role = "customer" | "driver" | "both";
 
+const TOTAL_STEPS = 4;
+
 export default function RegisterScreen() {
   const { register } = useAuth();
   const { t, lang } = useLanguage();
   const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
+
+  const [step, setStep] = useState(1);
   const [role, setRole] = useState<Role>("customer");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -40,17 +44,44 @@ export default function RegisterScreen() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const ROLES: { id: Role; label: string; icon: string }[] = [
-    { id: "customer", label: t("customer"), icon: "account" },
-    { id: "driver", label: t("driver"), icon: "truck" },
-    { id: "both", label: t("both"), icon: "account-switch" },
-  ];
+  const showVehicle = role === "driver" || role === "both";
+  const maxStep = showVehicle ? TOTAL_STEPS : TOTAL_STEPS - 1;
+
+  function handleBack() {
+    if (step === 1) {
+      router.back();
+    } else {
+      setStep(step - 1);
+    }
+  }
+
+  function handleNext() {
+    if (step === 1) {
+      setStep(2);
+    } else if (step === 2) {
+      if (!fullName.trim()) {
+        Alert.alert(t("missingFields"), isSv ? "Ange ditt namn." : "Enter your name.");
+        return;
+      }
+      if (!email.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+        Alert.alert(t("missingFields"), t("errorInvalidEmail"));
+        return;
+      }
+      if (password.length < 6) {
+        Alert.alert(t("missingFields"), isSv ? "Lösenordet måste vara minst 6 tecken." : "Password must be at least 6 characters.");
+        return;
+      }
+      setStep(3);
+    } else if (step === 3) {
+      if (showVehicle) {
+        setStep(4);
+      } else {
+        handleRegister();
+      }
+    }
+  }
 
   async function handleRegister() {
-    if (!fullName.trim() || !email.trim() || !password.trim()) {
-      Alert.alert(t("missingFields"), t("pleaseFillAll"));
-      return;
-    }
     if (!agreedToTerms) {
       Alert.alert(t("termsRequired"), t("pleaseAgreeTerms"));
       return;
@@ -73,7 +104,8 @@ export default function RegisterScreen() {
     }
   }
 
-  const showVehicle = role === "driver" || role === "both";
+  const effectiveStep = showVehicle ? step : step;
+  const effectiveMax = showVehicle ? 4 : 3;
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
@@ -88,172 +120,343 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
+        {/* Top row: back + lang toggle */}
         <View style={styles.topRow}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Feather name="arrow-left" size={20} color={Colors.text} />
+          <TouchableOpacity style={styles.backBtn} onPress={handleBack} activeOpacity={0.7}>
+            <Feather name="arrow-left" size={22} color={Colors.text} />
           </TouchableOpacity>
           <LanguageToggle />
         </View>
 
-        <View style={styles.header}>
-          <Image
-            source={require("../assets/images/logo.png")}
-            style={styles.logoSmall}
-            resizeMode="contain"
-          />
-          <Text style={styles.title}>{t("createAccount")}</Text>
-          <Text style={styles.subtitle}>{t("joinBara")}</Text>
-        </View>
-
-        <View style={styles.rolePicker}>
-          {ROLES.map((r) => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.roleBtn, role === r.id && styles.roleBtnActive]}
-              onPress={() => setRole(r.id)}
-            >
-              <MaterialCommunityIcons
-                name={r.icon as any}
-                size={16}
-                color={role === r.id ? Colors.navy : Colors.textMuted}
-              />
-              <Text style={[styles.roleText, role === r.id && styles.roleTextActive]}>{r.label}</Text>
-            </TouchableOpacity>
+        {/* Step indicator */}
+        <View style={styles.stepRow}>
+          {Array.from({ length: effectiveMax }).map((_, i) => (
+            <View
+              key={i}
+              style={[styles.stepDot, i + 1 <= effectiveStep && styles.stepDotActive]}
+            />
           ))}
         </View>
+        <Text style={styles.stepLabel}>
+          {isSv ? `Steg ${effectiveStep} av ${effectiveMax}` : `Step ${effectiveStep} of ${effectiveMax}`}
+        </Text>
 
-        {role === "both" && (
-          <View style={styles.bothHint}>
-            <Feather name="info" size={13} color={Colors.gold} />
-            <Text style={styles.bothHintText}>{t("bothHint")}</Text>
+        {/* Step 1: Role selection */}
+        {step === 1 && (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>
+              {isSv ? "Vad vill du göra?" : "What would you like to do?"}
+            </Text>
+            <Text style={styles.stepSubtitle}>
+              {isSv ? "Välj hur du vill använda Bära." : "Choose how you want to use Bära."}
+            </Text>
+
+            <View style={styles.roleCards}>
+              {([
+                {
+                  id: "customer" as Role,
+                  icon: "account",
+                  labelSV: "Kund",
+                  labelEN: "Customer",
+                  descSV: "Jag vill skicka eller hämta saker",
+                  descEN: "I want to send or pick up items",
+                },
+                {
+                  id: "driver" as Role,
+                  icon: "truck",
+                  labelSV: "Bärare",
+                  labelEN: "Carrier",
+                  descSV: "Jag vill köra och tjäna pengar",
+                  descEN: "I want to drive and earn money",
+                },
+                {
+                  id: "both" as Role,
+                  icon: "account-switch",
+                  labelSV: "Båda",
+                  labelEN: "Both",
+                  descSV: "Jag vill både skicka och köra",
+                  descEN: "I want to both send and drive",
+                },
+              ]).map((r) => (
+                <TouchableOpacity
+                  key={r.id}
+                  style={[styles.roleCard, role === r.id && styles.roleCardActive]}
+                  onPress={() => setRole(r.id)}
+                  activeOpacity={0.85}
+                >
+                  <MaterialCommunityIcons
+                    name={r.icon as any}
+                    size={28}
+                    color={role === r.id ? Colors.navy : Colors.gold}
+                  />
+                  <View style={styles.roleCardText}>
+                    <Text style={[styles.roleCardTitle, role === r.id && styles.roleCardTitleActive]}>
+                      {isSv ? r.labelSV : r.labelEN}
+                    </Text>
+                    <Text style={[styles.roleCardDesc, role === r.id && styles.roleCardDescActive]}>
+                      {isSv ? r.descSV : r.descEN}
+                    </Text>
+                  </View>
+                  {role === r.id && (
+                    <Feather name="check-circle" size={22} color={Colors.navy} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={styles.nextBtn} onPress={handleNext} activeOpacity={0.85}>
+              <Text style={styles.nextBtnText}>{isSv ? "Fortsätt" : "Continue"}</Text>
+              <Feather name="arrow-right" size={20} color={Colors.navy} />
+            </TouchableOpacity>
           </View>
         )}
 
-        <View style={styles.form}>
-          <InputField label={t("fullName")} icon="user" value={fullName} onChangeText={setFullName} placeholder={t("yourFullName")} />
-          <InputField label={t("email")} icon="mail" value={email} onChangeText={setEmail} placeholder="your@email.com" keyboardType="email-address" autoCapitalize="none" />
-          <InputField
-            label={t("password")}
-            icon="lock"
-            value={password}
-            onChangeText={setPassword}
-            placeholder={t("minimumChars")}
-            secureTextEntry={!showPassword}
-            rightIcon={showPassword ? "eye-off" : "eye"}
-            onRightIconPress={() => setShowPassword(!showPassword)}
-          />
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>{t("city")}</Text>
-            <TouchableOpacity
-              style={styles.inputWrapper}
-              onPress={() => setShowCityPicker(!showCityPicker)}
-            >
-              <Feather name="map-pin" size={16} color={Colors.textMuted} />
-              <Text style={[styles.pickerText, { color: Colors.text }]}>{city}</Text>
-              <Feather name={showCityPicker ? "chevron-up" : "chevron-down"} size={16} color={Colors.textMuted} />
-            </TouchableOpacity>
-            {showCityPicker && (
-              <View style={styles.cityDropdown}>
-                <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
-                  {SWEDISH_CITIES.map((c) => (
-                    <TouchableOpacity
-                      key={c}
-                      style={[styles.cityOption, city === c && styles.cityOptionActive]}
-                      onPress={() => { setCity(c); setShowCityPicker(false); }}
-                    >
-                      <Text style={[styles.cityOptionText, city === c && styles.cityOptionTextActive]}>{c}</Text>
-                      {city === c && <Feather name="check" size={14} color={Colors.gold} />}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-          </View>
-
-          {showVehicle && (
-            <>
-              {/* Any car qualifies banner */}
-              <View style={styles.anyCarBanner}>
-                <MaterialCommunityIcons name="cart-check" size={18} color={Colors.gold} />
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.anyCarTitle}>
-                    {isSv ? "Vilken bil som helst kvalificerar" : "Any car qualifies"}
-                  </Text>
-                  <Text style={styles.anyCarSub}>
-                    {isSv
-                      ? "Ingen skåpbil eller trailer krävs — bara en vanlig personbil."
-                      : "No van or trailer needed — just a regular car."}
-                  </Text>
-                </View>
-              </View>
-
-              {/* Vehicle type picker */}
-              <View style={styles.vehicleTypeSection}>
-                <Text style={styles.vehicleTypeLabel}>{t("vehicleType") || "Vehicle type"}</Text>
-                <View style={styles.vehicleTypeGrid}>
-                  {[
-                    { id: "regular_car", labelSV: "Personbil", labelEN: "Regular car", icon: "car" },
-                    { id: "suv", labelSV: "SUV", labelEN: "SUV", icon: "car-side" },
-                    { id: "estate_car", labelSV: "Kombi", labelEN: "Estate car", icon: "car-estate" },
-                    { id: "roof_box", labelSV: "Bil med takbox", labelEN: "Car with roof box", icon: "car-settings" },
-                  ].map((vt) => (
-                    <TouchableOpacity
-                      key={vt.id}
-                      style={[styles.vehicleTypeBtn, vehicleType === vt.id && styles.vehicleTypeBtnActive]}
-                      onPress={() => setVehicleType(vt.id)}
-                      activeOpacity={0.8}
-                    >
-                      <MaterialCommunityIcons
-                        name={vt.icon as any}
-                        size={20}
-                        color={vehicleType === vt.id ? Colors.navy : Colors.gold}
-                      />
-                      <Text style={[styles.vehicleTypeBtnText, vehicleType === vt.id && styles.vehicleTypeBtnTextActive]}>
-                        {vt.labelSV}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
-                </View>
-              </View>
-
-              <InputField
-                label={t("vehicleDescription")}
-                icon="truck"
-                value={vehicleDescription}
-                onChangeText={setVehicleDescription}
-                placeholder={t("vehiclePlaceholder")}
-              />
-            </>
-          )}
-
-          <TouchableOpacity
-            style={styles.termsRow}
-            onPress={() => setAgreedToTerms(!agreedToTerms)}
-            activeOpacity={0.8}
-          >
-            <View style={[styles.checkbox, agreedToTerms && styles.checkboxActive]}>
-              {agreedToTerms && <Feather name="check" size={12} color={Colors.navy} />}
-            </View>
-            <Text style={styles.termsText}>
-              {t("agreeToTerms")}
-              <Text style={styles.termsLink} onPress={() => router.push("/terms")}>{t("termsOfService")}</Text>
+        {/* Step 2: Personal info */}
+        {step === 2 && (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>
+              {isSv ? "Dina uppgifter" : "Your details"}
             </Text>
-          </TouchableOpacity>
+            <Text style={styles.stepSubtitle}>
+              {isSv ? "Fyll i ditt namn, e-post och lösenord." : "Enter your name, email and password."}
+            </Text>
 
-          <TouchableOpacity
-            style={[styles.registerBtn, loading && styles.disabled]}
-            onPress={handleRegister}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.navy} />
-            ) : (
-              <Text style={styles.registerBtnText}>{t("createAccountBtn")}</Text>
+            <View style={styles.form}>
+              <InputField
+                label={t("fullName")}
+                icon="user"
+                value={fullName}
+                onChangeText={setFullName}
+                placeholder={t("yourFullName")}
+              />
+              <InputField
+                label={t("email")}
+                icon="mail"
+                value={email}
+                onChangeText={setEmail}
+                placeholder="din@epost.se"
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+              <InputField
+                label={t("password")}
+                icon="lock"
+                value={password}
+                onChangeText={setPassword}
+                placeholder={isSv ? "Minst 6 tecken" : "Minimum 6 characters"}
+                secureTextEntry={!showPassword}
+                rightIcon={showPassword ? "eye-off" : "eye"}
+                onRightIconPress={() => setShowPassword(!showPassword)}
+              />
+            </View>
+
+            <TouchableOpacity style={[styles.nextBtn, { marginTop: 24 }]} onPress={handleNext} activeOpacity={0.85}>
+              <Text style={styles.nextBtnText}>{isSv ? "Fortsätt" : "Continue"}</Text>
+              <Feather name="arrow-right" size={20} color={Colors.navy} />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Step 3: City + vehicle (if driver) */}
+        {step === 3 && (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>
+              {isSv ? "Din stad" : "Your city"}
+            </Text>
+            <Text style={styles.stepSubtitle}>
+              {isSv ? "Välj din stad för att hitta jobb nära dig." : "Choose your city to find jobs nearby."}
+            </Text>
+
+            <View style={styles.form}>
+              <View style={styles.inputGroup}>
+                <Text style={styles.label}>{t("city")}</Text>
+                <TouchableOpacity
+                  style={styles.inputWrapper}
+                  onPress={() => setShowCityPicker(!showCityPicker)}
+                >
+                  <Feather name="map-pin" size={16} color={Colors.textMuted} />
+                  <Text style={[styles.pickerText, { color: Colors.text }]}>{city}</Text>
+                  <Feather name={showCityPicker ? "chevron-up" : "chevron-down"} size={16} color={Colors.textMuted} />
+                </TouchableOpacity>
+                {showCityPicker && (
+                  <View style={styles.cityDropdown}>
+                    <ScrollView style={{ maxHeight: 200 }} nestedScrollEnabled>
+                      {SWEDISH_CITIES.map((c) => (
+                        <TouchableOpacity
+                          key={c}
+                          style={[styles.cityOption, city === c && styles.cityOptionActive]}
+                          onPress={() => { setCity(c); setShowCityPicker(false); }}
+                        >
+                          <Text style={[styles.cityOptionText, city === c && styles.cityOptionTextActive]}>{c}</Text>
+                          {city === c && <Feather name="check" size={14} color={Colors.gold} />}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  </View>
+                )}
+              </View>
+
+              {showVehicle && (
+                <>
+                  <View style={styles.anyCarBanner}>
+                    <MaterialCommunityIcons name="cart-check" size={18} color={Colors.gold} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.anyCarTitle}>
+                        {isSv ? "Vilken bil som helst kvalificerar" : "Any car qualifies"}
+                      </Text>
+                      <Text style={styles.anyCarSub}>
+                        {isSv
+                          ? "Ingen skåpbil eller trailer krävs."
+                          : "No van or trailer needed."}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.vehicleTypeSection}>
+                    <Text style={styles.vehicleTypeLabel}>{t("vehicleType")}</Text>
+                    <View style={styles.vehicleTypeGrid}>
+                      {[
+                        { id: "regular_car", labelSV: "Personbil", labelEN: "Regular car", icon: "car" },
+                        { id: "suv", labelSV: "SUV", labelEN: "SUV", icon: "car-side" },
+                        { id: "estate_car", labelSV: "Kombi", labelEN: "Estate car", icon: "car-estate" },
+                        { id: "roof_box", labelSV: "Bil med takbox", labelEN: "Roof box", icon: "car-settings" },
+                      ].map((vt) => (
+                        <TouchableOpacity
+                          key={vt.id}
+                          style={[styles.vehicleTypeBtn, vehicleType === vt.id && styles.vehicleTypeBtnActive]}
+                          onPress={() => setVehicleType(vt.id)}
+                          activeOpacity={0.8}
+                        >
+                          <MaterialCommunityIcons
+                            name={vt.icon as any}
+                            size={20}
+                            color={vehicleType === vt.id ? Colors.navy : Colors.gold}
+                          />
+                          <Text style={[styles.vehicleTypeBtnText, vehicleType === vt.id && styles.vehicleTypeBtnTextActive]}>
+                            {isSv ? vt.labelSV : vt.labelEN}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </View>
+
+                  <InputField
+                    label={t("vehicleDescription")}
+                    icon="truck"
+                    value={vehicleDescription}
+                    onChangeText={setVehicleDescription}
+                    placeholder={isSv ? "t.ex. Volvo V60, vit" : "e.g. Volvo V60, white"}
+                  />
+                </>
+              )}
+            </View>
+
+            {!showVehicle && (
+              <TouchableOpacity
+                style={[styles.termsRow, { marginTop: 16 }]}
+                onPress={() => setAgreedToTerms(!agreedToTerms)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.checkbox, agreedToTerms && styles.checkboxActive]}>
+                  {agreedToTerms && <Feather name="check" size={14} color={Colors.navy} />}
+                </View>
+                <Text style={styles.termsText}>
+                  {t("agreeToTerms")}
+                  <Text style={styles.termsLink} onPress={() => router.push("/terms")}>
+                    {t("termsOfService")}
+                  </Text>
+                </Text>
+              </TouchableOpacity>
             )}
-          </TouchableOpacity>
-        </View>
+
+            <TouchableOpacity
+              style={[styles.nextBtn, { marginTop: 24 }, loading && styles.disabled]}
+              onPress={handleNext}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.navy} />
+              ) : (
+                <>
+                  <Text style={styles.nextBtnText}>
+                    {showVehicle ? (isSv ? "Fortsätt" : "Continue") : (isSv ? "Skapa konto" : "Create Account")}
+                  </Text>
+                  <Feather name={showVehicle ? "arrow-right" : "check"} size={20} color={Colors.navy} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Step 4: Terms + create account (driver/both only) */}
+        {step === 4 && showVehicle && (
+          <View style={styles.stepContent}>
+            <Text style={styles.stepTitle}>
+              {isSv ? "Godkänn villkor" : "Agree to Terms"}
+            </Text>
+            <Text style={styles.stepSubtitle}>
+              {isSv
+                ? "Läs och godkänn villkoren för att slutföra din registrering."
+                : "Read and accept the terms to complete your registration."}
+            </Text>
+
+            <View style={styles.form}>
+              <TouchableOpacity
+                style={styles.termsRow}
+                onPress={() => setAgreedToTerms(!agreedToTerms)}
+                activeOpacity={0.8}
+              >
+                <View style={[styles.checkbox, agreedToTerms && styles.checkboxActive]}>
+                  {agreedToTerms && <Feather name="check" size={14} color={Colors.navy} />}
+                </View>
+                <Text style={styles.termsText}>
+                  {t("agreeToTerms")}
+                  <Text style={styles.termsLink} onPress={() => router.push("/terms")}>
+                    {t("termsOfService")}
+                  </Text>
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.nextBtn, { marginTop: 24 }, loading && styles.disabled]}
+              onPress={handleRegister}
+              disabled={loading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={Colors.navy} />
+              ) : (
+                <>
+                  <Text style={styles.nextBtnText}>{t("createAccountBtn")}</Text>
+                  <Feather name="check" size={20} color={Colors.navy} />
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Step 3 customer-only terms (inline, no step 4) */}
+        {step === 3 && !showVehicle && (
+          <View style={[styles.form, { marginTop: 16 }]}>
+            <TouchableOpacity
+              style={styles.termsRow}
+              onPress={() => setAgreedToTerms(!agreedToTerms)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.checkbox, agreedToTerms && styles.checkboxActive]}>
+                {agreedToTerms && <Feather name="check" size={14} color={Colors.navy} />}
+              </View>
+              <Text style={styles.termsText}>
+                {t("agreeToTerms")}
+                <Text style={styles.termsLink} onPress={() => router.push("/terms")}>
+                  {t("termsOfService")}
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         <View style={styles.footer}>
           <Text style={styles.footerText}>{t("alreadyHaveAccount")}</Text>
@@ -296,72 +499,63 @@ function InputField({ label, icon, value, onChangeText, placeholder, secureTextE
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, flexGrow: 1 },
-  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
-  backBtn: { width: 40, height: 40, justifyContent: "center" },
-  header: { marginBottom: 28 },
-  logoSmall: {
-    width: 72,
-    height: 72,
-    borderRadius: 18,
-    marginBottom: 16,
-  },
-  title: { fontSize: 26, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 4 },
-  subtitle: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted },
-  rolePicker: {
-    flexDirection: "row",
-    backgroundColor: Colors.surface,
-    borderRadius: 12,
-    padding: 4,
-    marginBottom: 12,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  roleBtn: {
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
+  stepRow: { flexDirection: "row", gap: 6, marginBottom: 8 },
+  stepDot: {
     flex: 1,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: Colors.border,
+  },
+  stepDotActive: { backgroundColor: Colors.gold },
+  stepLabel: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.textMuted,
+    marginBottom: 24,
+  },
+  stepContent: { flex: 1 },
+  stepTitle: { fontSize: 26, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 8 },
+  stepSubtitle: { fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginBottom: 28, lineHeight: 22 },
+
+  roleCards: { gap: 12, marginBottom: 8 },
+  roleCard: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 10,
-    borderRadius: 10,
-    gap: 5,
+    gap: 14,
+    backgroundColor: Colors.surface,
+    borderRadius: 16,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: Colors.border,
   },
-  roleBtnActive: { backgroundColor: Colors.gold },
-  roleText: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
-  roleTextActive: { color: Colors.navy },
-  bothHint: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 8,
-    backgroundColor: `${Colors.gold}12`,
-    borderRadius: 10,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: `${Colors.gold}30`,
-    marginBottom: 12,
+  roleCardActive: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
   },
-  bothHintText: {
-    flex: 1,
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.gold,
-    lineHeight: 18,
-  },
+  roleCardText: { flex: 1 },
+  roleCardTitle: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.text, marginBottom: 2 },
+  roleCardTitleActive: { color: Colors.navy },
+  roleCardDesc: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, lineHeight: 19 },
+  roleCardDescActive: { color: `${Colors.navy}CC` },
+
   form: { gap: 16 },
   inputGroup: { gap: 8 },
-  label: { fontSize: 12, fontFamily: "Inter_500Medium", color: Colors.textMuted, letterSpacing: 0.5, textTransform: "uppercase" },
+  label: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted, letterSpacing: 0.4 },
   inputWrapper: {
     flexDirection: "row",
     alignItems: "center",
     backgroundColor: Colors.surface,
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: Colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    gap: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 12,
   },
-  input: { fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.text },
-  pickerText: { flex: 1, fontSize: 15, fontFamily: "Inter_400Regular" },
+  input: { fontSize: 16, fontFamily: "Inter_400Regular", color: Colors.text },
+  pickerText: { flex: 1, fontSize: 16, fontFamily: "Inter_400Regular" },
   cityDropdown: {
     backgroundColor: Colors.surface,
     borderRadius: 12,
@@ -374,99 +568,85 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
   cityOptionActive: { backgroundColor: `${Colors.gold}18` },
-  cityOptionText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.text },
+  cityOptionText: { fontSize: 15, fontFamily: "Inter_400Regular", color: Colors.text },
   cityOptionTextActive: { fontFamily: "Inter_600SemiBold", color: Colors.gold },
-  termsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    marginTop: 4,
-  },
-  checkbox: {
-    width: 20,
-    height: 20,
-    borderRadius: 6,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  checkboxActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
-  termsText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, flex: 1 },
-  termsLink: { color: Colors.gold, fontFamily: "Inter_500Medium" },
-  registerBtn: {
-    backgroundColor: Colors.gold,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  registerBtnText: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: Colors.navy },
-  disabled: { opacity: 0.7 },
-  footer: { flexDirection: "row", justifyContent: "center", marginTop: 28 },
-  footerText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted },
-  footerLink: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.gold },
+
   anyCarBanner: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 10,
     backgroundColor: `${Colors.gold}15`,
     borderRadius: 12,
-    padding: 12,
+    padding: 14,
     borderWidth: 1,
     borderColor: `${Colors.gold}30`,
   },
-  anyCarTitle: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.gold,
-    marginBottom: 2,
-  },
-  anyCarSub: {
-    fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    lineHeight: 17,
-  },
+  anyCarTitle: { fontSize: 14, fontFamily: "Inter_600SemiBold", color: Colors.gold, marginBottom: 2 },
+  anyCarSub: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted, lineHeight: 18 },
+
   vehicleTypeSection: { gap: 8 },
-  vehicleTypeLabel: {
-    fontSize: 13,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.textMuted,
-  },
-  vehicleTypeGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
+  vehicleTypeLabel: { fontSize: 13, fontFamily: "Inter_600SemiBold", color: Colors.textMuted },
+  vehicleTypeGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   vehicleTypeBtn: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
     borderRadius: 10,
     backgroundColor: Colors.surface,
     borderWidth: 1,
     borderColor: Colors.border,
   },
-  vehicleTypeBtnActive: {
+  vehicleTypeBtnActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  vehicleTypeBtnText: { fontSize: 13, fontFamily: "Inter_500Medium", color: Colors.text },
+  vehicleTypeBtnTextActive: { color: Colors.navy, fontFamily: "Inter_600SemiBold" },
+
+  termsRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 12,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: Colors.border,
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  checkboxActive: { backgroundColor: Colors.gold, borderColor: Colors.gold },
+  termsText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted, flex: 1, lineHeight: 21 },
+  termsLink: { color: Colors.gold, fontFamily: "Inter_600SemiBold" },
+
+  nextBtn: {
     backgroundColor: Colors.gold,
-    borderColor: Colors.gold,
+    borderRadius: 16,
+    paddingVertical: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    marginTop: 8,
   },
-  vehicleTypeBtnText: {
-    fontSize: 12,
-    fontFamily: "Inter_500Medium",
-    color: Colors.text,
-  },
-  vehicleTypeBtnTextActive: {
-    color: Colors.navy,
-    fontFamily: "Inter_600SemiBold",
-  },
+  nextBtnText: { fontSize: 17, fontFamily: "Inter_700Bold", color: Colors.navy },
+  disabled: { opacity: 0.7 },
+
+  footer: { flexDirection: "row", justifyContent: "center", marginTop: 28 },
+  footerText: { fontSize: 14, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  footerLink: { fontSize: 14, fontFamily: "Inter_700Bold", color: Colors.gold },
 });

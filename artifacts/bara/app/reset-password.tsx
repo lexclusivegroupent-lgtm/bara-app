@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   View,
   Text,
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     gap: 16,
   },
-  backBtn: { width: 40, height: 40, justifyContent: "center", marginBottom: 32 },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center", marginBottom: 32 },
   iconWrap: {
     width: 64,
     height: 64,

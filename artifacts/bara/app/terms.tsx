@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Linking } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -131,7 +131,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn: { width: 40, height: 40, justifyContent: "center" },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 17, fontFamily: "Inter_600SemiBold", color: Colors.text },
   updated: { fontSize: 11, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginBottom: 8, fontStyle: "italic" },
   content: { paddingHorizontal: 24, paddingTop: 24 },

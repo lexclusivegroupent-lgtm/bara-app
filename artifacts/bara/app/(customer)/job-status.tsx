@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   View,
   Text,
@@ -637,7 +637,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backBtn: { width: 40, height: 40, justifyContent: "center" },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
   headerTitle: { fontSize: 16, fontFamily: "Inter_600SemiBold", color: Colors.text },
   content: { padding: 20, gap: 16 },
   statusTracker: {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   View,
   Text,
@@ -226,9 +226,10 @@ export default function SettingsScreen() {
           <SettingsRow icon="trash-2" label={t("deleteAccount")} onPress={handleDeleteAccount} danger />
         </View>
 
-        <View style={styles.section}>
-          <SettingsRow icon="log-out" label={t("logOut")} onPress={handleLogout} danger />
-        </View>
+        <TouchableOpacity style={styles.logoutBtn} onPress={handleLogout} activeOpacity={0.85}>
+          <Feather name="log-out" size={20} color="#fff" />
+          <Text style={styles.logoutBtnText}>{t("logOut")}</Text>
+        </TouchableOpacity>
 
         <View style={styles.versionBlock}>
           <Text style={styles.versionText}>{t("appVersion")}</Text>
@@ -465,7 +466,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 18,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
@@ -484,7 +485,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 18,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
@@ -495,7 +496,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 18,
     borderTopWidth: 1,
     borderTopColor: Colors.border,
   },
@@ -589,6 +590,16 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.text,
   },
+  logoutBtn: {
+    backgroundColor: Colors.error,
+    borderRadius: 16,
+    paddingVertical: 18,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+  },
+  logoutBtnText: { fontSize: 17, fontFamily: "Inter_700Bold", color: "#fff" },
   versionBlock: {
     alignItems: "center" as const,
     paddingVertical: 20,

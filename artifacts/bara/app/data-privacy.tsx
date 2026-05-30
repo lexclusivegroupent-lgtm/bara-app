@@ -1,4 +1,4 @@
-import React from "react";
+﻿import React from "react";
 import {
   View,
   Text,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backArrow: { padding: 4, marginTop: 2 },
+  backArrow: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
   subtitle: { fontSize: 12, fontFamily: "Inter_400Regular", color: Colors.textMuted, marginTop: 2 },
   content: { padding: 20, gap: 16 },

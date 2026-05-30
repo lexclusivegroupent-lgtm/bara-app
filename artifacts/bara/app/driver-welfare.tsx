@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -210,7 +210,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
-  backArrow: { padding: 4 },
+  backArrow: { width: 56, height: 56, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 20, fontFamily: "Inter_700Bold", color: Colors.text },
   content: { padding: 20, gap: 16 },
   earningsCard: {

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+﻿import React, { useState } from "react";
 import {
   View,
   Text,
@@ -17,8 +17,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
 import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
+import { useLanguage } from "@/context/LanguageContext";
 
 export default function ForgotPasswordScreen() {
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
@@ -29,11 +31,11 @@ export default function ForgotPasswordScreen() {
   async function handleSubmit() {
     const trimmed = email.trim().toLowerCase();
     if (!trimmed) {
-      setError("Please enter your email address.");
+      setError(t("errorRequiredField"));
       return;
     }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      setError("Please enter a valid email address.");
+      setError(t("errorInvalidEmail"));
       return;
     }
 
@@ -47,7 +49,7 @@ export default function ForgotPasswordScreen() {
       });
       const data = await safeJson(res);
       if (!res.ok) {
-        setError(data.error || "Something went wrong. Please try again.");
+        setError(data.error || t("errorUnknown"));
         return;
       }
       if (data.devToken) {
@@ -55,7 +57,7 @@ export default function ForgotPasswordScreen() {
       }
       setSubmitted(true);
     } catch {
-      setError("Could not reach server. Check your internet connection.");
+      setError(t("errorNetwork"));
     } finally {
       setLoading(false);
     }
@@ -164,7 +166,7 @@ export default function ForgotPasswordScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, flexGrow: 1 },
-  backBtn: { width: 40, height: 40, justifyContent: "center", marginBottom: 32 },
+  backBtn: { width: 56, height: 56, justifyContent: "center", alignItems: "center", marginBottom: 32 },
   iconWrap: {
     width: 64,
     height: 64,

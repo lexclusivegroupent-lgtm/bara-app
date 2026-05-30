@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   ScrollView,
   Image,
+  Modal,
 } from "react-native";
 import { router } from "expo-router";
 import { Feather } from "@expo/vector-icons";
@@ -28,6 +29,8 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBankIdModal, setShowBankIdModal] = useState(false);
+  const isSv = t("logIn") === "Logga in";
 
   async function handleLogin() {
     if (!email.trim() || !password.trim()) {
@@ -47,7 +50,7 @@ export default function LoginScreen() {
       console.log("[Login] router.replace() called successfully");
     } catch (e: any) {
       console.log("[Login] login() threw error:", e.message);
-      setError(e.message || "Invalid credentials. Please try again.");
+      setError(e.message || t("errorLoginFailed"));
       setLoading(false);
     }
   }
@@ -148,6 +151,20 @@ export default function LoginScreen() {
             </TouchableOpacity>
           </View>
 
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>{isSv ? "eller" : "or"}</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
+          <TouchableOpacity
+            style={styles.bankIdBtn}
+            onPress={() => setShowBankIdModal(true)}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.bankIdBtnText}>🔐 BankID</Text>
+          </TouchableOpacity>
+
           <View style={styles.footer}>
             <Text style={styles.footerText}>{t("noAccount")}</Text>
             <TouchableOpacity onPress={() => router.replace("/register")}>
@@ -156,6 +173,25 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <Modal visible={showBankIdModal} transparent animationType="fade">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalIconRow}>
+              <Text style={styles.modalIcon}>🔐</Text>
+            </View>
+            <Text style={styles.modalTitle}>BankID</Text>
+            <Text style={styles.modalBody}>
+              {isSv
+                ? "Inloggning med BankID kommer snart. Vi jobbar på att integrera BankID för enklare och säkrare inloggning."
+                : "BankID login is coming soon. We are working on integrating BankID for easier and more secure login."}
+            </Text>
+            <TouchableOpacity style={styles.modalCloseBtn} onPress={() => setShowBankIdModal(false)} activeOpacity={0.85}>
+              <Text style={styles.modalCloseBtnText}>{isSv ? "Stäng" : "Close"}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -167,9 +203,10 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   backBtn: {
-    width: 40,
-    height: 40,
+    width: 56,
+    height: 56,
     justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   header: {
@@ -256,7 +293,7 @@ const styles = StyleSheet.create({
   loginBtn: {
     backgroundColor: Colors.gold,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 18,
     alignItems: "center",
     marginTop: 8,
   },
@@ -265,6 +302,67 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     color: Colors.navy,
   },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginTop: 8,
+  },
+  dividerLine: { flex: 1, height: 1, backgroundColor: Colors.border },
+  dividerText: { fontSize: 13, fontFamily: "Inter_400Regular", color: Colors.textMuted },
+  bankIdBtn: {
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    paddingVertical: 18,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: Colors.border,
+    flexDirection: "row",
+    justifyContent: "center",
+    gap: 8,
+  },
+  bankIdBtnText: {
+    fontSize: 17,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.65)",
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: Colors.surface,
+    borderRadius: 20,
+    padding: 28,
+    width: "100%",
+    alignItems: "center",
+    gap: 16,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  modalIconRow: { alignItems: "center" },
+  modalIcon: { fontSize: 48 },
+  modalTitle: { fontSize: 22, fontFamily: "Inter_700Bold", color: Colors.text },
+  modalBody: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 23,
+  },
+  modalCloseBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 14,
+    paddingVertical: 16,
+    paddingHorizontal: 40,
+    alignItems: "center",
+    marginTop: 4,
+    width: "100%",
+  },
+  modalCloseBtnText: { fontSize: 16, fontFamily: "Inter_700Bold", color: Colors.navy },
   disabled: {
     opacity: 0.7,
   },
