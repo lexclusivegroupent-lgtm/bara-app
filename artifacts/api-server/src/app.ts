@@ -1,4 +1,5 @@
-import express, { type Express } from "express";
+import express, { type Express, type Request, type Response, type NextFunction } from "express";
+import compression from "compression";
 import cors from "cors";
 import rateLimit from "express-rate-limit";
 import pinoHttp from "pino-http";
@@ -12,6 +13,17 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app: Express = express();
+
+// Gzip compression — reduces response size ~70%
+app.use(compression());
+
+// 30-second request timeout
+app.use((_req: Request, res: Response, next: NextFunction) => {
+  res.setTimeout(30_000, () => {
+    res.status(503).json({ error: "Request timeout" });
+  });
+  next();
+});
 
 app.use(
   pinoHttp({

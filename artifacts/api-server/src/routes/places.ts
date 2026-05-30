@@ -6,6 +6,23 @@ import { sql } from "drizzle-orm";
 
 const router: IRouter = Router();
 
+const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+const geocodeCache = new Map<string, { data: unknown; expires: number }>();
+
+function getCached(key: string): unknown | null {
+  const entry = geocodeCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expires) {
+    geocodeCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setCache(key: string, data: unknown): void {
+  geocodeCache.set(key, { data, expires: Date.now() + CACHE_TTL_MS });
+}
+
 function getToken(): string | null {
   return process.env.MAPBOX_SECRET_TOKEN || process.env.EXPO_PUBLIC_MAPBOX_TOKEN || null;
 }
@@ -35,6 +52,14 @@ router.get("/autocomplete", authenticate, async (req: Request, res: Response) =>
   const token = getToken();
   if (!token) {
     res.status(503).json({ error: "Mapbox token not configured" });
+    return;
+  }
+
+  const cacheKey = `ac:${input}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    res.set("X-Cache", "HIT");
+    res.json(cached);
     return;
   }
 
@@ -71,7 +96,10 @@ router.get("/autocomplete", authenticate, async (req: Request, res: Response) =>
       };
     });
 
-    res.json({ predictions });
+    const result = { predictions };
+    setCache(cacheKey, result);
+    res.set("X-Cache", "MISS");
+    res.json(result);
   } catch (err) {
     (req as any).log?.error(err, "Places autocomplete error");
     res.status(500).json({ error: "Internal server error" });
@@ -91,6 +119,14 @@ router.get("/details", authenticate, async (req: Request, res: Response) => {
   const token = getToken();
   if (!token) {
     res.status(503).json({ error: "Mapbox token not configured" });
+    return;
+  }
+
+  const cacheKey = `det:${placeId}`;
+  const cached = getCached(cacheKey);
+  if (cached) {
+    res.set("X-Cache", "HIT");
+    res.json(cached);
     return;
   }
 
@@ -118,11 +154,10 @@ router.get("/details", authenticate, async (req: Request, res: Response) => {
 
     const feature = data.features[0];
     const [lng, lat] = feature.geometry.coordinates;
-    res.json({
-      address: feature.place_name,
-      lat,
-      lng,
-    });
+    const result = { address: feature.place_name, lat, lng };
+    setCache(cacheKey, result);
+    res.set("X-Cache", "MISS");
+    res.json(result);
   } catch (err) {
     (req as any).log?.error(err, "Places details error");
     res.status(500).json({ error: "Internal server error" });
