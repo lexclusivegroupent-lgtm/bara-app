@@ -23,37 +23,40 @@ import Animated, {
 import * as Haptics from "expo-haptics";
 
 import { useAuth } from "@/context/AuthContext";
+import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
-const SERVICE_CARDS = [
-  {
-    icon: "tag-outline" as const,
-    title: "Blocket & Facebook",
-    desc: "Hämta ditt fynd snabbt",
-  },
-  {
-    icon: "briefcase-outline" as const,
-    title: "Kontors­material",
-    desc: "Kontor & småsaker",
-  },
-  {
-    icon: "laptop" as const,
-    title: "Elektronik & prylar",
-    desc: "Säker hantering",
-  },
+const SERVICE_CARD_ICONS = [
+  "tag-outline",
+  "briefcase-outline",
+  "laptop",
 ] as const;
 
-const STEPS = [
-  { n: "1", title: "Posta jobbet", sub: "60 sekunder", icon: "edit-3" as const },
-  { n: "2", title: "Bäraren accepterar", sub: "Inom minuter", icon: "user-check" as const },
-  { n: "3", title: "Levererat", sub: "På 30 minuter", icon: "check-circle" as const },
+const STEP_ICONS = [
+  "edit-3",
+  "user-check",
+  "check-circle",
 ] as const;
 
 const TRUST_BADGES = ["Max 15kg", "99–299 SEK", "30 min"] as const;
 
 export default function HomeScreen() {
   const { user, isLoading } = useAuth();
+  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
+
+  const SERVICE_CARDS = [
+    { icon: SERVICE_CARD_ICONS[0], title: t("card1Title"), desc: t("card1Desc") },
+    { icon: SERVICE_CARD_ICONS[1], title: t("card2Title"), desc: t("card2Desc") },
+    { icon: SERVICE_CARD_ICONS[2], title: t("card3Title"), desc: t("card3Desc") },
+  ];
+
+  const STEPS = [
+    { n: "1", title: t("step1Title"), sub: t("step1Sub"), icon: STEP_ICONS[0] },
+    { n: "2", title: t("step2Title"), sub: t("step2Sub"), icon: STEP_ICONS[1] },
+    { n: "3", title: t("step3Title"), sub: t("step3Sub"), icon: STEP_ICONS[2] },
+  ];
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(18);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
@@ -108,6 +111,11 @@ export default function HomeScreen() {
 
   return (
     <View style={styles.root}>
+      {/* ─── LANGUAGE TOGGLE (top right) ─── */}
+      <View style={[styles.langToggleContainer, { top: insets.top + (Platform.OS === "web" ? 72 : 12) }]}>
+        <LanguageToggle />
+      </View>
+
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
@@ -129,7 +137,7 @@ export default function HomeScreen() {
             />
             <Text style={styles.wordmark}>Bära</Text>
             <Text style={styles.headline}>
-              Smartaste sättet att{"\n"}flytta småsaker i din stad
+              {t("headline")}
             </Text>
             <View style={styles.badgeRow}>
               {TRUST_BADGES.map((label) => (
@@ -149,7 +157,7 @@ export default function HomeScreen() {
                 onPressIn={() => springPress(primaryScale)}
                 onPressOut={() => springRelease(primaryScale)}
               >
-                <Text style={styles.primaryText}>Kom igång</Text>
+                <Text style={styles.primaryText}>{t("getStarted")}</Text>
                 <Feather name="arrow-right" size={18} color={Colors.navy} />
               </Pressable>
             </Animated.View>
@@ -160,14 +168,14 @@ export default function HomeScreen() {
                 onPressIn={() => springPress(secondaryScale)}
                 onPressOut={() => springRelease(secondaryScale)}
               >
-                <Text style={styles.secondaryText}>Logga in</Text>
+                <Text style={styles.secondaryText}>{t("logIn")}</Text>
               </Pressable>
             </Animated.View>
           </View>
 
           {/* ─── SERVICE CARDS ─── */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Vad kan du skicka?</Text>
+            <Text style={styles.sectionLabel}>{t("serviceLabel")}</Text>
             <View style={styles.cardsRow}>
               {SERVICE_CARDS.map((card, i) => (
                 <Animated.View
@@ -191,7 +199,7 @@ export default function HomeScreen() {
 
           {/* ─── HOW IT WORKS ─── */}
           <View style={styles.section}>
-            <Text style={styles.sectionLabel}>Så fungerar det</Text>
+            <Text style={styles.sectionLabel}>{t("howItWorksLabel")}</Text>
             <View style={styles.steps}>
               {STEPS.map((step, i) => (
                 <Animated.View
@@ -220,9 +228,7 @@ export default function HomeScreen() {
           {/* ─── TRUST BAR ─── */}
           <View style={styles.trustBar}>
             <Feather name="shield" size={12} color={Colors.textMuted} />
-            <Text style={styles.trustText}>
-              Oberoende uppdragstagare · F-skatt · Säkra betalningar via Stripe
-            </Text>
+            <Text style={styles.trustText}>{t("trustBarText")}</Text>
           </View>
 
         </Animated.View>
@@ -239,6 +245,11 @@ const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: Colors.surfaceDark,
+  },
+  langToggleContainer: {
+    position: "absolute",
+    right: 20,
+    zIndex: 10,
   },
   scroll: {
     paddingHorizontal: 24,

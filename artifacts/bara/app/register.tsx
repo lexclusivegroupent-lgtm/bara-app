@@ -19,6 +19,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { SWEDISH_CITIES } from "@/constants/config";
+import { LanguageToggle } from "@/components/LanguageToggle";
 
 type Role = "customer" | "driver" | "both";
 
@@ -87,9 +88,12 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={20} color={Colors.text} />
-        </TouchableOpacity>
+        <View style={styles.topRow}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Feather name="arrow-left" size={20} color={Colors.text} />
+          </TouchableOpacity>
+          <LanguageToggle />
+        </View>
 
         <View style={styles.header}>
           <Image
@@ -292,7 +296,8 @@ function InputField({ label, icon, value, onChangeText, placeholder, secureTextE
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { paddingHorizontal: 24, flexGrow: 1 },
-  backBtn: { width: 40, height: 40, justifyContent: "center", marginBottom: 20 },
+  topRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 20 },
+  backBtn: { width: 40, height: 40, justifyContent: "center" },
   header: { marginBottom: 28 },
   logoSmall: {
     width: 72,

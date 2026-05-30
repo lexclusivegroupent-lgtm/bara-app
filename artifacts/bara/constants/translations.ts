@@ -516,6 +516,28 @@ const translations = {
     exportCsv: "Export CSV",
     thisWeek: "This week",
     csvShared: "CSV ready to share.",
+
+    // Language toggle
+    langSv: "Svenska",
+    langEn: "English",
+
+    // Landing screen (i18n)
+    headline: "The smartest way to move small items in your city",
+    serviceLabel: "What can you send?",
+    howItWorksLabel: "How it works",
+    step1Title: "Post the job",
+    step1Sub: "60 seconds",
+    step2Title: "Carrier accepts",
+    step2Sub: "Within minutes",
+    step3Title: "Delivered",
+    step3Sub: "In 30 minutes",
+    trustBarText: "Independent contractors · F-tax · Secure payments via Stripe",
+    card1Title: "Blocket & Facebook",
+    card1Desc: "Pick up your find quickly",
+    card2Title: "Office supplies",
+    card2Desc: "Office & small items",
+    card3Title: "Electronics & gadgets",
+    card3Desc: "Safe handling",
   },
 
   sv: {
@@ -1030,6 +1052,28 @@ const translations = {
     hobbyIncomeTitle: "Bära som tilläggsinkomst",
     hobbyIncomeDesc: "Bära är utformat för tilläggsinkomst. De flesta bärare tjänar 500–3 000 kr per månad med Bära vid sidan av sitt ordinarie arbete.",
     taxReminderDesc: "Inkomst från Bära bör deklareras som inkomst från hobby eller tillfälliga tjänster om den understiger den årliga gränsen. Överväg att konsultera en skatterådgivare.",
+
+    // Language toggle
+    langSv: "Svenska",
+    langEn: "English",
+
+    // Landing screen (i18n)
+    headline: "Smartaste sättet att flytta småsaker i din stad",
+    serviceLabel: "Vad kan du skicka?",
+    howItWorksLabel: "Så fungerar det",
+    step1Title: "Posta jobbet",
+    step1Sub: "60 sekunder",
+    step2Title: "Bäraren accepterar",
+    step2Sub: "Inom minuter",
+    step3Title: "Levererat",
+    step3Sub: "På 30 minuter",
+    trustBarText: "Oberoende uppdragstagare · F-skatt · Säkra betalningar via Stripe",
+    card1Title: "Blocket & Facebook",
+    card1Desc: "Hämta ditt fynd snabbt",
+    card2Title: "Kontorsmaterial",
+    card2Desc: "Kontor & småsaker",
+    card3Title: "Elektronik & prylar",
+    card3Desc: "Säker hantering",
   },
 } as const;
 

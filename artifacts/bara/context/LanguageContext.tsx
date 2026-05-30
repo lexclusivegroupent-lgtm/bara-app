@@ -24,6 +24,14 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
     AsyncStorage.getItem(STORAGE_KEY).then((stored) => {
       if (stored === "sv" || stored === "en") {
         setLangState(stored);
+      } else {
+        // Auto-detect device language on first launch
+        try {
+          const locale = Intl.DateTimeFormat().resolvedOptions().locale;
+          setLangState(locale.startsWith("sv") ? "sv" : "en");
+        } catch {
+          setLangState(DEFAULT_LANG);
+        }
       }
     }).catch(() => {});
   }, []);
