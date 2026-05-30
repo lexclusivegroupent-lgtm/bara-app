@@ -9,6 +9,7 @@ import {
   Linking,
   Platform,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -164,6 +165,9 @@ export default function DriverActiveJobScreen() {
       if (!completeRes.ok) {
         const err = await safeJson(completeRes);
         throw new Error(err.error || "Failed to complete job");
+      }
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
       router.replace({
         pathname: "/(driver)/job-complete",

@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery } from "@tanstack/react-query";
+import Animated, { FadeInDown } from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -20,6 +21,7 @@ import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { BottomNav } from "@/components/BottomNav";
 import { JobCard, Job } from "@/components/JobCard";
+import { JobCardSkeleton } from "@/components/Skeleton";
 
 export default function MyJobsScreen() {
   const { user, token } = useAuth();
@@ -44,24 +46,26 @@ export default function MyJobsScreen() {
 
   const safeJobs = Array.isArray(jobs) ? jobs : [];
 
-  const renderItem = useCallback(({ item }: { item: Job }) => (
-    <View style={{ gap: 8 }}>
-      <JobCard
-        job={item}
-        onPress={() => router.push({ pathname: "/(customer)/job-status", params: { id: item.id } })}
-      />
-      {item.status === "completed" && (
-        <TouchableOpacity
-          style={receiptBtnStyle}
-          onPress={() => router.push({ pathname: "/(customer)/receipt", params: { id: item.id } })}
-          activeOpacity={0.85}
-        >
-          <Feather name="file-text" size={13} color={Colors.gold} />
-          <Text style={receiptBtnTextStyle}>{t("viewReceipt")}</Text>
-          <Feather name="chevron-right" size={13} color={Colors.textMuted} />
-        </TouchableOpacity>
-      )}
-    </View>
+  const renderItem = useCallback(({ item, index }: { item: Job; index: number }) => (
+    <Animated.View entering={FadeInDown.delay(index * 60).springify()}>
+      <View style={{ gap: 8 }}>
+        <JobCard
+          job={item}
+          onPress={() => router.push({ pathname: "/(customer)/job-status", params: { id: item.id } })}
+        />
+        {item.status === "completed" && (
+          <TouchableOpacity
+            style={receiptBtnStyle}
+            onPress={() => router.push({ pathname: "/(customer)/receipt", params: { id: item.id } })}
+            activeOpacity={0.85}
+          >
+            <Feather name="file-text" size={13} color={Colors.gold} />
+            <Text style={receiptBtnTextStyle}>{t("viewReceipt")}</Text>
+            <Feather name="chevron-right" size={13} color={Colors.textMuted} />
+          </TouchableOpacity>
+        )}
+      </View>
+    </Animated.View>
   ), [t]);
 
   const keyExtractor = useCallback((item: Job) => item.id.toString(), []);
@@ -104,9 +108,10 @@ export default function MyJobsScreen() {
           }
           ListEmptyComponent={
             isLoading ? (
-              <View style={styles.empty}>
-                <MaterialCommunityIcons name="dots-horizontal" size={32} color={Colors.textMuted} />
-                <Text style={styles.emptyText}>{t("loading")}</Text>
+              <View style={{ gap: 12, paddingHorizontal: 20, paddingTop: 8 }}>
+                <JobCardSkeleton />
+                <JobCardSkeleton />
+                <JobCardSkeleton />
               </View>
             ) : (
               <View style={styles.empty}>

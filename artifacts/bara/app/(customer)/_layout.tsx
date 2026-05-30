@@ -11,13 +11,14 @@ export default function CustomerLayout() {
         animation: "slide_from_right",
       }}
     >
-      <Stack.Screen name="home" />
-      <Stack.Screen name="post-job" />
-      <Stack.Screen name="my-jobs" />
-      <Stack.Screen name="job-status" />
-      <Stack.Screen name="rate" />
-      <Stack.Screen name="settings" />
-      <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="home" options={{ animation: "fade" }} />
+      <Stack.Screen name="my-jobs" options={{ animation: "fade" }} />
+      <Stack.Screen name="post-job" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="job-status" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="receipt" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="rate" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="settings" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="edit-profile" options={{ animation: "slide_from_bottom" }} />
     </Stack>
   );
 }

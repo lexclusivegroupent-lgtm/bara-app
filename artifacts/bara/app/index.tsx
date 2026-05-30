@@ -20,6 +20,7 @@ import Animated, {
   withSpring,
   FadeInDown,
 } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 import { useAuth } from "@/context/AuthContext";
 import { Colors } from "@/constants/colors";
@@ -56,6 +57,26 @@ export default function HomeScreen() {
   const opacity = useSharedValue(0);
   const translateY = useSharedValue(18);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
+
+  const primaryScale = useSharedValue(1);
+  const secondaryScale = useSharedValue(1);
+
+  const primaryBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: primaryScale.value }],
+  }));
+  const secondaryBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: secondaryScale.value }],
+  }));
+
+  function springPress(sv: ReturnType<typeof useSharedValue<number>>) {
+    sv.value = withSpring(0.96, { damping: 15, stiffness: 400 });
+    if (Platform.OS !== "web") {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    }
+  }
+  function springRelease(sv: ReturnType<typeof useSharedValue<number>>) {
+    sv.value = withSpring(1, { damping: 15, stiffness: 400 });
+  }
 
   useEffect(() => {
     if (!isLoading) {
@@ -121,21 +142,29 @@ export default function HomeScreen() {
 
           {/* ─── CTA BUTTONS ─── */}
           <View style={styles.ctas}>
-            <TouchableOpacity
-              style={styles.primaryBtn}
-              onPress={() => router.push("/register")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.primaryText}>Kom igång</Text>
-              <Feather name="arrow-right" size={18} color={Colors.navy} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.secondaryBtn}
-              onPress={() => router.push("/login")}
-              activeOpacity={0.85}
-            >
-              <Text style={styles.secondaryText}>Logga in</Text>
-            </TouchableOpacity>
+            <Animated.View style={primaryBtnStyle}>
+              <TouchableOpacity
+                style={styles.primaryBtn}
+                onPress={() => router.push("/register")}
+                onPressIn={() => springPress(primaryScale)}
+                onPressOut={() => springRelease(primaryScale)}
+                activeOpacity={1}
+              >
+                <Text style={styles.primaryText}>Kom igång</Text>
+                <Feather name="arrow-right" size={18} color={Colors.navy} />
+              </TouchableOpacity>
+            </Animated.View>
+            <Animated.View style={secondaryBtnStyle}>
+              <TouchableOpacity
+                style={styles.secondaryBtn}
+                onPress={() => router.push("/login")}
+                onPressIn={() => springPress(secondaryScale)}
+                onPressOut={() => springRelease(secondaryScale)}
+                activeOpacity={1}
+              >
+                <Text style={styles.secondaryText}>Logga in</Text>
+              </TouchableOpacity>
+            </Animated.View>
           </View>
 
           {/* ─── SERVICE CARDS ─── */}

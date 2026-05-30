@@ -11,13 +11,13 @@ export default function DriverLayout() {
         animation: "slide_from_right",
       }}
     >
-      <Stack.Screen name="map" />
-      <Stack.Screen name="active-job" />
-      <Stack.Screen name="earnings" />
-      <Stack.Screen name="job-complete" />
-      <Stack.Screen name="rate" />
-      <Stack.Screen name="settings" />
-      <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="map" options={{ animation: "fade" }} />
+      <Stack.Screen name="active-job" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="earnings" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="job-complete" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="rate" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="settings" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="edit-profile" options={{ animation: "slide_from_bottom" }} />
     </Stack>
   );
 }

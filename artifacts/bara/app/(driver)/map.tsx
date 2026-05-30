@@ -14,6 +14,8 @@ import { router } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import * as Haptics from "expo-haptics";
 
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
@@ -23,6 +25,7 @@ import { BASE_URL } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { BottomNav } from "@/components/BottomNav";
 import { JobCard, Job } from "@/components/JobCard";
+import { JobCardSkeleton } from "@/components/Skeleton";
 import { DriverMapView } from "@/components/DriverMapView";
 
 export default function DriverMapScreen() {
@@ -77,6 +80,9 @@ export default function DriverMapScreen() {
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to accept job");
       queryClient.invalidateQueries({ queryKey: ["availableJobs"] });
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
       router.push({ pathname: "/(driver)/active-job", params: { id: jobId } });
     } catch (e: any) {
       setErrorMsg(e.message || "Could not accept this job.");
@@ -194,14 +200,16 @@ export default function DriverMapScreen() {
         <FlatList
           data={availableJobs}
           keyExtractor={(item) => item.id.toString()}
-          renderItem={({ item }) => (
-            <JobCard
-              job={item}
-              showAcceptButton={!!user?.isAvailable}
-              onAccept={() => openSurchargeSheet(item)}
-              isAccepting={accepting === item.id}
-              showDriverEarnings
-            />
+          renderItem={({ item, index }) => (
+            <Animated.View entering={FadeInDown.delay(index * 70).springify()}>
+              <JobCard
+                job={item}
+                showAcceptButton={!!user?.isAvailable}
+                onAccept={() => openSurchargeSheet(item)}
+                isAccepting={accepting === item.id}
+                showDriverEarnings
+              />
+            </Animated.View>
           )}
           ItemSeparatorComponent={() => <View style={{ height: 12 }} />}
           contentContainerStyle={styles.jobsList}
@@ -216,8 +224,10 @@ export default function DriverMapScreen() {
           }
           ListEmptyComponent={
             isLoading ? (
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyText}>{t("loading")}</Text>
+              <View style={{ gap: 12, paddingHorizontal: 16, paddingTop: 8 }}>
+                <JobCardSkeleton />
+                <JobCardSkeleton />
+                <JobCardSkeleton />
               </View>
             ) : (
               <View style={styles.emptyState}>

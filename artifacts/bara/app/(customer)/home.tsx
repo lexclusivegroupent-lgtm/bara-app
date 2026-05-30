@@ -21,6 +21,8 @@ import { BASE_URL, formatSEK, formatDate, type JobType, JOB_TYPE_ICONS } from "@
 import { safeJson } from "@/utils/api";
 import { BottomNav } from "@/components/BottomNav";
 import { JobCard, Job } from "@/components/JobCard";
+import { JobCardSkeleton } from "@/components/Skeleton";
+import { PressableScale } from "@/components/PressableScale";
 
 type Category = {
   type: JobType;
@@ -178,11 +180,10 @@ export default function CustomerHome() {
         {/* 2-column category grid */}
         <View style={styles.categoryGrid}>
           {CATEGORIES.map((cat) => (
-            <TouchableOpacity
+            <PressableScale
               key={cat.type}
               style={styles.categoryCard}
               onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: cat.type } })}
-              activeOpacity={0.78}
             >
               <View style={styles.categoryIconBg}>
                 <MaterialCommunityIcons name={cat.icon as any} size={26} color={Colors.gold} />
@@ -191,7 +192,7 @@ export default function CustomerHome() {
               <View style={styles.categoryArrow}>
                 <Feather name="arrow-right" size={12} color={Colors.gold} />
               </View>
-            </TouchableOpacity>
+            </PressableScale>
           ))}
         </View>
 
@@ -212,8 +213,9 @@ export default function CustomerHome() {
         )}
 
         {isLoading && (
-          <View style={styles.loadingCard}>
-            <Text style={styles.loadingText}>{t("loadingJobs")}</Text>
+          <View style={{ gap: 12 }}>
+            <JobCardSkeleton />
+            <JobCardSkeleton />
           </View>
         )}
 

@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Platform,
 } from "react-native";
+import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -276,6 +277,9 @@ export default function PostJobScreen() {
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to post job");
+      if (Platform.OS !== "web") {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      }
       router.replace("/(customer)/my-jobs");
     } catch (e: any) {
       setError(e.message || "Failed to post job. Please try again.");

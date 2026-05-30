@@ -77,14 +77,21 @@ function RootLayoutNav() {
         animation: "slide_from_right",
       }}
     >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="login" />
-      <Stack.Screen name="register" />
+      <Stack.Screen name="index" options={{ animation: "fade" }} />
       <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
-      <Stack.Screen name="terms" />
-      <Stack.Screen name="notifications" />
-      <Stack.Screen name="(customer)" options={{ headerShown: false }} />
-      <Stack.Screen name="(driver)" options={{ headerShown: false }} />
+      <Stack.Screen name="login" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="register" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="terms" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="privacy" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="support" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="insurance-safety" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="notifications" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="driver-agreement" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="dac7-consent" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="tax-info" options={{ animation: "slide_from_bottom" }} />
+      <Stack.Screen name="driver-onboarding-checklist" options={{ animation: "slide_from_right" }} />
+      <Stack.Screen name="(customer)" options={{ headerShown: false, animation: "fade" }} />
+      <Stack.Screen name="(driver)" options={{ headerShown: false, animation: "fade" }} />
     </Stack>
     </>
   );
