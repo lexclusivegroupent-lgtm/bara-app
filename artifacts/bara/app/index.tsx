@@ -4,36 +4,57 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Platform,
   Image,
+  ScrollView,
 } from "react-native";
 import { router } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { LinearGradient } from "expo-linear-gradient";
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   withDelay,
   withTiming,
+  withSpring,
   FadeInDown,
 } from "react-native-reanimated";
 
 import { useAuth } from "@/context/AuthContext";
-import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 
-const { width, height } = Dimensions.get("window");
+const SERVICE_CARDS = [
+  {
+    icon: "tag-outline" as const,
+    title: "Blocket & Facebook",
+    desc: "Hämta ditt fynd snabbt",
+  },
+  {
+    icon: "briefcase-outline" as const,
+    title: "Kontors­material",
+    desc: "Kontor & småsaker",
+  },
+  {
+    icon: "laptop" as const,
+    title: "Elektronik & prylar",
+    desc: "Säker hantering",
+  },
+] as const;
+
+const STEPS = [
+  { n: "1", title: "Posta jobbet", sub: "60 sekunder", icon: "edit-3" as const },
+  { n: "2", title: "Bäraren accepterar", sub: "Inom minuter", icon: "user-check" as const },
+  { n: "3", title: "Levererat", sub: "På 30 minuter", icon: "check-circle" as const },
+] as const;
+
+const TRUST_BADGES = ["Max 15kg", "99–299 SEK", "30 min"] as const;
 
 export default function HomeScreen() {
   const { user, isLoading } = useAuth();
-  const { t } = useLanguage();
   const insets = useSafeAreaInsets();
-  const logoScale = useSharedValue(0);
-  const contentOpacity = useSharedValue(0);
+  const opacity = useSharedValue(0);
+  const translateY = useSharedValue(18);
   const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   useEffect(() => {
@@ -45,223 +66,351 @@ export default function HomeScreen() {
         }
         setOnboardingChecked(true);
         if (user) {
-          if (user.role === "driver") {
-            router.replace("/(driver)/map");
-          } else {
-            router.replace("/(customer)/home");
-          }
+          router.replace(user.role === "driver" ? "/(driver)/map" : "/(customer)/home");
           return;
         }
-        logoScale.value = withSpring(1, { damping: 12 });
-        contentOpacity.value = withDelay(400, withTiming(1, { duration: 600 }));
+        opacity.value = withDelay(120, withTiming(1, { duration: 650 }));
+        translateY.value = withDelay(120, withSpring(0, { damping: 16, stiffness: 90 }));
       });
     }
   }, [isLoading, user]);
 
-  const logoStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: logoScale.value }],
-  }));
-
-  const contentStyle = useAnimatedStyle(() => ({
-    opacity: contentOpacity.value,
+  const animStyle = useAnimatedStyle(() => ({
+    opacity: opacity.value,
+    transform: [{ translateY: translateY.value }],
   }));
 
   if (isLoading || !onboardingChecked) {
-    return (
-      <View style={[styles.container, { backgroundColor: Colors.navy }]} />
-    );
+    return <View style={styles.splash} />;
   }
-
   if (user) return null;
 
   return (
-    <LinearGradient
-      colors={[Colors.surfaceDark, Colors.navy, Colors.surface]}
-      style={styles.container}
-    >
-      <View style={[styles.content, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20), paddingBottom: insets.bottom + (Platform.OS === "web" ? 34 : 20) }]}>
-        <Animated.View style={[styles.logoSection, logoStyle]}>
-          <Image
-            source={require("../assets/images/logo.png")}
-            style={styles.logoImage}
-            resizeMode="contain"
-          />
-          <Text style={styles.appName}>Bära</Text>
-          <Text style={styles.taglineEN}>Small items · Max 15kg · 99–299 SEK</Text>
-          <Text style={styles.taglineSV}>Småsaksfrakt · Max 15kg · 99–299 SEK</Text>
-          <View style={styles.freeLaunchBadge}>
-            <Feather name="tag" size={12} color={Colors.success} />
-            <Text style={styles.freeLaunchText}>{t("freeDuringLaunch")}</Text>
+    <View style={styles.root}>
+      <ScrollView
+        contentContainerStyle={[
+          styles.scroll,
+          {
+            paddingTop: insets.top + (Platform.OS === "web" ? 64 : 24),
+            paddingBottom: insets.bottom + 48,
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View style={animStyle}>
+
+          {/* ─── HERO ─── */}
+          <View style={styles.hero}>
+            <Image
+              source={require("../assets/images/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <Text style={styles.wordmark}>Bära</Text>
+            <Text style={styles.headline}>
+              Smartaste sättet att{"\n"}flytta småsaker i din stad
+            </Text>
+            <View style={styles.badgeRow}>
+              {TRUST_BADGES.map((label) => (
+                <View key={label} style={styles.badge}>
+                  <Text style={styles.badgeText}>{label}</Text>
+                </View>
+              ))}
+            </View>
           </View>
+
+          {/* ─── CTA BUTTONS ─── */}
+          <View style={styles.ctas}>
+            <TouchableOpacity
+              style={styles.primaryBtn}
+              onPress={() => router.push("/register")}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.primaryText}>Kom igång</Text>
+              <Feather name="arrow-right" size={18} color={Colors.navy} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.secondaryBtn}
+              onPress={() => router.push("/login")}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.secondaryText}>Logga in</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* ─── SERVICE CARDS ─── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Vad kan du skicka?</Text>
+            <View style={styles.cardsRow}>
+              {SERVICE_CARDS.map((card, i) => (
+                <Animated.View
+                  key={card.icon}
+                  entering={FadeInDown.delay(i * 80 + 200).springify()}
+                  style={styles.card}
+                >
+                  <View style={styles.cardIconBg}>
+                    <MaterialCommunityIcons
+                      name={card.icon}
+                      size={20}
+                      color={Colors.gold}
+                    />
+                  </View>
+                  <Text style={styles.cardTitle}>{card.title}</Text>
+                  <Text style={styles.cardDesc}>{card.desc}</Text>
+                </Animated.View>
+              ))}
+            </View>
+          </View>
+
+          {/* ─── HOW IT WORKS ─── */}
+          <View style={styles.section}>
+            <Text style={styles.sectionLabel}>Så fungerar det</Text>
+            <View style={styles.steps}>
+              {STEPS.map((step, i) => (
+                <Animated.View
+                  key={step.n}
+                  entering={FadeInDown.delay(i * 100 + 300).springify()}
+                  style={styles.stepRow}
+                >
+                  <View style={styles.stepLeft}>
+                    <View style={styles.stepCircle}>
+                      <Text style={styles.stepNum}>{step.n}</Text>
+                    </View>
+                    {i < STEPS.length - 1 && <View style={styles.stepConnector} />}
+                  </View>
+                  <View style={styles.stepBody}>
+                    <View style={styles.stepTitleRow}>
+                      <Text style={styles.stepTitle}>{step.title}</Text>
+                      <Feather name={step.icon} size={14} color={Colors.gold} />
+                    </View>
+                    <Text style={styles.stepSub}>{step.sub}</Text>
+                  </View>
+                </Animated.View>
+              ))}
+            </View>
+          </View>
+
+          {/* ─── TRUST BAR ─── */}
+          <View style={styles.trustBar}>
+            <Feather name="shield" size={12} color={Colors.textMuted} />
+            <Text style={styles.trustText}>
+              Oberoende uppdragstagare · F-skatt · Säkra betalningar via Stripe
+            </Text>
+          </View>
+
         </Animated.View>
-
-        <Animated.View style={[styles.serviceCards, contentStyle]}>
-          <ServiceCard
-            icon="tag-outline"
-            title={t("furnitureTransport")}
-            subtitle={t("moveSofas")}
-            delay={0}
-          />
-        </Animated.View>
-
-        <Animated.View style={[styles.buttons, contentStyle]}>
-          <TouchableOpacity
-            style={styles.getStartedBtn}
-            onPress={() => router.push("/register")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.getStartedText}>{t("getStarted")}</Text>
-            <Feather name="arrow-right" size={18} color={Colors.navy} />
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.loginBtn}
-            onPress={() => router.push("/login")}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.loginText}>{t("logIn")}</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </View>
-    </LinearGradient>
-  );
-}
-
-function ServiceCard({ icon, title, subtitle, delay }: { icon: any; title: string; subtitle: string; delay: number }) {
-  return (
-    <Animated.View entering={FadeInDown.delay(delay + 600).springify()}>
-      <View style={styles.serviceCard}>
-        <View style={styles.serviceIconBg}>
-          <MaterialCommunityIcons name={icon} size={28} color={Colors.gold} />
-        </View>
-        <View style={styles.serviceInfo}>
-          <Text style={styles.serviceTitle}>{title}</Text>
-          <Text style={styles.serviceSubtitle}>{subtitle}</Text>
-        </View>
-        <Feather name="chevron-right" size={18} color={Colors.textMuted} />
-      </View>
-    </Animated.View>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  splash: {
     flex: 1,
+    backgroundColor: Colors.navy,
   },
-  content: {
+  root: {
     flex: 1,
+    backgroundColor: Colors.surfaceDark,
+  },
+  scroll: {
     paddingHorizontal: 24,
-    justifyContent: "space-between",
   },
-  logoSection: {
+
+  // ── Hero
+  hero: {
     alignItems: "center",
-    paddingTop: 40,
+    marginBottom: 28,
   },
-  logoImage: {
-    width: 120,
-    height: 120,
-    marginBottom: 16,
-    borderRadius: 26,
+  logo: {
+    width: 80,
+    height: 80,
+    borderRadius: 20,
+    marginBottom: 14,
   },
-  appName: {
-    fontSize: 48,
+  wordmark: {
+    fontSize: 52,
     fontFamily: "Inter_700Bold",
     color: Colors.text,
-    letterSpacing: -1,
+    letterSpacing: -2,
+    marginBottom: 10,
   },
-  taglineEN: {
-    fontSize: 16,
-    fontFamily: "Inter_500Medium",
-    color: Colors.gold,
-    marginTop: 4,
-  },
-  taglineSV: {
-    fontSize: 13,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    marginTop: 2,
-    fontStyle: "italic",
-  },
-  freeLaunchBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    backgroundColor: `${Colors.success}18`,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: `${Colors.success}35`,
-    marginTop: 10,
-  },
-  freeLaunchText: {
-    fontSize: 12,
-    fontFamily: "Inter_600SemiBold",
-    color: Colors.success,
-  },
-  serviceCards: {
-    gap: 12,
-  },
-  serviceCard: {
-    backgroundColor: Colors.surface,
-    borderRadius: 16,
-    padding: 16,
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 12,
-  },
-  serviceIconBg: {
-    width: 52,
-    height: 52,
-    borderRadius: 14,
-    backgroundColor: `${Colors.gold}18`,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceTitle: {
-    fontSize: 15,
+  headline: {
+    fontSize: 20,
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
+    textAlign: "center",
+    lineHeight: 28,
+    marginBottom: 20,
+    opacity: 0.88,
   },
-  serviceSubtitle: {
+  badgeRow: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  badge: {
+    borderWidth: 1,
+    borderColor: Colors.gold,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  badgeText: {
     fontSize: 12,
-    fontFamily: "Inter_400Regular",
-    color: Colors.textMuted,
-    marginTop: 2,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.gold,
   },
-  buttons: {
-    gap: 12,
-    paddingBottom: 16,
+
+  // ── CTAs
+  ctas: {
+    gap: 10,
+    marginBottom: 40,
   },
-  getStartedBtn: {
+  primaryBtn: {
     backgroundColor: Colors.gold,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 17,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
-  getStartedText: {
+  primaryText: {
     fontSize: 17,
-    fontFamily: "Inter_600SemiBold",
+    fontFamily: "Inter_700Bold",
     color: Colors.navy,
   },
-  loginBtn: {
+  secondaryBtn: {
     borderWidth: 1.5,
     borderColor: Colors.border,
     borderRadius: 14,
-    paddingVertical: 15,
+    paddingVertical: 16,
     alignItems: "center",
   },
-  loginText: {
+  secondaryText: {
     fontSize: 17,
     fontFamily: "Inter_600SemiBold",
     color: Colors.text,
+  },
+
+  // ── Sections
+  section: {
+    marginBottom: 36,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.textMuted,
+    letterSpacing: 1.4,
+    textTransform: "uppercase",
+    marginBottom: 14,
+  },
+
+  // ── Service cards
+  cardsRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  card: {
+    flex: 1,
+    backgroundColor: Colors.surface,
+    borderRadius: 14,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    gap: 8,
+  },
+  cardIconBg: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: `${Colors.gold}1A`,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cardTitle: {
+    fontSize: 12,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+    lineHeight: 16,
+  },
+  cardDesc: {
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 15,
+  },
+
+  // ── Steps
+  steps: {
+    gap: 0,
+  },
+  stepRow: {
+    flexDirection: "row",
+    gap: 16,
+    minHeight: 60,
+  },
+  stepLeft: {
+    alignItems: "center",
+    width: 32,
+  },
+  stepCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: `${Colors.gold}1A`,
+    borderWidth: 1.5,
+    borderColor: Colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepNum: {
+    fontSize: 13,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+  },
+  stepConnector: {
+    flex: 1,
+    width: 1.5,
+    backgroundColor: Colors.border,
+    marginVertical: 4,
+  },
+  stepBody: {
+    flex: 1,
+    paddingTop: 5,
+    paddingBottom: 18,
+  },
+  stepTitleRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 3,
+  },
+  stepTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  stepSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+  },
+
+  // ── Trust bar
+  trustBar: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    paddingTop: 20,
+  },
+  trustText: {
+    flex: 1,
+    fontSize: 11,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 16,
   },
 });
