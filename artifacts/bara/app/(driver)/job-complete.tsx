@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Colors } from "@/constants/colors";
 import { useLanguage } from "@/context/LanguageContext";
+import { Confetti } from "@/components/Confetti";
 
 export default function JobCompleteScreen() {
   const insets = useSafeAreaInsets();
@@ -22,10 +23,12 @@ export default function JobCompleteScreen() {
   const payoutNum = payout ? Math.round(Number(payout)) : null;
   const taxReserve = payoutNum ? Math.round(payoutNum * 0.30) : null;
 
+  const [confettiActive, setConfettiActive] = useState(false);
   const scaleAnim = useRef(new Animated.Value(0)).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    setTimeout(() => setConfettiActive(true), 200);
     Animated.sequence([
       Animated.spring(scaleAnim, {
         toValue: 1,
@@ -54,6 +57,7 @@ export default function JobCompleteScreen() {
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 20), paddingBottom: insets.bottom + 20 }]}>
+      <Confetti active={confettiActive} />
       <Animated.View style={[styles.checkCircle, { transform: [{ scale: scaleAnim }] }]}>
         <Feather name="check" size={56} color={Colors.navy} />
       </Animated.View>

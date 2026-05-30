@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   View,
   Text,
@@ -8,6 +8,8 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  Modal,
+  Animated,
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
@@ -61,6 +63,9 @@ export default function PostJobScreen() {
   const [preferredTime, setPreferredTime] = useState<Date | null>(null);
   const [distanceKm, setDistanceKm] = useState(10);
   const [loading, setLoading] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const successScale = useRef(new Animated.Value(0)).current;
+  const successFade = useRef(new Animated.Value(0)).current;
   const [calculating, setCalculating] = useState(false);
   const [agreedToOwnership, setAgreedToOwnership] = useState(false);
   const [customerPhotos, setCustomerPhotos] = useState<string[]>([]);
@@ -280,7 +285,14 @@ export default function PostJobScreen() {
       if (Platform.OS !== "web") {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       }
-      router.replace("/(customer)/my-jobs");
+      setLoading(false);
+      setShowSuccess(true);
+      Animated.sequence([
+        Animated.spring(successScale, { toValue: 1, damping: 12, stiffness: 180, useNativeDriver: true }),
+        Animated.timing(successFade, { toValue: 1, duration: 300, useNativeDriver: true }),
+      ]).start();
+      setTimeout(() => router.replace("/(customer)/my-jobs"), 1800);
+      return;
     } catch (e: any) {
       setError(e.message || "Failed to post job. Please try again.");
     } finally {
@@ -290,6 +302,19 @@ export default function PostJobScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <View style={styles.successOverlay}>
+          <Animated.View style={[styles.successCircle, { transform: [{ scale: successScale }] }]}>
+            <Feather name="check" size={48} color={Colors.navy} />
+          </Animated.View>
+          <Animated.Text style={[styles.successTitle, { opacity: successFade }]}>
+            {isSv ? "Jobb publicerat!" : "Job Posted!"}
+          </Animated.Text>
+          <Animated.Text style={[styles.successSub, { opacity: successFade }]}>
+            {isSv ? "Bärare söker ditt jobb nu." : "Carriers are looking at your job now."}
+          </Animated.Text>
+        </View>
+      </Modal>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
@@ -791,6 +816,14 @@ export default function PostJobScreen() {
           <View style={styles.errorBanner}>
             <Feather name="alert-circle" size={15} color={Colors.error} />
             <Text style={styles.errorBannerText}>{error}</Text>
+            <TouchableOpacity
+              onPress={() => { setError(null); handlePost(); }}
+              style={styles.retryBtn}
+              activeOpacity={0.8}
+            >
+              <Feather name="refresh-cw" size={13} color={Colors.error} />
+              <Text style={styles.retryBtnText}>{isSv ? "Försök igen" : "Retry"}</Text>
+            </TouchableOpacity>
           </View>
         ) : null}
 
@@ -1323,6 +1356,55 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     lineHeight: 17,
+  },
+  successOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(27,42,74,0.96)",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+    paddingHorizontal: 40,
+  },
+  successCircle: {
+    width: 110,
+    height: 110,
+    borderRadius: 55,
+    backgroundColor: Colors.gold,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: Colors.gold,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.45,
+    shadowRadius: 20,
+    elevation: 14,
+  },
+  successTitle: {
+    fontSize: 28,
+    fontFamily: "Inter_700Bold",
+    color: Colors.gold,
+    textAlign: "center",
+  },
+  successSub: {
+    fontSize: 15,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  retryBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: `${Colors.error}50`,
+  },
+  retryBtnText: {
+    fontSize: 12,
+    fontFamily: "Inter_500Medium",
+    color: Colors.error,
   },
   otherSmallBanner: {
     flexDirection: "row",

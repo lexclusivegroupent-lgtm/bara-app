@@ -92,6 +92,7 @@ function RootLayoutNav() {
       <Stack.Screen name="driver-onboarding-checklist" options={{ animation: "slide_from_right" }} />
       <Stack.Screen name="(customer)" options={{ headerShown: false, animation: "fade" }} />
       <Stack.Screen name="(driver)" options={{ headerShown: false, animation: "fade" }} />
+      <Stack.Screen name="admin" options={{ headerShown: false, animation: "slide_from_right" }} />
     </Stack>
     </>
   );

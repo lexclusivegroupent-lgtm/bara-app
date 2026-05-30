@@ -186,15 +186,26 @@ export default function DriverMapScreen() {
         </View>
 
         {errorMsg && (
-          <TouchableOpacity
-            style={styles.errorBanner}
-            onPress={() => setErrorMsg(null)}
-            activeOpacity={0.8}
-          >
+          <View style={styles.errorBanner}>
             <Feather name="alert-circle" size={14} color={Colors.error} />
             <Text style={styles.errorBannerText}>{errorMsg}</Text>
-            <Feather name="x" size={14} color={Colors.error} />
-          </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => { setErrorMsg(null); refetch(); }}
+              style={styles.retryIconBtn}
+              activeOpacity={0.8}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="refresh-cw" size={13} color={Colors.error} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setErrorMsg(null)}
+              style={styles.retryIconBtn}
+              activeOpacity={0.8}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Feather name="x" size={13} color={Colors.error} />
+            </TouchableOpacity>
+          </View>
         )}
 
         <FlatList
@@ -451,6 +462,9 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: "Inter_500Medium",
     color: Colors.error,
+  },
+  retryIconBtn: {
+    padding: 4,
   },
   surchargeOverlay: {
     flex: 1,
