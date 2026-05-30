@@ -3,7 +3,7 @@ import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
+  Pressable,
   Platform,
   Image,
   ScrollView,
@@ -118,7 +118,7 @@ export default function HomeScreen() {
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View style={animStyle}>
+        <Animated.View style={animStyle} pointerEvents="box-none">
 
           {/* ─── HERO ─── */}
           <View style={styles.hero}>
@@ -142,28 +142,26 @@ export default function HomeScreen() {
 
           {/* ─── CTA BUTTONS ─── */}
           <View style={styles.ctas}>
-            <Animated.View style={primaryBtnStyle}>
-              <TouchableOpacity
+            <Animated.View style={primaryBtnStyle} pointerEvents="box-none">
+              <Pressable
                 style={styles.primaryBtn}
                 onPress={() => router.push("/register")}
                 onPressIn={() => springPress(primaryScale)}
                 onPressOut={() => springRelease(primaryScale)}
-                activeOpacity={1}
               >
                 <Text style={styles.primaryText}>Kom igång</Text>
                 <Feather name="arrow-right" size={18} color={Colors.navy} />
-              </TouchableOpacity>
+              </Pressable>
             </Animated.View>
-            <Animated.View style={secondaryBtnStyle}>
-              <TouchableOpacity
+            <Animated.View style={secondaryBtnStyle} pointerEvents="box-none">
+              <Pressable
                 style={styles.secondaryBtn}
                 onPress={() => router.push("/login")}
                 onPressIn={() => springPress(secondaryScale)}
                 onPressOut={() => springRelease(secondaryScale)}
-                activeOpacity={1}
               >
                 <Text style={styles.secondaryText}>Logga in</Text>
-              </TouchableOpacity>
+              </Pressable>
             </Animated.View>
           </View>
 

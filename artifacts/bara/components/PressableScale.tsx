@@ -49,12 +49,11 @@ export function PressableScale({
   }
 
   return (
-    <Animated.View style={[style, animStyle]}>
+    <Animated.View style={[style, animStyle]} pointerEvents="box-none">
       <TouchableOpacity
         onPress={disabled ? undefined : onPress}
         onPressIn={disabled ? undefined : handlePressIn}
         onPressOut={handlePressOut}
-        style={{ flex: 1 }}
         activeOpacity={1}
         disabled={disabled}
       >
