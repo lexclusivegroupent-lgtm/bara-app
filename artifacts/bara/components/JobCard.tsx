@@ -14,7 +14,7 @@ const JOB_LABELS_SV: Record<string, string> = {
   electronics: "Elektronik",
   other_small: "Övrigt litet",
   // Legacy types
-  furniture_transport: "Möbeltransport",
+  furniture_transport: "Blocket & Facebook hämtning",
   bulky_delivery: "Tungvaror",
   junk_pickup: "Skräp & sopor",
 };
@@ -28,7 +28,7 @@ const JOB_LABELS_EN: Record<string, string> = {
   electronics: "Electronics",
   other_small: "Other Small Items",
   // Legacy types
-  furniture_transport: "Furniture Transport",
+  furniture_transport: "Blocket & Facebook Pickup",
   bulky_delivery: "Bulky Delivery",
   junk_pickup: "Junk Pickup",
 };
