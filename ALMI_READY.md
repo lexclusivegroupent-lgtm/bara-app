@@ -4,6 +4,55 @@ Status key: ✅ Complete | 🔄 In Progress | ⏳ Not Started | ⚖️ Legal Rev
 
 ---
 
+## ALMI Presentation Checklist (2026-05-30)
+
+### Performance
+- [x] Gzip compression active — added `compression` middleware (~70% response size reduction)
+- [ ] Image optimization via Cloudinary — f_auto,q_auto on all URLs ⏳
+- [x] Mapbox caching active — in-memory 1-hour cache on autocomplete + details endpoints
+- [x] Database connection pooling configured — max 10 connections, 30s idle timeout
+
+### Language
+- [x] Swedish/English language toggle — pill component with gold active state
+- [x] Auto-detects device language on first launch (Intl.DateTimeFormat)
+- [x] Toggle on landing screen (top right), register screen, settings screen
+- [x] All landing screen strings use t() — no hardcoded text
+
+### UX
+- [ ] Skeleton loaders on all screens ⏳
+- [ ] Pull to refresh working ⏳
+- [ ] Empty states designed ⏳
+- [ ] Micro-interactions on key actions ⏳
+
+### Website
+- [ ] Landing page redesigned ⏳
+- [ ] SEO meta tags added ⏳
+- [ ] Mobile responsive ⏳
+- [ ] FAQ section added ⏳
+
+### Security
+- [x] Auth rate limit restored to 10 attempts per 15 min
+- [x] All legal copy in place (⚖️ flags throughout)
+- [ ] Environment variables verified in Railway ⏳
+- [x] pnpm audit run — 31 vulnerabilities in React Native transitive deps (not API runtime)
+- [x] 500 errors logged to security_logs table
+
+### Monitoring
+- [x] GET /api/healthz — simple health check
+- [x] GET /api/status — detailed: uptime, memory, environment, host
+- [x] Request timeout middleware — 30s max per request
+
+### Deployment
+- [x] Zero TypeScript errors (api-server + bara app)
+- [x] Pushed to main (Railway auto-deploy triggered)
+- [ ] Railway deployment healthy — check after build completes
+- [ ] Login works end to end — verify after deploy
+- [ ] Admin dashboard live ⏳
+
+---
+
+
+
 ## Legal & Risk Positioning ✅ ⚖️
 
 Bära is positioned as a **technology marketplace platform**. Carriers are independent contractors. Platform does not employ, schedule, or control carriers.
