@@ -78,7 +78,7 @@ app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 50, // temporarily raised for ALMI demo testing — restore to 10 after demo
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many attempts. Please wait 15 minutes before trying again." },
