@@ -2,12 +2,20 @@ import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator } from "react-native";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import * as Location from "expo-location";
-import MapboxGL from "@rnmapbox/maps";
+import Constants from "expo-constants";
 import { Colors } from "@/constants/colors";
 import { CITY_COORDINATES, MAPBOX_TOKEN, geocodeAddress } from "@/constants/config";
 import { Job } from "@/components/JobCard";
 
-MapboxGL.setAccessToken(MAPBOX_TOKEN);
+const isExpoGo = Constants.appOwnership === "expo";
+
+let MapboxGL: any = null;
+if (!isExpoGo) {
+  try {
+    MapboxGL = require("@rnmapbox/maps").default;
+    if (MapboxGL) MapboxGL.setAccessToken(MAPBOX_TOKEN);
+  } catch {}
+}
 
 interface Props {
   city: string;
@@ -29,7 +37,7 @@ export function DriverMapView({ city, jobs, onAccept, accepting, isAvailable }: 
   const cityCoords = CITY_COORDINATES[city] || CITY_COORDINATES["Stockholm"];
 
   useEffect(() => { requestLocation(); }, []);
-  useEffect(() => { geocodeJobs(); }, [jobs]);
+  useEffect(() => { if (!isExpoGo) geocodeJobs(); }, [jobs]);
 
   async function requestLocation() {
     try {
@@ -51,6 +59,28 @@ export function DriverMapView({ city, jobs, onAccept, accepting, isAvailable }: 
       if (coords) markers.push({ job, coords });
     }
     setJobMarkers(markers);
+  }
+
+  if (isExpoGo || !MapboxGL) {
+    return (
+      <View style={[styles.container, styles.fallback]}>
+        <MaterialCommunityIcons name="map-marker-radius" size={32} color={Colors.gold} />
+        <Text style={styles.fallbackTitle}>Map View</Text>
+        <Text style={styles.fallbackText}>Map view available in production build</Text>
+        {jobs.length > 0 && (
+          <View style={styles.fallbackBadge}>
+            <MaterialCommunityIcons name="package-variant-closed" size={12} color={Colors.gold} />
+            <Text style={styles.fallbackBadgeText}>{jobs.length} job{jobs.length !== 1 ? "s" : ""} nearby</Text>
+          </View>
+        )}
+        {driverLocation && (
+          <View style={[styles.fallbackBadge, { borderColor: `${Colors.success}40` }]}>
+            <Feather name="navigation" size={11} color={Colors.success} />
+            <Text style={[styles.fallbackBadgeText, { color: Colors.success }]}>GPS Active</Text>
+          </View>
+        )}
+      </View>
+    );
   }
 
   const center = driverLocation || cityCoords;
@@ -152,6 +182,42 @@ const styles = StyleSheet.create({
     position: "relative",
   },
   map: { flex: 1 },
+  fallback: {
+    backgroundColor: `${Colors.surfaceDark}cc`,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  fallbackTitle: {
+    fontSize: 15,
+    fontFamily: "Inter_700Bold",
+    color: Colors.text,
+    marginTop: 4,
+  },
+  fallbackText: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    textAlign: "center",
+    paddingHorizontal: 32,
+  },
+  fallbackBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: `${Colors.surface}ee`,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}40`,
+    marginTop: 2,
+  },
+  fallbackBadgeText: {
+    fontSize: 11,
+    fontFamily: "Inter_500Medium",
+    color: Colors.gold,
+  },
   jobMarker: {
     width: 38,
     height: 38,
