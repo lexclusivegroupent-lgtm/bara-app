@@ -289,13 +289,15 @@ export function getJobTypeLabel(jobType: string): string {
   }
 }
 
-function getBaseUrl(): string {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin;
+function getApiBaseUrl(): string {
+  if (process.env.EXPO_PUBLIC_API_URL) return process.env.EXPO_PUBLIC_API_URL;
+  if (process.env.EXPO_PUBLIC_DOMAIN) {
+    const d = process.env.EXPO_PUBLIC_DOMAIN;
+    return `${d.startsWith("localhost") ? "http" : "https"}://${d}`;
   }
-  return `https://${process.env.EXPO_PUBLIC_DOMAIN ?? "app.baraapp.se"}`;
+  return "https://api.baraapp.se";
 }
-export const BASE_URL = getBaseUrl();
+export const BASE_URL = getApiBaseUrl();
 
 export const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || "";
 
