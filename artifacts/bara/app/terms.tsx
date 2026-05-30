@@ -1,6 +1,6 @@
 ﻿import React from "react";
 import { View, Text, ScrollView, TouchableOpacity, StyleSheet, Platform, Linking } from "react-native";
-import { router } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors } from "@/constants/colors";
@@ -14,7 +14,7 @@ export default function TermsScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={safeBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>{isSv ? "Användarvillkor" : "Terms of Service"}</Text>

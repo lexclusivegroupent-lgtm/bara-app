@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import * as Haptics from "expo-haptics";
 import { router, useLocalSearchParams } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { Feather, MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -316,7 +317,7 @@ export default function PostJobScreen() {
         </View>
       </Modal>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+        <TouchableOpacity onPress={safeBack} style={styles.backBtn}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.headerCenter}>

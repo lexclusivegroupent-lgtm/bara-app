@@ -8,7 +8,7 @@ import {
   Platform,
   Linking,
 } from "react-native";
-import { router } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -61,7 +61,7 @@ export default function InsuranceSafetyScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backArrow}>
+        <TouchableOpacity onPress={safeBack} style={styles.backArrow}>
           <Feather name="arrow-left" size={20} color={Colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>{isSv ? "Försäkring och säkerhet" : "Insurance and Safety"}</Text>

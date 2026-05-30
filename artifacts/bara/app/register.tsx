@@ -12,6 +12,7 @@ import {
   Image,
 } from "react-native";
 import { router } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { MaterialCommunityIcons, Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -49,7 +50,7 @@ export default function RegisterScreen() {
 
   function handleBack() {
     if (step === 1) {
-      router.back();
+      safeBack();
     } else {
       setStep(step - 1);
     }

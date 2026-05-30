@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { router } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -138,7 +139,7 @@ export default function DriverOnboardingChecklistScreen() {
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
       <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()} activeOpacity={0.7}>
+        <TouchableOpacity style={styles.backBtn} onPress={safeBack} activeOpacity={0.7}>
           <Feather name="arrow-left" size={22} color={Colors.text} />
         </TouchableOpacity>
         <View style={styles.iconCircle}>

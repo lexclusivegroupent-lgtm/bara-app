@@ -13,6 +13,7 @@ import {
   Modal,
 } from "react-native";
 import { router } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -73,7 +74,7 @@ export default function LoginScreen() {
         >
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => router.back()}
+            onPress={safeBack}
           >
             <Feather name="arrow-left" size={20} color={Colors.text} />
           </TouchableOpacity>

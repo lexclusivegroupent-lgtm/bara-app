@@ -11,7 +11,7 @@ import {
   Platform,
   KeyboardAvoidingView,
 } from "react-native";
-import { router } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -62,7 +62,7 @@ export default function SupportScreen() {
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <View style={[styles.container, { backgroundColor: Colors.navy }]}>
         <View style={[styles.header, { paddingTop: insets.top + (Platform.OS === "web" ? 67 : 12) }]}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
+          <TouchableOpacity onPress={safeBack} style={styles.backBtn}>
             <Feather name="arrow-left" size={20} color={Colors.text} />
           </TouchableOpacity>
           <Text style={styles.title}>{t("contactSupport")}</Text>
@@ -77,7 +77,7 @@ export default function SupportScreen() {
               </View>
               <Text style={styles.successTitle}>{t("messageSent")}</Text>
               <Text style={styles.successSub}>{t("messageSentSuccess")}</Text>
-              <TouchableOpacity style={styles.backHomeBtn} onPress={() => router.back()} activeOpacity={0.85}>
+              <TouchableOpacity style={styles.backHomeBtn} onPress={safeBack} activeOpacity={0.85}>
                 <Text style={styles.backHomeBtnText}>{t("home")}</Text>
               </TouchableOpacity>
             </View>

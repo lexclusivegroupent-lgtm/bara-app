@@ -11,6 +11,7 @@ import {
   KeyboardAvoidingView,
 } from "react-native";
 import { router } from "expo-router";
+import { safeBack } from "@/utils/navigation";
 import { Feather } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -73,7 +74,7 @@ export default function ForgotPasswordScreen() {
           ]}
           keyboardShouldPersistTaps="handled"
         >
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+          <TouchableOpacity style={styles.backBtn} onPress={safeBack}>
             <Feather name="arrow-left" size={20} color={Colors.text} />
           </TouchableOpacity>
 
