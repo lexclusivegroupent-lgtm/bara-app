@@ -8,6 +8,7 @@ import fs from "fs";
 import { fileURLToPath } from "url";
 import router from "./routes";
 import { logger } from "./lib/logger";
+import { db, securityLogsTable } from "@workspace/db";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -90,7 +91,7 @@ app.use(express.urlencoded({ extended: true, limit: "15mb" }));
 
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 50, // temporarily raised for ALMI demo testing — restore to 10 after demo
+  max: 10,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many attempts. Please wait 15 minutes before trying again." },
@@ -122,5 +123,21 @@ if (fs.existsSync(staticBuildPath)) {
 } else {
   logger.warn({ staticBuildPath }, "Expo static-build not found — only API routes will be served");
 }
+
+// Global error handler — logs 500s to security_logs
+app.use((err: unknown, req: Request, res: Response, _next: NextFunction) => {
+  const message = err instanceof Error ? err.message : String(err);
+  const stack = err instanceof Error ? err.stack : undefined;
+  logger.error({ err, url: req.url, method: req.method }, "Unhandled error");
+  db.insert(securityLogsTable).values({
+    eventType: "suspicious_activity",
+    endpoint: `${req.method} ${req.path}`,
+    metadata: { error: message, stack: stack?.split("\n").slice(0, 5) },
+    ipAddress: req.ip ?? null,
+  }).catch(() => {});
+  if (!res.headersSent) {
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 export default app;
