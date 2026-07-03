@@ -30,13 +30,10 @@ type Category = {
 };
 
 const CATEGORIES: Category[] = [
-  { type: "blocket_pickup", labelSV: "Blocket hämtning", labelEN: "Blocket Pickup", icon: "tag-outline" },
-  { type: "facebook_pickup", labelSV: "Facebook Marketplace", labelEN: "Facebook Marketplace", icon: "store-outline" },
-  { type: "small_furniture", labelSV: "Liten möbel", labelEN: "Small Furniture", icon: "chair-rolling" },
-  { type: "office_items", labelSV: "Kontorsföremål", labelEN: "Office Items", icon: "briefcase-outline" },
-  { type: "children_items", labelSV: "Barnprylar", labelEN: "Children's Items", icon: "baby-carriage" },
-  { type: "electronics", labelSV: "Elektronik", labelEN: "Electronics", icon: "laptop" },
-  { type: "other_small", labelSV: "Övrigt litet", labelEN: "Other Small", icon: "package-variant-closed" },
+  { type: "furniture_transport", labelSV: "Möbeltransport", labelEN: "Furniture Pickup/Delivery", icon: "sofa-outline" },
+  { type: "bulky_delivery", labelSV: "Skrymmande föremål", labelEN: "Bulky Item Transport", icon: "package-variant" },
+  { type: "junk_pickup", labelSV: "Grovsopor & bortforsling", labelEN: "Junk Removal", icon: "trash-can-outline" },
+  { type: "secondhand_delivery", labelSV: "Second hand-leverans", labelEN: "Second-hand Delivery", icon: "tag-outline" },
 ];
 
 export default function CustomerHome() {
@@ -66,7 +63,7 @@ export default function CustomerHome() {
 
   function handleSwitchMode(mode: "customer" | "driver") {
     setActiveMode(mode);
-    if (mode === "driver") router.replace("/(driver)/map");
+    if (mode === "driver") router.replace("/(driver)/leads");
   }
 
   return (
@@ -110,12 +107,12 @@ export default function CustomerHome() {
         <View style={styles.heroBanner}>
           <View style={styles.heroBannerLeft}>
             <Text style={styles.heroBannerTitle}>
-              {isSv ? "Det enkla sättet att hämta ditt Blocket-fynd" : "The easy way to pick up your Blocket find"}
+              {isSv ? "Boka hämtning av möbler, grovsopor och skrymmande föremål" : "Book bulky item pickup, junk removal and furniture transport"}
             </Text>
             <Text style={styles.heroBannerSub}>
               {isSv
-                ? "Koppla ihop med oberoende bärare — från 99 kr, klart på 30 min."
-                : "Connect with independent carriers — from 99 SEK, done in 30 min."}
+                ? "Vi skickar din förfrågan till rätt lokal partner — enkelt och tryggt."
+                : "We route your request to the right local service provider — simple and reliable."}
             </Text>
           </View>
           <View style={styles.heroPriceBadge}>
@@ -127,48 +124,40 @@ export default function CustomerHome() {
         {/* Featured Blocket quick-launch */}
         <TouchableOpacity
           style={styles.blocketBtn}
-          onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "blocket_pickup" } })}
+          onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "secondhand_delivery" } })}
           activeOpacity={0.85}
         >
           <MaterialCommunityIcons name="tag-outline" size={20} color={Colors.navy} />
           <Text style={styles.blocketBtnText}>
-            {isSv ? "Hämta Blocket/Facebook-fynd snabbt" : "Quick Blocket / Facebook pickup"}
+            {isSv ? "Hämta Blocket/Facebook-fynd" : "Blocket / Facebook pickup"}
           </Text>
           <Feather name="arrow-right" size={16} color={Colors.navy} />
         </TouchableOpacity>
 
         {/* Feature pills */}
         <View style={styles.pillRow}>
-          <FeaturePill icon="car" text={isSv ? "Vilken bil" : "Any car"} />
-          <FeaturePill icon="clock" text={isSv ? "30 min" : "30 min"} />
-          <FeaturePill icon="shield" text={isSv ? "Verifierade" : "Verified"} />
+          <FeaturePill icon="map-pin" text={isSv ? "Lokala partners" : "Local partners"} />
+          <FeaturePill icon="check-circle" text={isSv ? "Proffs" : "Professional"} />
+          <FeaturePill icon="shield" text={isSv ? "Tryggt" : "Reliable"} />
         </View>
 
         <Text style={styles.sectionTitle}>{t("newJob")}</Text>
 
-        {/* "Not allowed" — always visible before category selection */}
+        {/* "Not handled" — hazardous/regulated items are never accepted */}
         <View style={styles.notAllowedCard}>
           <View style={styles.notAllowedHeader}>
             <Feather name="x-circle" size={13} color="#E05252" />
             <Text style={styles.notAllowedTitle}>
-              {isSv ? "Bära transporterar INTE:" : "Bära does NOT transport:"}
+              {isSv ? "Bära förmedlar INTE:" : "Bära does NOT handle:"}
             </Text>
           </View>
           <View style={styles.notAllowedList}>
             {(isSv ? [
-              "Hushållsavfall",
-              "Byggskräp",
-              "Farliga ämnen",
-              "Föremål över 15 kg",
+              "Farliga ämnen & kemikalier",
               "Föremål med specialtillstånd",
-              "Hel hemmaflytt",
             ] : [
-              "Household waste",
-              "Construction debris",
-              "Hazardous materials",
-              "Items over 15 kg",
+              "Hazardous materials & chemicals",
               "Items requiring special permits",
-              "Full household moves",
             ]).map((item) => (
               <Text key={item} style={styles.notAllowedItem}>❌ {item}</Text>
             ))}

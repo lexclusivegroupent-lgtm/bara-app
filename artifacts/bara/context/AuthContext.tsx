@@ -16,7 +16,7 @@ export interface User {
   id: number;
   email: string;
   fullName: string;
-  role: "customer" | "driver" | "both";
+  role: "customer" | "driver" | "both" | "partner";
   city: string;
   profilePhoto?: string | null;
   isAvailable: boolean;
@@ -38,6 +38,12 @@ export interface User {
   referralCode?: string | null;
   referralCount?: number;
   referralBonusEarned?: number;
+  // Partner business profile (lead-gen)
+  companyName?: string | null;
+  orgNumber?: string | null;
+  phone?: string | null;
+  serviceAreas?: string[];
+  serviceCategories?: string[];
   createdAt: string;
 }
 
@@ -57,7 +63,7 @@ interface RegisterData {
   email: string;
   password: string;
   fullName: string;
-  role: "customer" | "driver" | "both";
+  role: "customer" | "driver" | "both" | "partner";
   city: string;
   vehicleDescription?: string;
   vehicleType?: string;
@@ -65,8 +71,9 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-function defaultMode(role: "customer" | "driver" | "both"): "customer" | "driver" {
-  return role === "driver" ? "driver" : "customer";
+function defaultMode(role: "customer" | "driver" | "both" | "partner"): "customer" | "driver" {
+  // Partners use the provider-side screens (the old driver shell)
+  return role === "driver" || role === "partner" ? "driver" : "customer";
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

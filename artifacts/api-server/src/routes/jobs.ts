@@ -154,8 +154,8 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
 
   // Weight presets: mandatory in marketplace mode (gig carriers with regular
   // cars, 25kg cap). In lead-gen mode partners are professional businesses
-  // with proper vehicles, so the preset is optional and there is no cap —
-  // bulky items ARE the business.
+  // with proper vehicles, so the preset is optional informational data and
+  // there is no cap — bulky items ARE the business.
   const VALID_WEIGHT_PRESETS = ["0_10kg", "10_20kg", "20_25kg"];
   if (!LEAD_GEN_MODE) {
     if (!weightPreset) {
@@ -166,9 +166,6 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       res.status(400).json({ error: "Bära is for small, light items only (max 25kg). For heavier items, please use a moving service." });
       return;
     }
-  } else if (weightPreset && !VALID_WEIGHT_PRESETS.includes(weightPreset)) {
-    res.status(400).json({ error: "Invalid weightPreset. Must be one of: 0_10kg, 10_20kg, 20_25kg" });
-    return;
   }
   // City is optional — fall back to a default so drivers can still see the job
   const resolvedCity: string = (city && city.trim()) ? city.trim() : "Sverige";

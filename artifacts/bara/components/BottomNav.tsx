@@ -22,7 +22,7 @@ const CUSTOMER_TABS: NavItem[] = [
 ];
 
 const DRIVER_TABS: NavItem[] = [
-  { label: "Jobs",     labelSv: "Jobb",          icon: "map",         route: "/(driver)/map",      slug: "map" },
+  { label: "Leads",    labelSv: "Förfrågningar", icon: "inbox",       route: "/(driver)/leads",    slug: "leads" },
   { label: "Earnings", labelSv: "Intäkter",      icon: "dollar-sign", route: "/(driver)/earnings", slug: "earnings" },
   { label: "Settings", labelSv: "Inställningar", icon: "settings",    route: "/(driver)/settings", slug: "settings" },
 ];
@@ -36,7 +36,7 @@ export function BottomNav() {
   if (!user) return null;
 
   const effectiveMode = user.role === "both" ? activeMode : user.role;
-  const tabs = effectiveMode === "driver" ? DRIVER_TABS : CUSTOMER_TABS;
+  const tabs = effectiveMode === "driver" || effectiveMode === "partner" ? DRIVER_TABS : CUSTOMER_TABS;
   const bottomPad = Platform.OS === "web" ? 8 : Math.max(insets.bottom, 8);
 
   function isActive(tab: NavItem) {

@@ -105,7 +105,7 @@ export default function DriverActiveJobScreen() {
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to cancel");
-      router.replace("/(driver)/map");
+      router.replace("/(driver)/leads");
     } catch (e: any) {
       setCompleteError(e.message || "Failed to cancel. Please try again.");
     } finally {
@@ -233,7 +233,7 @@ export default function DriverActiveJobScreen() {
           </View>
           <TouchableOpacity
             style={styles.backToMapBtn}
-            onPress={() => router.replace("/(driver)/map")}
+            onPress={() => router.replace("/(driver)/leads")}
             activeOpacity={0.85}
           >
             <Feather name="map" size={15} color={Colors.navy} />

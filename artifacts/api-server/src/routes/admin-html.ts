@@ -89,6 +89,9 @@ main{flex:1;padding:20px}
 /* Badges */
 .badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
 .badge-pending{background:#fff3cd;color:#856404}
+.badge-assigned{background:#e7dcc3;color:#7a5c1e}
+.badge-contacted{background:#e2d9f3;color:#4c2f8f}
+.badge-declined{background:#f8d7da;color:#721c24}
 .badge-accepted{background:#cfe2ff;color:#084298}
 .badge-arrived{background:#e8d5ff;color:#5a1aac}
 .badge-in_progress{background:#ffe0d0;color:#8b3a00}
@@ -170,6 +173,7 @@ main{flex:1;padding:20px}
     <div class="header-brand">Bära Admin</div>
     <nav>
       <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
+      <button class="tab-btn" data-tab="requests" onclick="showTab('requests')">Requests <span id="requests-badge"></span></button>
       <button class="tab-btn" data-tab="jobs" onclick="showTab('jobs')">Jobs</button>
       <button class="tab-btn" data-tab="users" onclick="showTab('users')">Users</button>
       <button class="tab-btn" data-tab="drivers" onclick="showTab('drivers')">Drivers</button>
@@ -188,6 +192,41 @@ main{flex:1;padding:20px}
         <button class="btn-ghost" onclick="reloadTab('overview')">↻ Refresh</button>
       </div>
       <div id="overview-content"><div class="loading-text">Loading...</div></div>
+    </div>
+
+    <!-- REQUESTS (lead-gen workflow) -->
+    <div class="tab-content" id="tab-requests">
+      <div class="page-header">
+        <div class="page-title">Requests — assign to partners</div>
+        <button class="btn-ghost" onclick="reloadTab('requests')">↻ Refresh</button>
+      </div>
+      <div id="funnel-content" style="margin-bottom:14px"></div>
+      <div class="filter-bar">
+        <select id="requests-filter-status" onchange="applyRequestFilters()">
+          <option value="">All statuses</option>
+          <option value="pending">Submitted (needs routing)</option>
+          <option value="declined">Declined (needs re-routing)</option>
+          <option value="assigned">Assigned</option>
+          <option value="contacted">Contacted</option>
+          <option value="accepted">Accepted</option>
+          <option value="completed">Completed</option>
+          <option value="cancelled">Cancelled</option>
+        </select>
+        <select id="requests-filter-category" onchange="applyRequestFilters()">
+          <option value="">All categories</option>
+          <option value="furniture_transport">Furniture</option>
+          <option value="bulky_delivery">Bulky items</option>
+          <option value="junk_pickup">Junk removal</option>
+          <option value="secondhand_delivery">Second-hand</option>
+        </select>
+        <input id="requests-filter-city" placeholder="Filter by city…" oninput="applyRequestFilters()" style="width:160px">
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>#</th><th>Category</th><th>City</th><th>Item</th><th>Customer</th><th>Contact</th><th>Status</th><th>Partner</th><th>Assign / Actions</th></tr></thead>
+          <tbody id="requests-tbody"><tr><td colspan="9" class="loading-text">Loading…</td></tr></tbody>
+        </table>
+      </div>
     </div>
 
     <!-- JOBS -->
@@ -299,6 +338,8 @@ const S = {
   usersData: [],
   driversData: [],
   disputesData: [],
+  requestsData: [],
+  partnersData: [],
 };
 
 // ── Auth ──────────────────────────────────────────────────────────────
@@ -349,6 +390,7 @@ function showTab(name) {
 async function loadTab(name) {
   S.loaded[name] = true;
   if (name === 'overview') await renderOverview();
+  if (name === 'requests') await renderRequests();
   if (name === 'jobs')     await renderJobs();
   if (name === 'users')    await renderUsers();
   if (name === 'drivers')  await renderDrivers();
@@ -431,6 +473,104 @@ function sc(label, value, icon, type) {
 }
 
 // ── Jobs ──────────────────────────────────────────────────────────────
+// ── Requests (lead-gen workflow) ─────────────────────────────────────
+async function renderRequests() {
+  const tbody = document.getElementById('requests-tbody');
+  tbody.innerHTML = '<tr><td colspan="9" class="loading-text">Loading…</td></tr>';
+
+  const [requests, partners, funnelData] = await Promise.all([
+    api('/api/admin/jobs'),
+    api('/api/admin/partners'),
+    api('/api/admin/funnel'),
+  ]);
+  if (!requests) return;
+  S.requestsData = requests;
+  S.partnersData = partners || [];
+
+  const needsRouting = requests.filter(r => r.status === 'pending' || r.status === 'declined').length;
+  document.getElementById('requests-badge').textContent = needsRouting > 0 ? \`(\${needsRouting})\` : '';
+
+  if (funnelData && funnelData.funnel) {
+    const f = funnelData.funnel;
+    document.getElementById('funnel-content').innerHTML = \`
+      <div class="stats-grid">
+        \${sc('Submitted', f.submitted, '📥', Number(f.submitted) > 0 ? 'orange' : 'blue')}
+        \${sc('Assigned', f.assigned, '📋', 'gold')}
+        \${sc('Contacted', f.contacted, '📞', 'blue')}
+        \${sc('Accepted', f.accepted, '🤝', 'green')}
+        \${sc('Completed', f.completed, '✅', 'green')}
+        \${sc('Declined', f.declined, '↩️', Number(f.declined) > 0 ? 'red' : 'blue')}
+      </div>\`;
+  }
+
+  applyRequestFilters();
+}
+
+function applyRequestFilters() {
+  const st = document.getElementById('requests-filter-status').value;
+  const cat = document.getElementById('requests-filter-category').value;
+  const city = document.getElementById('requests-filter-city').value.toLowerCase();
+  const rows = S.requestsData.filter(r =>
+    (!st || r.status === st) &&
+    (!cat || r.jobType === cat) &&
+    (!city || (r.city || '').toLowerCase().includes(city))
+  );
+  const tbody = document.getElementById('requests-tbody');
+  if (rows.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="9" style="color:#999;text-align:center;padding:24px">No requests match</td></tr>';
+    return;
+  }
+  const partnerOptions = S.partnersData.map(p =>
+    \`<option value="\${p.id}">\${(p.companyName || p.fullName || 'Partner ' + p.id).replace(/</g,'&lt;')} (\${p.city || '—'})</option>\`
+  ).join('');
+
+  tbody.innerHTML = rows.map(r => {
+    const partnerName = r.driverName || (r.driverId ? 'Partner #' + r.driverId : '—');
+    const canRoute = ['pending', 'declined', 'assigned'].includes(r.status);
+    const assignCell = canRoute ? \`
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+        <select id="assign-sel-\${r.id}" style="max-width:170px"><option value="">Choose partner…</option>\${partnerOptions}</select>
+        <button class="btn-sm" onclick="assignRequest(\${r.id})">Assign</button>
+      </div>\` : \`
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        \${['accepted','contacted'].includes(r.status) ? \`<button class="btn-sm" onclick="setRequestStatus(\${r.id},'completed')">Mark completed</button>\` : ''}
+        \${r.status !== 'cancelled' && r.status !== 'completed' ? \`<button class="btn-sm" onclick="setRequestStatus(\${r.id},'cancelled')">Cancel</button>\` : ''}
+      </div>\`;
+    return \`<tr>
+      <td>\${r.id}</td>
+      <td>\${fmtJobType(r.jobType)}</td>
+      <td>\${r.city || '—'}</td>
+      <td title="\${(r.itemDescription||'').replace(/"/g,'&quot;')}">\${truncate(r.itemDescription, 40)}</td>
+      <td>\${r.customerName || '—'}</td>
+      <td>\${r.contactPhone || r.customerEmail || '—'}</td>
+      <td>\${statusBadge(r.status)}</td>
+      <td>\${partnerName}</td>
+      <td>\${assignCell}</td>
+    </tr>\`;
+  }).join('');
+}
+
+async function assignRequest(id) {
+  const sel = document.getElementById('assign-sel-' + id);
+  const partnerId = Number(sel && sel.value);
+  if (!partnerId) { showToast('Choose a partner first', 'error'); return; }
+  const res = await api('/api/admin/requests/' + id + '/assign', {
+    method: 'POST',
+    body: JSON.stringify({ partnerId }),
+  });
+  if (res && res.ok) { showToast('Request #' + id + ' assigned'); reloadTab('requests'); }
+  else showToast((res && res.error) || 'Failed to assign', 'error');
+}
+
+async function setRequestStatus(id, status) {
+  const res = await api('/api/admin/requests/' + id, {
+    method: 'PUT',
+    body: JSON.stringify({ status }),
+  });
+  if (res && res.ok) { showToast('Request #' + id + ' → ' + status); reloadTab('requests'); }
+  else showToast((res && res.error) || 'Failed to update', 'error');
+}
+
 async function renderJobs() {
   const tbody = document.getElementById('jobs-tbody');
   tbody.innerHTML = '<tr><td colspan="8" class="loading-text">Loading…</td></tr>';

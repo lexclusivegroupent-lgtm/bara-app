@@ -188,6 +188,12 @@ export const SWEDISH_CITIES = [
 ].sort((a, b) => a.localeCompare(b, "sv"));
 
 export type JobType =
+  // Lead-gen categories (current)
+  | "furniture_transport"
+  | "bulky_delivery"
+  | "junk_pickup"
+  | "secondhand_delivery"
+  // Legacy marketplace categories (old requests still render)
   | "blocket_pickup"
   | "facebook_pickup"
   | "small_furniture"
@@ -197,6 +203,10 @@ export type JobType =
   | "other_small";
 
 export const JOB_TYPE_ICONS: Record<JobType, string> = {
+  furniture_transport: "sofa-outline",
+  bulky_delivery: "package-variant",
+  junk_pickup: "trash-can-outline",
+  secondhand_delivery: "tag-outline",
   blocket_pickup: "tag-outline",
   facebook_pickup: "store-outline",
   small_furniture: "chair-rolling",
@@ -248,6 +258,9 @@ export const MAX_JOB_VALUE_SEK = 299;
 export function getStatusColor(status: string): string {
   switch (status) {
     case "pending":               return "#8B9CBD";
+    case "assigned":              return "#C9A84C";
+    case "contacted":             return "#A47FE8";
+    case "declined":              return "#E05252";
     case "accepted":              return "#4A9EE8";
     case "arrived":               return "#A47FE8";
     case "in_progress":           return "#E87A2A";
@@ -261,9 +274,12 @@ export function getStatusColor(status: string): string {
 
 export function getStatusLabel(status: string): string {
   switch (status) {
-    case "pending":               return "Pending";
-    case "accepted":              return "Accepted";
-    case "arrived":               return "Driver Arrived";
+    case "pending":               return "Submitted";
+    case "assigned":              return "Matched with partner";
+    case "contacted":             return "Partner will contact you";
+    case "declined":              return "Finding a new partner";
+    case "accepted":              return "Booking confirmed";
+    case "arrived":               return "Partner Arrived";
     case "in_progress":           return "In Progress";
     case "completed":             return "Completed";
     case "cancelled":             return "Cancelled";
@@ -275,17 +291,18 @@ export function getStatusLabel(status: string): string {
 
 export function getJobTypeLabel(jobType: string): string {
   switch (jobType) {
-    case "blocket_pickup":      return "Blocket Pickup";
-    case "facebook_pickup":     return "Facebook Marketplace";
-    case "small_furniture":     return "Small Furniture";
-    case "office_items":        return "Office Items";
-    case "children_items":      return "Children's Items";
-    case "electronics":         return "Electronics";
-    case "other_small":         return "Other Small Items";
-    case "furniture_transport": return "Furniture Transport";
-    case "bulky_delivery":      return "Bulky Item Delivery";
-    case "junk_pickup":         return "Junk & Trash Pickup";
-    default:                    return jobType.replace(/_/g, " ");
+    case "furniture_transport":  return "Furniture Pickup/Delivery";
+    case "bulky_delivery":       return "Bulky Item Transport";
+    case "junk_pickup":          return "Junk Removal";
+    case "secondhand_delivery":  return "Second-hand Delivery";
+    case "blocket_pickup":       return "Blocket Pickup";
+    case "facebook_pickup":      return "Facebook Marketplace";
+    case "small_furniture":      return "Small Furniture";
+    case "office_items":         return "Office Items";
+    case "children_items":       return "Children's Items";
+    case "electronics":          return "Electronics";
+    case "other_small":          return "Other Small Items";
+    default:                     return jobType.replace(/_/g, " ");
   }
 }
 
@@ -299,9 +316,9 @@ export const BASE_URL = getBaseUrl();
 
 export const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || "";
 
-// Platform identity — Bära is a technology marketplace, not a transport company.
-export const PLATFORM_TAGLINE_EN = "Connect with independent carriers for small item pickup and delivery";
-export const PLATFORM_TAGLINE_SV = "Koppla ihop med oberoende bärare för upphämtning och leverans av små föremål";
+// Platform identity — Bära routes customer requests to vetted local service providers.
+export const PLATFORM_TAGLINE_EN = "We route your request to the right local partner";
+export const PLATFORM_TAGLINE_SV = "Vi skickar din förfrågan till rätt lokal partner";
 
 export const CITY_COORDINATES: Record<string, { latitude: number; longitude: number }> = {
   // Stockholms län

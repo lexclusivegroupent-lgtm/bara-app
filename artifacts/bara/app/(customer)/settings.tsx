@@ -80,7 +80,7 @@ export default function SettingsScreen() {
 
   function handleSwitchToDriver() {
     setActiveMode("driver");
-    router.replace("/(driver)/map");
+    router.replace("/(driver)/leads");
   }
 
   async function handleUpgradeToDriver() {

@@ -11,6 +11,7 @@ export default function DriverLayout() {
         animation: "slide_from_right",
       }}
     >
+      <Stack.Screen name="leads" />
       <Stack.Screen name="map" />
       <Stack.Screen name="active-job" />
       <Stack.Screen name="earnings" />

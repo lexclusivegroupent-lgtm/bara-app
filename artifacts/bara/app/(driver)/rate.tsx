@@ -45,7 +45,7 @@ export default function DriverRateScreen() {
         body: JSON.stringify({ score: rating, comment: comment.trim() || null, ratedUserId: parseInt(userId) }),
       });
       if (!res.ok) throw new Error("Failed to submit rating");
-      router.replace(activeMode === "customer" ? "/(customer)/home" : "/(driver)/map");
+      router.replace(activeMode === "customer" ? "/(customer)/home" : "/(driver)/leads");
     } catch {
       Alert.alert("Error", "Failed to submit rating.");
     } finally {
@@ -54,7 +54,7 @@ export default function DriverRateScreen() {
   }
 
   function handleSkip() {
-    router.replace(activeMode === "customer" ? "/(customer)/home" : "/(driver)/map");
+    router.replace(activeMode === "customer" ? "/(customer)/home" : "/(driver)/leads");
   }
 
   return (

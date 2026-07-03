@@ -49,7 +49,7 @@ export default function JobCompleteScreen() {
   }
 
   function handleBackToMap() {
-    router.replace("/(driver)/map");
+    router.replace("/(driver)/leads");
   }
 
   return (

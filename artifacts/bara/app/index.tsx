@@ -45,8 +45,8 @@ export default function HomeScreen() {
         }
         setOnboardingChecked(true);
         if (user) {
-          if (user.role === "driver") {
-            router.replace("/(driver)/map");
+          if (user.role === "driver" || user.role === "partner") {
+            router.replace("/(driver)/leads");
           } else {
             router.replace("/(customer)/home");
           }

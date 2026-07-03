@@ -23,6 +23,10 @@ import { PlacesAutocomplete, type PlaceResult } from "@/components/PlacesAutocom
 import { BaraDateTimePicker } from "@/components/BaraDateTimePicker";
 
 const JOB_LABELS_SV: Record<JobType, string> = {
+  furniture_transport: "Möbeltransport",
+  bulky_delivery: "Skrymmande föremål",
+  junk_pickup: "Grovsopor & bortforsling",
+  secondhand_delivery: "Second hand-leverans",
   blocket_pickup: "Blocket hämtning",
   facebook_pickup: "Facebook Marketplace",
   small_furniture: "Liten möbel",
@@ -32,6 +36,10 @@ const JOB_LABELS_SV: Record<JobType, string> = {
   other_small: "Övrigt litet",
 };
 const JOB_LABELS_EN: Record<JobType, string> = {
+  furniture_transport: "Furniture Pickup/Delivery",
+  bulky_delivery: "Bulky Item Transport",
+  junk_pickup: "Junk Removal",
+  secondhand_delivery: "Second-hand Delivery",
   blocket_pickup: "Blocket Pickup",
   facebook_pickup: "Facebook Marketplace",
   small_furniture: "Small Furniture",
@@ -48,7 +56,10 @@ export default function PostJobScreen() {
   const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
 
-  const jobType = (type || "blocket_pickup") as JobType;
+  const jobType = (type || "furniture_transport") as JobType;
+  // Lead-gen categories are handled by professional partner businesses — the
+  // 15 kg gig-carrier size limits don't apply to them.
+  const isLeadCategory = ["furniture_transport", "bulky_delivery", "junk_pickup", "secondhand_delivery"].includes(jobType);
 
   const [pickupAddress, setPickupAddress] = useState("");
   const [pickupCoords, setPickupCoords] = useState<{ lat: number; lng: number } | null>(null);
@@ -71,6 +82,8 @@ export default function PostJobScreen() {
   const [hasElevator, setHasElevator] = useState<boolean | null>(null);
   const [helpersNeeded, setHelpersNeeded] = useState("");
   const [weightPreset, setWeightPreset] = useState<string | null>(null);
+  // Contact details so the assigned partner can reach the customer
+  const [contactPhone, setContactPhone] = useState("");
   // Promo code
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
@@ -210,18 +223,24 @@ export default function PostJobScreen() {
         return;
       }
     }
-    if (!weightPreset) {
-      setError(isSv ? "Välj föremålets ungefärliga vikt." : "Please select the item's approximate weight.");
-      return;
+    if (!isLeadCategory) {
+      if (!weightPreset) {
+        setError(isSv ? "Välj föremålets ungefärliga vikt." : "Please select the item's approximate weight.");
+        return;
+      }
+      if (weightPreset === "over_15kg") {
+        setError(isSv
+          ? "Bära är för små, lätta föremål (max 15 kg). För tyngre föremål, använd en flytt- eller transporttjänst."
+          : "Bära is for small, light items only (max 15 kg). For heavier items, please use a moving service.");
+        return;
+      }
+      if (!agreedToSize) {
+        setError(isSv ? "Bekräfta föremålets storlek och vikt." : t("pleaseConfirmSize"));
+        return;
+      }
     }
-    if (weightPreset === "over_15kg") {
-      setError(isSv
-        ? "Bära är för små, lätta föremål (max 15 kg). För tyngre föremål, använd en flytt- eller transporttjänst."
-        : "Bära is for small, light items only (max 15 kg). For heavier items, please use a moving service.");
-      return;
-    }
-    if (!agreedToSize) {
-      setError(isSv ? "Bekräfta föremålets storlek och vikt." : t("pleaseConfirmSize"));
+    if (isLeadCategory && !contactPhone.trim()) {
+      setError(isSv ? "Ange ditt telefonnummer så att partnern kan kontakta dig." : "Please enter your phone number so the partner can reach you.");
       return;
     }
     if (!agreedToOwnership) {
@@ -272,6 +291,8 @@ export default function PostJobScreen() {
           involvesHazardous: jobType === "other_small" ? involvesHazardous : null,
           promoCode: promoCode.trim() || null,
           discountAmount: promoDiscount,
+          contactName: user?.fullName || null,
+          contactPhone: contactPhone.trim() || null,
         }),
       });
       const data = await safeJson(res);
@@ -306,7 +327,8 @@ export default function PostJobScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Size guide card */}
+        {/* Size guide card — gig 15 kg limit, not relevant for partner-handled categories */}
+        {!isLeadCategory && (
         <TouchableOpacity
           style={styles.sizeGuideCard}
           onPress={() => setSizeGuideOpen(o => !o)}
@@ -346,6 +368,7 @@ export default function PostJobScreen() {
             </View>
           )}
         </TouchableOpacity>
+        )}
 
         <View style={styles.jobTypeBadge}>
           <MaterialCommunityIcons
@@ -515,7 +538,9 @@ export default function PostJobScreen() {
           </View>
           <View style={{ gap: 6, marginTop: 8 }}>
             <Text style={styles.miniLabel}>
-              {isSv ? "UNGEFÄRLIG VIKT *" : "APPROXIMATE WEIGHT *"}
+              {isLeadCategory
+                ? (isSv ? "UNGEFÄRLIG VIKT (VALFRITT)" : "APPROXIMATE WEIGHT (OPTIONAL)")
+                : (isSv ? "UNGEFÄRLIG VIKT *" : "APPROXIMATE WEIGHT *")}
             </Text>
             <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 8 }}>
               {[
@@ -523,12 +548,14 @@ export default function PostJobScreen() {
                 { value: "5_10kg", label: "5–10 kg" },
                 { value: "10_15kg", label: "10–15 kg" },
                 { value: "over_15kg", label: isSv ? "Över 15 kg" : "Over 15 kg" },
-              ].map((preset) => (
+              ].map((preset) => {
+                const blocked = !isLeadCategory && preset.value === "over_15kg";
+                return (
                 <TouchableOpacity
                   key={preset.value}
                   style={[
                     styles.boolBtn,
-                    weightPreset === preset.value && (preset.value === "over_15kg"
+                    weightPreset === preset.value && (blocked
                       ? { borderColor: "#E05252", backgroundColor: "#E0525218" }
                       : styles.boolBtnActive),
                   ]}
@@ -537,16 +564,17 @@ export default function PostJobScreen() {
                 >
                   <Text style={[
                     styles.boolBtnText,
-                    weightPreset === preset.value && (preset.value === "over_15kg"
+                    weightPreset === preset.value && (blocked
                       ? { color: "#E05252", fontFamily: "Inter_600SemiBold" }
                       : styles.boolBtnTextActive),
                   ]}>
                     {preset.label}
                   </Text>
                 </TouchableOpacity>
-              ))}
+                );
+              })}
             </View>
-            {weightPreset === "over_15kg" && (
+            {!isLeadCategory && weightPreset === "over_15kg" && (
               <Text style={{ color: "#E05252", fontSize: 12, fontFamily: "Inter_500Medium", lineHeight: 18 }}>
                 {isSv
                   ? "Bära är för små, lätta föremål (max 15 kg). För tyngre föremål, använd en flytt- eller transporttjänst."
@@ -744,7 +772,27 @@ export default function PostJobScreen() {
           </View>
         </View>
 
-        {/* Mandatory size confirmation checkbox */}
+        {/* Contact phone — the assigned partner contacts the customer directly */}
+        {isLeadCategory && (
+          <FormField label={isSv ? "Telefonnummer" : "Phone number"} icon="phone">
+            <TextInput
+              style={styles.input}
+              placeholder={isSv ? "070-123 45 67" : "070-123 45 67"}
+              placeholderTextColor={Colors.textMuted}
+              value={contactPhone}
+              onChangeText={setContactPhone}
+              keyboardType="phone-pad"
+            />
+            <Text style={{ color: Colors.textMuted, fontSize: 12, marginTop: 6 }}>
+              {isSv
+                ? "Din lokala partner använder detta för att bekräfta detaljer med dig."
+                : "Your local partner uses this to confirm details with you."}
+            </Text>
+          </FormField>
+        )}
+
+        {/* Mandatory size confirmation checkbox (gig categories only) */}
+        {!isLeadCategory && (
         <TouchableOpacity
           style={[styles.ownershipRow, !agreedToSize && styles.ownershipRowHighlight]}
           onPress={() => setAgreedToSize(!agreedToSize)}
@@ -759,6 +807,7 @@ export default function PostJobScreen() {
               : "I confirm the item is smaller than a small dresser and weighs under 15 kg"}
           </Text>
         </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={styles.ownershipRow}
@@ -778,8 +827,8 @@ export default function PostJobScreen() {
           <Feather name="info" size={13} color={Colors.textMuted} />
           <Text style={styles.legalDisclaimerText}>
             {isSv
-              ? "Genom att lägga upp detta jobb ingår du ett direkt avtal med din valda bärare. Bära underlättar denna kontakt men är inte part i transportavtalet."
-              : "By posting this job, you are entering into a direct agreement with your chosen carrier. Bära facilitates this connection but is not a party to the transport contract."}
+              ? "Genom att skicka denna förfrågan ingår du ett direkt avtal med den tilldelade tjänsteleverantören. Bära förmedlar din förfrågan men är inte part i transportavtalet."
+              : "By submitting this request, you enter into a direct agreement with the assigned service provider. Bära routes your request but is not a party to the transport contract."}
           </Text>
         </View>
 

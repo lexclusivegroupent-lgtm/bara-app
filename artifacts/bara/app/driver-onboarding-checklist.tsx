@@ -129,7 +129,7 @@ export default function DriverOnboardingChecklistScreen() {
       const data = await safeJson(res);
       if (res.ok) {
         updateUser(data);
-        router.replace("/(driver)/map");
+        router.replace("/(driver)/leads");
       }
     } catch {}
     setLoading(false);
