@@ -70,6 +70,9 @@ export const jobsTable = pgTable("jobs", {
   // Customer contact details so the partner can reach out directly
   contactName: text("contact_name"),
   contactPhone: text("contact_phone"),
+  // Trust & safety: set when chat messages contain off-platform payment signals
+  flaggedForReview: boolean("flagged_for_review").notNull().default(false),
+  flagReason: text("flag_reason"),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });

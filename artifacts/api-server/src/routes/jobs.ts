@@ -1073,6 +1073,16 @@ router.get("/:id/messages", authenticate, async (req: AuthenticatedRequest, res)
   }
 });
 
+// Trust & safety: detects attempts to move payment off-platform (phone
+// numbers, Swish handles, cash keywords). Flagged jobs surface in the admin
+// dashboard for review — messages are still delivered so users aren't tipped off.
+function containsOffPlatformSignal(text: string): boolean {
+  const phonePattern = /07[0-9\s\-]{8,10}/;
+  const swishPattern = /swish\s*:?\s*07[0-9]/i;
+  const cashPattern = /\b(kontant|cash|betala\s+direkt|pay\s+cash|venmo|paypal)\b/i;
+  return phonePattern.test(text) || swishPattern.test(text) || cashPattern.test(text);
+}
+
 router.post("/:id/messages", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
@@ -1087,6 +1097,14 @@ router.post("/:id/messages", authenticate, async (req: AuthenticatedRequest, res
     if (job.customerId !== req.userId && job.driverId !== req.userId) {
       res.status(403).json({ error: "You are not part of this job" });
       return;
+    }
+
+    if (containsOffPlatformSignal(text)) {
+      await db.update(jobsTable)
+        .set({ flaggedForReview: true, flagReason: "off_platform_signal_in_chat" })
+        .where(eq(jobsTable.id, jobId))
+        .catch(() => {});
+      // still deliver the message — don't break UX or alert the user
     }
 
     const [msg] = await db.insert(messagesTable).values({

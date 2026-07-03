@@ -247,6 +247,10 @@ main{flex:1;padding:20px}
           <option value="disputed">Disputed</option>
         </select>
         <input id="jobs-filter-city" placeholder="Filter by city…" oninput="applyJobFilters()" style="width:160px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+          <input type="checkbox" id="jobs-filter-flagged" onchange="applyJobFilters()">
+          <span id="flagged-count-label">⚑ Flagged only</span>
+        </label>
       </div>
       <div class="table-wrap">
         <table class="data-table">
@@ -582,7 +586,18 @@ async function renderJobs() {
   const data = await api('/api/admin/jobs?' + qs);
   if (!data) return;
   S.jobsData = data;
-  renderJobsTable(data);
+
+  // Trust & safety: surface how many jobs were flagged for off-platform signals
+  const flaggedCount = data.filter(j => j.flaggedForReview).length;
+  const label = document.getElementById('flagged-count-label');
+  if (label) label.textContent = flaggedCount > 0 ? \`⚑ Flagged only (\${flaggedCount})\` : '⚑ Flagged only';
+
+  renderJobsTable(applyFlaggedFilter(data));
+}
+
+function applyFlaggedFilter(jobs) {
+  const flaggedOnly = document.getElementById('jobs-filter-flagged');
+  return flaggedOnly && flaggedOnly.checked ? jobs.filter(j => j.flaggedForReview) : jobs;
 }
 
 function renderJobsTable(jobs) {
@@ -590,7 +605,7 @@ function renderJobsTable(jobs) {
   if (!jobs.length) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:#999">No jobs found</td></tr>'; return; }
   tbody.innerHTML = jobs.map(j => \`
     <tr>
-      <td><span class="link" onclick="showJobDetail(\${j.id})">#\${j.id}</span></td>
+      <td><span class="link" onclick="showJobDetail(\${j.id})">#\${j.id}</span>\${j.flaggedForReview ? ' <span title="Flagged: ' + (j.flagReason || 'review') + '" style="color:#dc3545">⚑</span>' : ''}</td>
       <td>\${fmtJobType(j.jobType)}</td>
       <td>\${j.city||'—'}</td>
       <td>\${j.customerName||'—'}</td>
