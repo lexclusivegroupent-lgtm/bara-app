@@ -81,13 +81,13 @@ export default function OnboardingScreen() {
           </Text>
           <Text style={styles.slideSubtitle}>
             {isSv
-              ? "Hämtning av små föremål — från Blocket, Facebook Marketplace eller hemmet. Får plats i vilken bil som helst. Från 99 kr, klart på 30 minuter."
-              : "Small item pickup — from Blocket, Facebook Marketplace or home. Fits in any car. From 99 SEK, done in 30 minutes."}
+              ? "Boka hjälp med möbler, skrymmande föremål, grovsopor och second hand-leveranser. Vi skickar din förfrågan till rätt lokal partner."
+              : "Book help with furniture, bulky items, junk removal and second-hand deliveries. We route your request to the right local partner."}
           </Text>
           <View style={styles.featurePills}>
-            <FeaturePill text={isSv ? "Från 99 kr" : "From 99 SEK"} />
-            <FeaturePill text={isSv ? "30 min" : "30 min"} />
-            <FeaturePill text={isSv ? "Vilken bil som helst" : "Any car"} />
+            <FeaturePill text={isSv ? "Lokala partners" : "Local partners"} />
+            <FeaturePill text={isSv ? "Enkelt" : "Simple"} />
+            <FeaturePill text={isSv ? "Tryggt" : "Reliable"} />
           </View>
         </View>
 
@@ -97,30 +97,28 @@ export default function OnboardingScreen() {
             <MaterialCommunityIcons name="check-circle-outline" size={56} color={Colors.gold} />
           </View>
           <Text style={styles.slideTitle}>
-            {isSv ? "Vad du kan skicka" : "What you can send"}
+            {isSv ? "Vad vi hjälper dig med" : "What we help you with"}
           </Text>
           <Text style={styles.slideSubtitle}>
             {isSv
-              ? "Föremål som ryms i vilken vanlig bil som helst — max 15 kg."
-              : "Items that fit in any regular car — max 15 kg."}
+              ? "Från enstaka möbler till hela grovsopshämtningar — våra partners har rätt fordon och utrustning."
+              : "From single furniture pieces to full junk removal — our partners have the right vehicles and equipment."}
           </Text>
           <View style={styles.allowedGrid}>
             <View style={styles.allowedColumn}>
-              <Text style={styles.allowedHeader}>✅ {isSv ? "Tillåtet" : "Allowed"}</Text>
+              <Text style={styles.allowedHeader}>✅ {isSv ? "Vi förmedlar" : "We handle"}</Text>
               {(isSv ? [
-                "Blocket-fynd",
-                "Facebook Marketplace",
-                "Liten möbel",
-                "Elektronik",
-                "Barnprylar",
-                "Kontorsföremål",
+                "Möbeltransport",
+                "Skrymmande föremål",
+                "Grovsopor & bortforsling",
+                "Second hand-leverans",
+                "Blocket & Facebook-fynd",
               ] : [
-                "Blocket picks",
-                "Facebook Marketplace",
-                "Small furniture",
-                "Electronics",
-                "Children's items",
-                "Office items",
+                "Furniture transport",
+                "Bulky items",
+                "Junk removal",
+                "Second-hand delivery",
+                "Blocket & Facebook picks",
               ]).map((item) => (
                 <Text key={item} style={styles.allowedItem}>{item}</Text>
               ))}
@@ -128,17 +126,13 @@ export default function OnboardingScreen() {
             <View style={styles.allowedColumn}>
               <Text style={styles.prohibitedHeader}>❌ {isSv ? "Inte tillåtet" : "Not allowed"}</Text>
               {(isSv ? [
-                "Hushållsavfall",
-                "Byggskräp",
                 "Farliga ämnen",
-                "Över 15 kg",
-                "Hel flytt",
+                "Kemikalier",
+                "Föremål med specialtillstånd",
               ] : [
-                "Household waste",
-                "Construction debris",
                 "Hazardous materials",
-                "Over 15 kg",
-                "Full house moves",
+                "Chemicals",
+                "Items requiring special permits",
               ]).map((item) => (
                 <Text key={item} style={styles.prohibitedItem}>{item}</Text>
               ))}
@@ -154,18 +148,18 @@ export default function OnboardingScreen() {
           <View style={styles.stepList}>
             <Step
               number="1"
-              title={isSv ? "Lägg upp ett jobb" : "Post a job"}
-              desc={isSv ? "Välj kategori, ange hämtnings- och leveransadress och bekräfta att föremålet är litet." : "Choose a category, enter pickup and drop-off address, confirm the item is small."}
+              title={isSv ? "Skicka en förfrågan" : "Submit a request"}
+              desc={isSv ? "Välj kategori, beskriv föremålen, lägg till foton och önskad tid." : "Choose a category, describe the items, add photos and your preferred time."}
             />
             <Step
               number="2"
-              title={isSv ? "En bärare accepterar" : "A carrier accepts"}
-              desc={isSv ? "En oberoende bärare nära dig tar jobbet med sin vanliga bil — ingen skåpbil behövs." : "An independent carrier near you takes the job in their regular car — no van needed."}
+              title={isSv ? "Vi matchar dig med en partner" : "We match you with a partner"}
+              desc={isSv ? "Bära skickar din förfrågan till en lokal, professionell tjänsteleverantör i ditt område." : "Bära routes your request to a local, professional service provider in your area."}
             />
             <Step
               number="3"
-              title={isSv ? "Klart på 30 minuter!" : "Done in 30 minutes!"}
-              desc={isSv ? "Enkelt, snabbt och prisvärt. Kvitto skickas direkt." : "Simple, fast and affordable. Receipt sent instantly."}
+              title={isSv ? "Partnern kontaktar dig" : "The partner contacts you"}
+              desc={isSv ? "Ni bekräftar detaljer och pris tillsammans — sedan är bokningen klar." : "You confirm details and price together — then your booking is set."}
             />
           </View>
         </View>
@@ -176,25 +170,25 @@ export default function OnboardingScreen() {
             <MaterialCommunityIcons name="car-hatchback" size={56} color={Colors.gold} />
           </View>
           <Text style={styles.slideTitle}>
-            {isSv ? "Tjäna som oberoende bärare" : "Earn as an independent carrier"}
+            {isSv ? "Driver du ett transportföretag?" : "Run a transport business?"}
           </Text>
           <Text style={styles.slideSubtitle}>
             {isSv
-              ? "Välj jobb som passar dig. Du är din egen chef — Bära är bara marknadsplatsen."
-              : "Pick jobs that suit you. You're your own boss — Bära is just the marketplace."}
+              ? "Bli partner och få kvalificerade förfrågningar från kunder i ditt område — utan att jaga leads själv."
+              : "Become a partner and receive qualified customer requests in your area — without chasing leads yourself."}
           </Text>
           <View style={styles.bulletList}>
-            <BulletPoint text={isSv ? "Vanlig bil, SUV, kombi eller bil med takbox" : "Regular car, SUV, estate or car with roof box"} />
-            <BulletPoint text={isSv ? "Tjäna 75% av varje jobb" : "Earn 75% of every job"} />
-            <BulletPoint text={isSv ? "Du väljer dina egna tider och jobb" : "You set your own hours and choose your jobs"} />
-            <BulletPoint text={isSv ? "Oberoende uppdragstagare — ej anställd" : "Independent contractor — not an employee"} />
+            <BulletPoint text={isSv ? "Förfrågningar i dina serviceområden" : "Requests in your service areas"} />
+            <BulletPoint text={isSv ? "Välj själv vilka kategorier du tar" : "Choose which categories you take"} />
+            <BulletPoint text={isSv ? "Acceptera eller tacka nej — du bestämmer" : "Accept or decline — you decide"} />
+            <BulletPoint text={isSv ? "Direktkontakt med kunden" : "Direct contact with the customer"} />
           </View>
-          {/* ⚖️ Independent contractor disclaimer */}
+          {/* ⚖️ Partner relationship disclaimer */}
           <View style={styles.contractorNote}>
             <Text style={styles.contractorNoteText}>
               {isSv
-                ? "Bärare på Bära är oberoende uppdragstagare, inte anställda. Du kan arbeta med flera plattformar samtidigt."
-                : "Carriers on Bära are independent contractors, not employees. You may work with multiple platforms simultaneously."}
+                ? "Partners på Bära är självständiga företag. Bära förmedlar förfrågningar men är inte part i uppdragsavtalet."
+                : "Partners on Bära are independent businesses. Bära routes requests but is not a party to the service agreement."}
             </Text>
           </View>
         </View>
