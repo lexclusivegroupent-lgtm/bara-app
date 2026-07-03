@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import { createHash, randomBytes, randomInt } from "node:crypto";
 import { Resend } from "resend";
 import { sendVerificationEmail } from "../utils/email";
+import { decrypt } from "../utils/crypto";
 import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
@@ -427,7 +428,7 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     ftaxNumber: user.ftaxNumber,
     ftaxVerifiedByAdmin: user.ftaxVerifiedByAdmin,
     dac7Consented: user.dac7Consented,
-    personnummer: user.personnummer,
+    personnummer: user.personnummer ? decrypt(user.personnummer) : user.personnummer,
     fullLegalName: user.fullLegalName,
     referralCode: user.referralCode,
     referralCount: user.referralCount,

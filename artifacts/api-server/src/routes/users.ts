@@ -4,6 +4,7 @@ import { usersTable, jobsTable, savedAddressesTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { authenticate, AuthenticatedRequest } from "../middlewares/auth";
 import { formatUser } from "./auth";
+import { encrypt, decrypt } from "../utils/crypto";
 
 const router: IRouter = Router();
 
@@ -101,13 +102,15 @@ router.post("/dac7-consent", authenticate, async (req: AuthenticatedRequest, res
     return;
   }
   try {
+    // GDPR: personnummer and bank account number are special-category data —
+    // encrypted at rest (AES-256-GCM), decrypted only where they are exposed.
     const [user] = await db.update(usersTable).set({
       dac7Consented: true,
       dac7ConsentDate: new Date(),
-      personnummer: personnummer.trim(),
+      personnummer: encrypt(personnummer.trim()),
       fullLegalName: fullLegalName.trim(),
       registeredAddress: registeredAddress?.trim() || null,
-      bankAccountNumber: bankAccountNumber?.trim() || null,
+      bankAccountNumber: bankAccountNumber?.trim() ? encrypt(bankAccountNumber.trim()) : null,
     }).where(eq(usersTable.id, req.userId!)).returning();
     res.json(formatUser(user));
   } catch (err) {
@@ -158,6 +161,9 @@ router.get("/export", authenticate, async (req: AuthenticatedRequest, res) => {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
     if (!user) { res.status(404).json({ error: "Not found" }); return; }
     const { passwordHash, resetToken, resetTokenExpiry, pushToken, ...exportable } = user;
+    // GDPR data portability: decrypt at-rest-encrypted fields for the user's own export
+    if (exportable.personnummer) exportable.personnummer = decrypt(exportable.personnummer);
+    if (exportable.bankAccountNumber) exportable.bankAccountNumber = decrypt(exportable.bankAccountNumber);
     res.json({ ok: true, message: "Data export requested — will be emailed within 24 hours.", preview: exportable });
   } catch (err) {
     res.status(500).json({ error: "Internal server error" });

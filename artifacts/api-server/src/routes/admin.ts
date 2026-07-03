@@ -4,6 +4,7 @@ import { jobsTable, usersTable, mapsApiCallsTable } from "@workspace/db";
 import { eq, sql, count, desc, inArray, and } from "drizzle-orm";
 import { adminDashboardHtml } from "./admin-html";
 import { sendPushToUser } from "../utils/push";
+import { decrypt } from "../utils/crypto";
 
 const VAT_WARNING_SEK = 80_000;
 const VAT_URGENT_SEK = 115_000;
@@ -394,7 +395,7 @@ router.get("/dac7/report/:year", async (req: Request, res: Response) => {
       return {
         carrierId: id,
         fullLegalName: c?.fullLegalName ?? c?.fullName ?? "",
-        personnummer: c?.personnummer ?? "",
+        personnummer: c?.personnummer ? decrypt(c.personnummer) : "",
         email: c?.email ?? "",
         registeredAddress: c?.registeredAddress ?? "",
         year,
