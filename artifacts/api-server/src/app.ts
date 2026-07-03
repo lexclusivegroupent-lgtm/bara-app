@@ -18,6 +18,16 @@ if (process.env.NODE_ENV === "production" && !process.env.MAPBOX_SECRET_TOKEN) {
   process.exit(1);
 }
 
+// Admin routes are protected by a shared key — refuse to boot in production
+// with a missing or weak one.
+const adminKey = process.env.BARA_ADMIN_KEY || process.env.ADMIN_STATS_KEY;
+if (process.env.NODE_ENV === "production") {
+  if (!adminKey || adminKey.length < 32) {
+    console.error("FATAL: BARA_ADMIN_KEY must be at least 32 characters in production");
+    process.exit(1);
+  }
+}
+
 const app: Express = express();
 
 app.use(

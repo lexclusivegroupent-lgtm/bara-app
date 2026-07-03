@@ -23,5 +23,14 @@ export function authenticateAdmin(req: Request, res: Response, next: NextFunctio
     return;
   }
 
+  // Admin audit trail. Deliberately console.info (not req.log) so entries
+  // always reach Railway logs regardless of Pino level configuration.
+  console.info("[admin-audit]", JSON.stringify({
+    action: req.path,
+    method: req.method,
+    ip: req.ip,
+    ts: new Date().toISOString(),
+  }));
+
   next();
 }
