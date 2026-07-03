@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, numeric, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, numeric, integer, timestamp, date } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -24,6 +24,9 @@ export const usersTable = pgTable("users", {
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   passwordChangedAt: timestamp("password_changed_at"),
+  // Age verification: required (≥18) for carrier registration; nullable so
+  // existing accounts are unaffected.
+  dateOfBirth: date("date_of_birth"),
   // Email verification. Nullable on purpose: NULL = legacy account created
   // before this column existed, treated as verified so existing users are not
   // locked out. New registrations set false explicitly until the OTP is confirmed.

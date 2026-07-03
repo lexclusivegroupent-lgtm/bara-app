@@ -60,7 +60,7 @@ function getResend(): Resend | null {
 }
 
 router.post("/register", registerLimiter, async (req, res) => {
-  const { email, password, fullName, role, city, vehicleDescription, vehicleType } = req.body;
+  const { email, password, fullName, role, city, vehicleDescription, vehicleType, dateOfBirth } = req.body;
 
   if (!email || !password || !fullName || !role || !city) {
     res.status(400).json({ error: "Missing required fields" });
@@ -70,6 +70,30 @@ router.post("/register", registerLimiter, async (req, res) => {
   if (password.length < 8) {
     res.status(400).json({ error: "Password must be at least 8 characters" });
     return;
+  }
+
+  // Legal: carriers enter into transport agreements and must be adults.
+  // Optional for customers, required and verified ≥18 for driver/both.
+  let resolvedDob: string | null = null;
+  if (role === "driver" || role === "both") {
+    if (!dateOfBirth) {
+      res.status(400).json({ error: "Date of birth is required for carriers" });
+      return;
+    }
+    const dob = new Date(dateOfBirth as string);
+    if (isNaN(dob.getTime())) {
+      res.status(400).json({ error: "Invalid date of birth format. Use YYYY-MM-DD" });
+      return;
+    }
+    const ageYears = (Date.now() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+    if (ageYears < 18) {
+      res.status(400).json({ error: "Carriers must be at least 18 years old" });
+      return;
+    }
+    resolvedDob = dob.toISOString().slice(0, 10);
+  } else if (dateOfBirth) {
+    const dob = new Date(dateOfBirth as string);
+    if (!isNaN(dob.getTime())) resolvedDob = dob.toISOString().slice(0, 10);
   }
 
   try {
@@ -112,6 +136,7 @@ router.post("/register", registerLimiter, async (req, res) => {
       totalJobs: 0,
       referralCode,
       referredBy,
+      dateOfBirth: resolvedDob,
       emailVerified: resend ? false : true,
       emailVerificationToken: resend ? hashOtp(otp) : null,
     }).returning();
