@@ -433,10 +433,6 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
       return;
     }
 
-    if (existing.status !== "pending") {
-      res.status(400).json({ error: "Job is no longer available" });
-      return;
-    }
     if (existing.customerId === req.userId) {
       res.status(400).json({ error: "You cannot accept a job you posted yourself" });
       return;
@@ -492,14 +488,26 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
     const surchargeTotalSek = stairsFee + distanceFee;
     const hasSurcharge = surchargeTotalSek > 0;
 
-    await db.update(jobsTable).set({
+    // Atomic accept: status = 'pending' in the WHERE clause means only ONE of
+    // two simultaneous accepts can succeed — the loser matches zero rows.
+    const [updated] = await db.update(jobsTable).set({
       status: hasSurcharge ? "surcharge_requested" : "accepted",
       driverId: req.userId!,
       acceptedAt: hasSurcharge ? null : new Date(),
       surchargeStairs: stairsFee,
       surchargeDistance: distanceFee,
       surchargeTotalSek,
-    }).where(eq(jobsTable.id, jobId));
+    }).where(
+      and(
+        eq(jobsTable.id, jobId),
+        eq(jobsTable.status, "pending")
+      )
+    ).returning({ id: jobsTable.id });
+
+    if (!updated) {
+      res.status(409).json({ error: "This job has already been accepted by another carrier." });
+      return;
+    }
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
