@@ -283,6 +283,20 @@ router.post("/login", loginLimiter, async (req, res) => {
   }
 });
 
+// Clears the push token so a device that logs out (or is handed to someone
+// else) stops receiving this account's notifications.
+router.post("/logout", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    await db.update(usersTable)
+      .set({ pushToken: null })
+      .where(eq(usersTable.id, req.userId!));
+    res.json({ success: true });
+  } catch (err) {
+    req.log?.error(err, "Logout error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/me", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);

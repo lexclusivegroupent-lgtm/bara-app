@@ -235,6 +235,14 @@ router.delete("/account", authenticate, async (req: AuthenticatedRequest, res) =
       resetTokenExpiry: null,
       vehicleDescription: null,
       isAvailable: false,
+      // GDPR: clear all remaining PII, including encrypted special-category data
+      personnummer: null,
+      bankAccountNumber: null,
+      fullLegalName: null,
+      registeredAddress: null,
+      phone: null,
+      ftaxNumber: null,
+      emailVerificationToken: null,
     }).where(eq(usersTable.id, userId));
 
     // Delete saved addresses
