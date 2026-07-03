@@ -1,7 +1,8 @@
 import { Router, type IRouter, type Request } from "express";
 import bcrypt from "bcryptjs";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomInt } from "node:crypto";
 import { Resend } from "resend";
+import { sendVerificationEmail } from "../utils/email";
 import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
@@ -38,6 +39,18 @@ function makeAuthLimiter(limit: number, windowMs = 15 * 60 * 1000) {
 const registerLimiter = makeAuthLimiter(5);
 const loginLimiter = makeAuthLimiter(10);
 const forgotPasswordLimiter = makeAuthLimiter(5);
+const verifyEmailLimiter = makeAuthLimiter(5);
+const resendVerificationLimiter = makeAuthLimiter(3, 60 * 60 * 1000);
+
+// ─── Email verification helpers ──────────────────────────────────────────────
+
+function generateOtp(): string {
+  return String(randomInt(100000, 999999));
+}
+
+function hashOtp(otp: string): string {
+  return createHash("sha256").update(otp).digest("hex");
+}
 
 function getResend(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY;
@@ -80,6 +93,12 @@ router.post("/register", registerLimiter, async (req, res) => {
       }
     }
 
+    // Email verification: with Resend configured the account starts unverified
+    // and must confirm a 6-digit OTP. Without RESEND_API_KEY (dev mode) the
+    // account is verified immediately so local development keeps working.
+    const resend = getResend();
+    const otp = generateOtp();
+
     const [user] = await db.insert(usersTable).values({
       email: email.toLowerCase(),
       passwordHash,
@@ -92,12 +111,13 @@ router.post("/register", registerLimiter, async (req, res) => {
       totalJobs: 0,
       referralCode,
       referredBy,
+      emailVerified: resend ? false : true,
+      emailVerificationToken: resend ? hashOtp(otp) : null,
     }).returning();
 
     const token = signToken(user.id, user.role);
 
     // Send welcome email (non-blocking)
-    const resend = getResend();
     if (resend) {
       const fromEmail = process.env.RESEND_FROM_EMAIL || "Bära <noreply@baraapp.se>";
       const firstName = fullName.split(" ")[0];
@@ -158,12 +178,74 @@ router.post("/register", registerLimiter, async (req, res) => {
       resend.emails.send({ from: fromEmail, to: email.toLowerCase(), subject, html }).catch(() => {});
     }
 
+    if (resend) {
+      // Verification required: send the OTP and do NOT issue a JWT yet.
+      sendVerificationEmail(email.toLowerCase(), otp).catch(() => {});
+      res.status(201).json({ requiresVerification: true, token: null });
+      return;
+    }
+
     res.status(201).json({
       token,
       user: formatUser(user),
     });
   } catch (err) {
     req.log?.error(err, "Register error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ─── Email verification ───────────────────────────────────────────────────────
+
+// Public route (no auth): confirms the 6-digit OTP and issues the first JWT.
+router.post("/verify-email", verifyEmailLimiter, async (req, res) => {
+  const { email, otp } = req.body;
+  if (!email || !otp || typeof email !== "string" || typeof otp !== "string") {
+    res.status(400).json({ error: "email and otp are required" });
+    return;
+  }
+
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
+    if (!user || !user.emailVerificationToken || user.emailVerificationToken !== hashOtp(otp.trim())) {
+      res.status(400).json({ error: "Invalid or expired code" });
+      return;
+    }
+
+    const [updated] = await db.update(usersTable)
+      .set({ emailVerified: true, emailVerificationToken: null })
+      .where(eq(usersTable.id, user.id))
+      .returning();
+
+    const token = signToken(updated.id, updated.role);
+    res.json({ token, user: formatUser(updated) });
+  } catch (err) {
+    req.log?.error(err, "Verify email error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Public route (no auth): regenerates and resends the OTP.
+// Responds identically whether or not the account exists (no enumeration).
+router.post("/resend-verification", resendVerificationLimiter, async (req, res) => {
+  const { email } = req.body;
+  if (!email || typeof email !== "string") {
+    res.status(400).json({ error: "email is required" });
+    return;
+  }
+
+  try {
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase())).limit(1);
+    if (user && user.emailVerified === false) {
+      const otp = generateOtp();
+      await db.update(usersTable)
+        .set({ emailVerificationToken: hashOtp(otp) })
+        .where(eq(usersTable.id, user.id));
+      sendVerificationEmail(email.toLowerCase(), otp).catch(() => {});
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    req.log?.error(err, "Resend verification error");
     res.status(500).json({ error: "Internal server error" });
   }
 });

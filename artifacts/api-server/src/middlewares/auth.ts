@@ -202,6 +202,20 @@ export async function authenticate(
       userId: number;
       role: string;
     };
+
+    // Email verification gate: unverified accounts are blocked from all
+    // authenticated routes. NULL (legacy accounts predating the column)
+    // counts as verified — only an explicit false blocks.
+    const [row] = await db
+      .select({ emailVerified: usersTable.emailVerified })
+      .from(usersTable)
+      .where(eq(usersTable.id, payload.userId))
+      .limit(1);
+    if (row && row.emailVerified === false) {
+      res.status(403).json({ error: "EMAIL_NOT_VERIFIED" });
+      return;
+    }
+
     req.userId = payload.userId;
     req.userRole = payload.role;
     next();

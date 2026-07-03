@@ -255,3 +255,34 @@ export async function sendReceiptEmail(data: ReceiptData): Promise<void> {
     console.error("[email] Failed to send receipt:", err);
   }
 }
+
+/**
+ * Sends the 6-digit email verification OTP.
+ * No-op when RESEND_API_KEY is unset (dev mode skips verification entirely).
+ */
+export async function sendVerificationEmail(email: string, otp: string): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+  try {
+    await resend.emails.send({
+      from: getFrom(),
+      to: email,
+      subject: "Verifiera din e-post – Bära",
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#1B2A4A;color:#fff;border-radius:16px;overflow:hidden;">
+          <div style="background:#C9A84C;padding:32px;text-align:center;">
+            <h1 style="margin:0;color:#1B2A4A;font-size:28px;font-weight:800;">Bära</h1>
+          </div>
+          <div style="padding:32px;text-align:center;">
+            <h2 style="color:#C9A84C;margin:0 0 8px;">Verifiera din e-post</h2>
+            <p style="color:#C4C9D4;">Ange koden nedan i appen för att aktivera ditt konto:</p>
+            <div style="font-size:36px;font-weight:800;letter-spacing:8px;color:#fff;background:#243252;border-radius:12px;padding:20px;margin:20px 0;">${otp}</div>
+            <p style="color:#6B7280;font-size:12px;">Om du inte skapade ett Bära-konto kan du ignorera detta mejl.</p>
+          </div>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error("[email] Failed to send verification email:", err);
+  }
+}

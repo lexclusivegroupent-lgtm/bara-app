@@ -24,6 +24,11 @@ export const usersTable = pgTable("users", {
   resetToken: text("reset_token"),
   resetTokenExpiry: timestamp("reset_token_expiry"),
   passwordChangedAt: timestamp("password_changed_at"),
+  // Email verification. Nullable on purpose: NULL = legacy account created
+  // before this column existed, treated as verified so existing users are not
+  // locked out. New registrations set false explicitly until the OTP is confirmed.
+  emailVerified: boolean("email_verified"),
+  emailVerificationToken: text("email_verification_token"),
   driverAgreementAccepted: boolean("driver_agreement_accepted").notNull().default(false),
   driverAgreementAcceptedAt: timestamp("driver_agreement_accepted_at"),
   driverOnboardingComplete: boolean("driver_onboarding_complete").notNull().default(false),
