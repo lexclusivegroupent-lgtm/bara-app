@@ -6,6 +6,7 @@ import { authenticate, AuthenticatedRequest } from "../middlewares/auth";
 import { formatUser } from "./auth";
 import { sendPushToUser, sendPush } from "../utils/push";
 import { sendReceiptEmail } from "../utils/email";
+import { LEAD_GEN_MODE } from "../lib/leadGen";
 
 const router: IRouter = Router();
 
@@ -60,6 +61,13 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     surchargeTotalSek: job.surchargeTotalSek ?? 0,
     surchargeApprovedAt: job.surchargeApprovedAt?.toISOString() || null,
     tipAmount: job.tipAmount ?? 0,
+    // Lead-gen fields
+    assignedAt: job.assignedAt?.toISOString() || null,
+    contactedAt: job.contactedAt?.toISOString() || null,
+    declinedAt: job.declinedAt?.toISOString() || null,
+    declineReason: job.declineReason,
+    contactName: job.contactName,
+    contactPhone: job.contactPhone,
     customer: customer ? formatUser(customer) : null,
     driver: driver ? formatUser(driver) : null,
   };
@@ -84,6 +92,15 @@ router.get("/", authenticate, async (req: AuthenticatedRequest, res) => {
     const conditions = [];
     if (city) conditions.push(eq(jobsTable.city, city as string));
     if (status) conditions.push(eq(jobsTable.status, status as any));
+
+    // Lead-gen mode: no open marketplace feed. Users only see requests they
+    // submitted (customer) or requests assigned to them (partner). Admin
+    // routes requests via /api/admin — providers cannot browse open jobs.
+    if (LEAD_GEN_MODE) {
+      conditions.push(
+        sql`(${jobsTable.customerId} = ${req.userId!} OR ${jobsTable.driverId} = ${req.userId!})`
+      );
+    }
 
     const jobs = await db.select().from(jobsTable)
       .where(conditions.length > 0 ? and(...conditions) : undefined)
@@ -127,6 +144,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     driverPayout, platformFee, city, customerPhotos, customerPrice,
     floorNumber, hasElevator, helpersNeeded, estimatedWeightKg,
     weightPreset, involvesHazardous, promoCode,
+    contactName, contactPhone,
   } = req.body;
 
   if (!jobType || !itemDescription || !preferredTime || priceTotal == null) {
@@ -134,25 +152,34 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     return;
   }
 
-  // Enforce weight limit — weightPreset is mandatory for all new jobs
+  // Weight presets: mandatory in marketplace mode (gig carriers with regular
+  // cars, 25kg cap). In lead-gen mode partners are professional businesses
+  // with proper vehicles, so the preset is optional and there is no cap —
+  // bulky items ARE the business.
   const VALID_WEIGHT_PRESETS = ["0_10kg", "10_20kg", "20_25kg"];
-  if (!weightPreset) {
-    res.status(400).json({ error: "weightPreset is required. Must be one of: 0_10kg, 10_20kg, 20_25kg" });
-    return;
-  }
-  if (!VALID_WEIGHT_PRESETS.includes(weightPreset)) {
-    res.status(400).json({ error: "Bära is for small, light items only (max 25kg). For heavier items, please use a moving service." });
+  if (!LEAD_GEN_MODE) {
+    if (!weightPreset) {
+      res.status(400).json({ error: "weightPreset is required. Must be one of: 0_10kg, 10_20kg, 20_25kg" });
+      return;
+    }
+    if (!VALID_WEIGHT_PRESETS.includes(weightPreset)) {
+      res.status(400).json({ error: "Bära is for small, light items only (max 25kg). For heavier items, please use a moving service." });
+      return;
+    }
+  } else if (weightPreset && !VALID_WEIGHT_PRESETS.includes(weightPreset)) {
+    res.status(400).json({ error: "Invalid weightPreset. Must be one of: 0_10kg, 10_20kg, 20_25kg" });
     return;
   }
   // City is optional — fall back to a default so drivers can still see the job
   const resolvedCity: string = (city && city.trim()) ? city.trim() : "Sverige";
 
   const VALID_JOB_TYPES = [
-    // New types (7 categories)
+    // Lead-gen categories: furniture pickup/delivery, bulky item transport,
+    // junk removal, second-hand item delivery
+    "furniture_transport", "bulky_delivery", "junk_pickup", "secondhand_delivery",
+    // Legacy marketplace types (kept so old clients keep working)
     "blocket_pickup", "facebook_pickup", "small_furniture",
     "office_items", "children_items", "electronics", "other_small",
-    // Legacy types (kept for backward compatibility)
-    "furniture_transport", "bulky_delivery", "junk_pickup",
   ];
   if (!VALID_JOB_TYPES.includes(jobType)) {
     res.status(400).json({ error: `Invalid jobType. Must be one of: ${VALID_JOB_TYPES.join(", ")}` });
@@ -243,33 +270,101 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       hasElevator: hasElevator != null ? Boolean(hasElevator) : null,
       helpersNeeded: helpersNeeded != null ? parseInt(helpersNeeded) : null,
       estimatedWeightKg: estimatedWeightKg != null ? parseInt(estimatedWeightKg) : null,
-      weightPreset: weightPreset as "0_10kg" | "10_20kg" | "20_25kg",
+      weightPreset: (weightPreset as "0_10kg" | "10_20kg" | "20_25kg") || null,
       promoCode: appliedPromoCode,
       discountAmount: discountAmount != null ? discountAmount.toString() : null,
+      contactName: contactName?.trim() || null,
+      contactPhone: contactPhone?.trim() || null,
     }).returning();
 
     const enriched = await getJobWithUsers(job.id);
     res.status(201).json(enriched);
 
-    // Notify all available drivers in the same city (fire and forget)
-    const typeLabel = jobType.replace(/_/g, " ");
-    db.select({ pushToken: usersTable.pushToken }).from(usersTable)
-      .where(and(eq(usersTable.city, resolvedCity), eq(usersTable.isAvailable, true)))
-      .then((drivers) => {
-        const messages = drivers
-          .filter((d) => d.pushToken)
-          .map((d) => ({
-            to: d.pushToken!,
-            title: `New job in ${city}`,
-            body: `${typeLabel} — ${itemDescription.trim().slice(0, 60)}`,
-            data: { screen: "driver-job", jobId: job.id },
-            sound: "default" as const,
-          }));
-        return sendPush(messages);
-      })
-      .catch(() => {});
+    // Marketplace mode only: broadcast to all available drivers in the city.
+    // In lead-gen mode requests wait in the admin queue for manual routing.
+    if (!LEAD_GEN_MODE) {
+      const typeLabel = jobType.replace(/_/g, " ");
+      db.select({ pushToken: usersTable.pushToken }).from(usersTable)
+        .where(and(eq(usersTable.city, resolvedCity), eq(usersTable.isAvailable, true)))
+        .then((drivers) => {
+          const messages = drivers
+            .filter((d) => d.pushToken)
+            .map((d) => ({
+              to: d.pushToken!,
+              title: `New job in ${city}`,
+              body: `${typeLabel} — ${itemDescription.trim().slice(0, 60)}`,
+              data: { screen: "driver-job", jobId: job.id },
+              sound: "default" as const,
+            }));
+          return sendPush(messages);
+        })
+        .catch(() => {});
+    }
   } catch (err) {
     req.log?.error(err, "Create job error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Partner responds to an assigned lead: accept, decline, or mark as contacted.
+// Declining returns the request to the admin queue for re-routing.
+router.post("/:id/respond", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id as string);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+
+  const { action, reason } = req.body as { action?: string; reason?: string };
+  if (!action || !["accept", "decline", "contacted"].includes(action)) {
+    res.status(400).json({ error: "action must be one of: accept, decline, contacted" });
+    return;
+  }
+
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Request not found" }); return; }
+    if (existing.driverId !== req.userId) {
+      res.status(403).json({ error: "This request is not assigned to you" });
+      return;
+    }
+    const RESPONDABLE = ["assigned", "contacted", "accepted"];
+    if (!RESPONDABLE.includes(existing.status)) {
+      res.status(400).json({ error: `Request cannot be updated from status '${existing.status}'` });
+      return;
+    }
+
+    const now = new Date();
+    if (action === "accept") {
+      await db.update(jobsTable)
+        .set({ status: "accepted", acceptedAt: now })
+        .where(eq(jobsTable.id, jobId));
+    } else if (action === "contacted") {
+      await db.update(jobsTable)
+        .set({ status: "contacted", contactedAt: existing.contactedAt ?? now })
+        .where(eq(jobsTable.id, jobId));
+    } else {
+      // decline: unassign and hand back to the admin queue
+      await db.update(jobsTable)
+        .set({ status: "declined", driverId: null, declinedAt: now, declineReason: reason?.trim() || null })
+        .where(eq(jobsTable.id, jobId));
+    }
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+
+    // Let the customer know their request is moving (fire and forget)
+    if (action !== "decline") {
+      const [customer] = await db.select({ pushToken: usersTable.pushToken })
+        .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+      sendPushToUser(
+        customer?.pushToken,
+        action === "accept" ? "Din förfrågan är bekräftad ✅" : "En partner kontaktar dig snart 📞",
+        action === "accept"
+          ? "En lokal partner har bekräftat din bokning."
+          : "Din förfrågan har tagits emot av en lokal partner.",
+        { screen: "customer-job", jobId }
+      ).catch(() => {});
+    }
+  } catch (err) {
+    req.log?.error(err, "Partner respond error");
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -283,6 +378,41 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
       res.status(404).json({ error: "Job not found" });
       return;
     }
+
+    // Lead-gen mode: open first-accept is disabled. Only the partner the
+    // admin assigned can accept, and gig-marketplace gates (onboarding
+    // checklist, F-skatt threshold, cancellation lockout, surcharges) do
+    // not apply to partner businesses.
+    if (LEAD_GEN_MODE) {
+      if (existing.driverId !== req.userId) {
+        res.status(403).json({
+          error: "Requests are assigned by Bära. This request is not assigned to you.",
+          code: "NOT_ASSIGNED",
+        });
+        return;
+      }
+      if (!["assigned", "contacted"].includes(existing.status)) {
+        res.status(400).json({ error: `Request cannot be accepted from status '${existing.status}'` });
+        return;
+      }
+      await db.update(jobsTable)
+        .set({ status: "accepted", acceptedAt: new Date() })
+        .where(eq(jobsTable.id, jobId));
+
+      const enriched = await getJobWithUsers(jobId);
+      res.json(enriched);
+
+      const [customer] = await db.select({ pushToken: usersTable.pushToken })
+        .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
+      sendPushToUser(
+        customer?.pushToken,
+        "Din förfrågan är bekräftad ✅",
+        "En lokal partner har bekräftat din bokning.",
+        { screen: "customer-job", jobId }
+      ).catch(() => {});
+      return;
+    }
+
     if (existing.status !== "pending") {
       res.status(400).json({ error: "Job is no longer available" });
       return;

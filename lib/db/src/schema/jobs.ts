@@ -7,8 +7,10 @@ export const jobsTable = pgTable("jobs", {
   id: serial("id").primaryKey(),
   customerId: integer("customer_id").notNull().references(() => usersTable.id),
   driverId: integer("driver_id").references(() => usersTable.id),
-  jobType: text("job_type").notNull().$type<"furniture_transport" | "bulky_delivery" | "junk_pickup">(),
-  status: text("status").notNull().default("pending").$type<"pending" | "surcharge_requested" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "cancelled_by_driver" | "disputed">(),
+  jobType: text("job_type").notNull(),
+  // Lead-gen statuses: pending (submitted) → assigned → contacted/accepted → completed.
+  // "declined" returns the lead to the admin queue. Legacy marketplace statuses kept for old records.
+  status: text("status").notNull().default("pending").$type<"pending" | "assigned" | "contacted" | "declined" | "surcharge_requested" | "accepted" | "arrived" | "in_progress" | "completed" | "cancelled" | "cancelled_by_customer" | "cancelled_by_driver" | "disputed">(),
   pickupAddress: text("pickup_address"),
   dropoffAddress: text("dropoff_address"),
   homeAddress: text("home_address"),
@@ -59,6 +61,15 @@ export const jobsTable = pgTable("jobs", {
   surchargeApprovedAt: timestamp("surcharge_approved_at"),
   // Customer tip (100% to carrier)
   tipAmount: integer("tip_amount").default(0),
+  // B2B lead-gen: admin assignment + lead outcome tracking.
+  // driverId doubles as the assigned partner's user id.
+  assignedAt: timestamp("assigned_at"),
+  contactedAt: timestamp("contacted_at"),
+  declinedAt: timestamp("declined_at"),
+  declineReason: text("decline_reason"),
+  // Customer contact details so the partner can reach out directly
+  contactName: text("contact_name"),
+  contactPhone: text("contact_phone"),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });

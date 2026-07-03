@@ -7,7 +7,8 @@ export const usersTable = pgTable("users", {
   email: text("email").notNull().unique(),
   passwordHash: text("password_hash"),
   fullName: text("full_name").notNull(),
-  role: text("role").notNull().$type<"customer" | "driver" | "both">(),
+  // "partner" = B2B service provider (lead-gen model); "driver"/"both" kept for legacy accounts
+  role: text("role").notNull().$type<"customer" | "driver" | "both" | "partner">(),
   city: text("city").notNull(),
   profilePhoto: text("profile_photo"),
   isAvailable: boolean("is_available").notNull().default(true),
@@ -40,6 +41,12 @@ export const usersTable = pgTable("users", {
   bankAccountNumber: text("bank_account_number"),
   dac7Consented: boolean("dac7_consented").notNull().default(false),
   dac7ConsentDate: timestamp("dac7_consent_date"),
+  // B2B lead-gen pivot: partner business profile
+  companyName: text("company_name"),
+  orgNumber: text("org_number"),
+  phone: text("phone"),
+  serviceAreas: text("service_areas").array(),
+  serviceCategories: text("service_categories").array(),
   // Referral programme
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),

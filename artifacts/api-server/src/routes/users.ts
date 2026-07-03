@@ -23,7 +23,8 @@ router.put("/push-token", authenticate, async (req: AuthenticatedRequest, res) =
 });
 
 router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
-  const { fullName, city, vehicleType, vehicleDescription, isAvailable, profilePhoto, role, ftaxRegistered, ftaxNumber } = req.body;
+  const { fullName, city, vehicleType, vehicleDescription, isAvailable, profilePhoto, role, ftaxRegistered, ftaxNumber,
+    companyName, orgNumber, phone, serviceAreas, serviceCategories } = req.body;
 
   try {
     const updateData: Partial<typeof usersTable.$inferInsert> = {};
@@ -35,6 +36,12 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     if (profilePhoto !== undefined) updateData.profilePhoto = profilePhoto;
     if (ftaxRegistered !== undefined) updateData.ftaxRegistered = Boolean(ftaxRegistered);
     if (ftaxNumber !== undefined) updateData.ftaxNumber = ftaxNumber?.trim() || null;
+    // Partner business profile (lead-gen)
+    if (companyName !== undefined) updateData.companyName = companyName?.trim() || null;
+    if (orgNumber !== undefined) updateData.orgNumber = orgNumber?.trim() || null;
+    if (phone !== undefined) updateData.phone = phone?.trim() || null;
+    if (serviceAreas !== undefined) updateData.serviceAreas = Array.isArray(serviceAreas) ? serviceAreas : null;
+    if (serviceCategories !== undefined) updateData.serviceCategories = Array.isArray(serviceCategories) ? serviceCategories : null;
 
     if (role !== undefined) {
       if (role !== "both") {

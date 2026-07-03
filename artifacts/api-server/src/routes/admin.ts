@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import { jobsTable, usersTable, mapsApiCallsTable } from "@workspace/db";
 import { eq, sql, count, desc, inArray, and } from "drizzle-orm";
 import { adminDashboardHtml } from "./admin-html";
+import { sendPushToUser } from "../utils/push";
 
 const VAT_WARNING_SEK = 80_000;
 const VAT_URGENT_SEK = 115_000;
@@ -496,6 +497,230 @@ router.get("/maps/usage", async (req: Request, res: Response) => {
   } catch (err: any) {
     console.error("Maps usage error:", err);
     res.status(500).json({ error: "Failed to fetch maps usage" });
+  }
+});
+
+// ─── B2B Lead-Gen: partners, assignment, funnel ─────────────────────────────
+
+/**
+ * List partner businesses for the assignment dropdown.
+ * Includes legacy driver/both accounts so existing providers can receive
+ * leads during the transition. Optional filters: ?city= &category=
+ */
+router.get("/partners", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const { city, category } = req.query as Record<string, string>;
+
+    const partners = await db.select({
+      id: usersTable.id,
+      fullName: usersTable.fullName,
+      companyName: usersTable.companyName,
+      orgNumber: usersTable.orgNumber,
+      email: usersTable.email,
+      phone: usersTable.phone,
+      city: usersTable.city,
+      role: usersTable.role,
+      serviceAreas: usersTable.serviceAreas,
+      serviceCategories: usersTable.serviceCategories,
+      isAvailable: usersTable.isAvailable,
+      rating: usersTable.rating,
+      totalJobs: usersTable.totalJobs,
+      createdAt: usersTable.createdAt,
+    }).from(usersTable)
+      .where(and(
+        sql`${usersTable.role} in ('partner', 'driver', 'both')`,
+        eq(usersTable.isDeactivated, false),
+      ))
+      .orderBy(desc(usersTable.createdAt))
+      .limit(500);
+
+    // Filter by service area / category in JS — arrays are small at MVP scale
+    let filtered = partners;
+    if (city) {
+      const c = city.toLowerCase();
+      filtered = filtered.filter(p =>
+        p.city?.toLowerCase().includes(c) ||
+        (p.serviceAreas || []).some(a => a.toLowerCase().includes(c))
+      );
+    }
+    if (category) {
+      filtered = filtered.filter(p =>
+        !p.serviceCategories?.length || p.serviceCategories.includes(category)
+      );
+    }
+
+    res.json(filtered);
+  } catch (err: any) {
+    console.error("Admin partners error:", err);
+    res.status(500).json({ error: "Failed to fetch partners" });
+  }
+});
+
+/**
+ * Create or update a partner business account.
+ * Lets the admin onboard partners manually — no public gig signup needed.
+ */
+router.post("/partners", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const { email, fullName, companyName, orgNumber, phone, city, serviceAreas, serviceCategories } = req.body;
+    if (!email || !companyName || !city) {
+      return res.status(400).json({ error: "email, companyName, and city are required" });
+    }
+
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email.toLowerCase().trim())).limit(1);
+
+    const partnerFields = {
+      companyName: companyName.trim(),
+      orgNumber: orgNumber?.trim() || null,
+      phone: phone?.trim() || null,
+      city: city.trim(),
+      serviceAreas: Array.isArray(serviceAreas) && serviceAreas.length ? serviceAreas : [city.trim()],
+      serviceCategories: Array.isArray(serviceCategories) && serviceCategories.length ? serviceCategories : null,
+    };
+
+    if (existing) {
+      const [updated] = await db.update(usersTable)
+        .set({ ...partnerFields, role: "partner" })
+        .where(eq(usersTable.id, existing.id))
+        .returning({ id: usersTable.id, email: usersTable.email, companyName: usersTable.companyName });
+      return res.json({ ok: true, partner: updated, created: false });
+    }
+
+    const [created] = await db.insert(usersTable).values({
+      email: email.toLowerCase().trim(),
+      fullName: fullName?.trim() || companyName.trim(),
+      role: "partner",
+      isAvailable: true,
+      ...partnerFields,
+    }).returning({ id: usersTable.id, email: usersTable.email, companyName: usersTable.companyName });
+
+    return res.status(201).json({ ok: true, partner: created, created: true });
+  } catch (err: any) {
+    console.error("Admin create partner error:", err);
+    return res.status(500).json({ error: "Failed to create partner" });
+  }
+});
+
+/**
+ * Assign a request to a partner. Reuses the jobs.driverId column as the
+ * assigned-partner reference, so all existing screens keep working.
+ */
+router.post("/requests/:id/assign", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const { partnerId } = req.body as { partnerId?: number };
+    if (!partnerId) return res.status(400).json({ error: "partnerId is required" });
+
+    const [job] = await db.select().from(jobsTable).where(eq(jobsTable.id, id));
+    if (!job) return res.status(404).json({ error: "Request not found" });
+    if (["completed", "cancelled", "cancelled_by_customer"].includes(job.status)) {
+      return res.status(400).json({ error: `Cannot assign a request with status '${job.status}'` });
+    }
+
+    const [partner] = await db.select().from(usersTable).where(eq(usersTable.id, partnerId));
+    if (!partner || !["partner", "driver", "both"].includes(partner.role)) {
+      return res.status(404).json({ error: "Partner not found" });
+    }
+
+    const [updated] = await db.update(jobsTable)
+      .set({ driverId: partnerId, status: "assigned", assignedAt: new Date(), declinedAt: null, declineReason: null })
+      .where(eq(jobsTable.id, id))
+      .returning({ id: jobsTable.id, status: jobsTable.status, driverId: jobsTable.driverId, assignedAt: jobsTable.assignedAt });
+
+    res.json({ ok: true, request: updated });
+
+    sendPushToUser(
+      partner.pushToken,
+      "Ny förfrågan tilldelad 📋",
+      `${job.jobType.replace(/_/g, " ")} i ${job.city} — öppna appen för detaljer.`,
+      { screen: "driver-job", jobId: id }
+    ).catch(() => {});
+    return;
+  } catch (err: any) {
+    console.error("Admin assign error:", err);
+    return res.status(500).json({ error: "Failed to assign request" });
+  }
+});
+
+/**
+ * Admin override: edit request details or force a status/outcome.
+ */
+router.put("/requests/:id", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const { status, itemDescription, preferredTime, pickupAddress, dropoffAddress, city, contactName, contactPhone } = req.body;
+
+    const ALLOWED_STATUSES = ["pending", "assigned", "contacted", "accepted", "completed", "cancelled", "declined"];
+    if (status && !ALLOWED_STATUSES.includes(status)) {
+      return res.status(400).json({ error: `status must be one of: ${ALLOWED_STATUSES.join(", ")}` });
+    }
+
+    const updateData: Record<string, unknown> = {};
+    if (status) {
+      updateData.status = status;
+      if (status === "completed") updateData.completedAt = new Date();
+      if (status === "contacted") updateData.contactedAt = new Date();
+      if (status === "pending") { updateData.driverId = null; updateData.assignedAt = null; }
+    }
+    if (itemDescription !== undefined) updateData.itemDescription = itemDescription;
+    if (preferredTime !== undefined) updateData.preferredTime = preferredTime;
+    if (pickupAddress !== undefined) updateData.pickupAddress = pickupAddress;
+    if (dropoffAddress !== undefined) updateData.dropoffAddress = dropoffAddress;
+    if (city !== undefined) updateData.city = city;
+    if (contactName !== undefined) updateData.contactName = contactName;
+    if (contactPhone !== undefined) updateData.contactPhone = contactPhone;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    const [updated] = await db.update(jobsTable)
+      .set(updateData)
+      .where(eq(jobsTable.id, id))
+      .returning({ id: jobsTable.id, status: jobsTable.status });
+
+    if (!updated) return res.status(404).json({ error: "Request not found" });
+    return res.json({ ok: true, request: updated });
+  } catch (err: any) {
+    console.error("Admin request override error:", err);
+    return res.status(500).json({ error: "Failed to update request" });
+  }
+});
+
+/**
+ * Lightweight lead funnel: submitted → assigned → contacted → accepted → completed.
+ */
+router.get("/funnel", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const { city } = req.query as Record<string, string>;
+    const cityCond = city ? sql`lower(${jobsTable.city}) like ${"%" + city.toLowerCase() + "%"}` : sql`true`;
+
+    const [row] = await db.select({
+      total: count(),
+      submitted: sql<number>`count(*) filter (where ${jobsTable.status} = 'pending')`,
+      assigned: sql<number>`count(*) filter (where ${jobsTable.status} = 'assigned')`,
+      contacted: sql<number>`count(*) filter (where ${jobsTable.status} = 'contacted')`,
+      accepted: sql<number>`count(*) filter (where ${jobsTable.status} in ('accepted', 'arrived', 'in_progress'))`,
+      completed: sql<number>`count(*) filter (where ${jobsTable.status} = 'completed')`,
+      cancelled: sql<number>`count(*) filter (where ${jobsTable.status} in ('cancelled', 'cancelled_by_customer', 'cancelled_by_driver'))`,
+      declined: sql<number>`count(*) filter (where ${jobsTable.status} = 'declined')`,
+    }).from(jobsTable).where(cityCond);
+
+    const byCategory = await db.select({
+      jobType: jobsTable.jobType,
+      total: count(),
+      completed: sql<number>`count(*) filter (where ${jobsTable.status} = 'completed')`,
+    }).from(jobsTable).where(cityCond).groupBy(jobsTable.jobType).orderBy(sql`count(*) desc`);
+
+    res.json({ funnel: row, byCategory, generatedAt: new Date().toISOString() });
+  } catch (err: any) {
+    console.error("Admin funnel error:", err);
+    res.status(500).json({ error: "Failed to fetch funnel" });
   }
 });
 

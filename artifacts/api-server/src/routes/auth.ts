@@ -320,6 +320,12 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     referralCode: user.referralCode,
     referralCount: user.referralCount,
     referralBonusEarned: user.referralBonusEarned,
+    // Partner business profile (lead-gen)
+    companyName: user.companyName,
+    orgNumber: user.orgNumber,
+    phone: user.phone,
+    serviceAreas: user.serviceAreas || [],
+    serviceCategories: user.serviceCategories || [],
     createdAt: user.createdAt.toISOString(),
   };
 }
