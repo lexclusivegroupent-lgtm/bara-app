@@ -62,6 +62,21 @@ async function geocodeAddress(address: string): Promise<{ lat: number; lon: numb
   return geocodeMapbox(address);
 }
 
+/**
+ * Server-side distance between two addresses in km (min 1, 0.1 precision).
+ * Returns null when either address cannot be geocoded — callers must treat
+ * that as a hard failure, never fall back to client-supplied values.
+ */
+export async function getDistanceKm(origin: string, destination: string): Promise<number | null> {
+  const [originCoords, destCoords] = await Promise.all([
+    geocodeAddress(origin),
+    geocodeAddress(destination),
+  ]);
+  if (!originCoords || !destCoords) return null;
+  const rawKm = haversineDistance(originCoords.lat, originCoords.lon, destCoords.lat, destCoords.lon);
+  return Math.max(1, Math.round(rawKm * 10) / 10);
+}
+
 function calcPrice(distanceKm: number, jobType?: string): { priceBase: number; pricePerKm: number; priceTotal: number } {
   const type = (jobType || "furniture_transport").toLowerCase();
   let base = 799;

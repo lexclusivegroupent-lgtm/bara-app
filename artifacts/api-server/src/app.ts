@@ -11,6 +11,13 @@ import { logger } from "./lib/logger";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+// Job pricing is computed server-side from geocoded addresses; Mapbox is the
+// geocoding fallback and must be configured in production.
+if (process.env.NODE_ENV === "production" && !process.env.MAPBOX_SECRET_TOKEN) {
+  console.error("FATAL: MAPBOX_SECRET_TOKEN is required in production");
+  process.exit(1);
+}
+
 const app: Express = express();
 
 app.use(

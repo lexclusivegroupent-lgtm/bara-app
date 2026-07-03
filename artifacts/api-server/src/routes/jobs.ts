@@ -7,6 +7,7 @@ import { formatUser } from "./auth";
 import { sendPushToUser, sendPush } from "../utils/push";
 import { sendReceiptEmail } from "../utils/email";
 import { LEAD_GEN_MODE } from "../lib/leadGen";
+import { getDistanceKm } from "./distance";
 
 const router: IRouter = Router();
 
@@ -138,17 +139,19 @@ router.get("/:id", authenticate, async (req: AuthenticatedRequest, res) => {
 });
 
 router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
+  // NOTE: priceTotal, distanceKm, driverPayout, platformFee and customerPrice
+  // from the request body are intentionally IGNORED — price and distance are
+  // computed server-side (see below) to prevent client price manipulation.
   const {
     jobType, pickupAddress, dropoffAddress, homeAddress, extraStops,
-    itemDescription, preferredTime, distanceKm, priceTotal,
-    driverPayout, platformFee, city, customerPhotos, customerPrice,
+    itemDescription, preferredTime, city, customerPhotos,
     floorNumber, hasElevator, helpersNeeded, estimatedWeightKg,
     weightPreset, involvesHazardous, promoCode,
     contactName, contactPhone,
   } = req.body;
 
-  if (!jobType || !itemDescription || !preferredTime || priceTotal == null) {
-    res.status(400).json({ error: "Missing required fields: jobType, itemDescription, preferredTime, priceTotal" });
+  if (!jobType || !itemDescription || !preferredTime) {
+    res.status(400).json({ error: "Missing required fields: jobType, itemDescription, preferredTime" });
     return;
   }
 
@@ -207,22 +210,33 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     }
   }
 
-  const suggested = parseFloat(priceTotal);
-  // New pricing range: 99–299 SEK; allow ±30% flex around suggested but clamp to 99–299
-  const minAllowed = Math.max(99, Math.round(suggested * 0.70));
-  const maxAllowed = Math.min(299, Math.round(suggested * 1.30));
+  // ── Server-side price calculation ──────────────────────────────────────────
+  // Distance and price are computed here from the addresses. Client-sent
+  // values are never trusted; on geocoding failure we refuse the request
+  // rather than fall back to anything client-supplied.
+  const BASE_PRICE = 99;
+  const PRICE_PER_KM = 10;
+  const MAX_PRICE = 299;
+  const MIN_PRICE = 99;
 
-  let resolvedCustomerPrice: number | null = null;
-  if (customerPrice != null) {
-    const cp = parseFloat(customerPrice);
-    if (isNaN(cp) || cp < minAllowed || cp > maxAllowed) {
-      res.status(400).json({
-        error: `Customer price must be between ${minAllowed} and ${maxAllowed} kr (±30% of suggested ${Math.round(suggested)} kr)`,
-      });
+  let computedDistance = 0;
+  if (pickupAddress?.trim() && dropoffAddress?.trim()) {
+    const km = await getDistanceKm(pickupAddress.trim(), dropoffAddress.trim());
+    if (km == null) {
+      res.status(503).json({ error: "Could not calculate delivery price. Please try again." });
       return;
     }
-    resolvedCustomerPrice = Math.round(cp);
+    computedDistance = km;
   }
+  // Single-address jobs (e.g. junk pickup at home) have no transport leg:
+  // distance 0 → base price.
+
+  const computedPrice = Math.min(
+    MAX_PRICE,
+    Math.max(MIN_PRICE, Math.round(BASE_PRICE + computedDistance * PRICE_PER_KM))
+  );
+  const computedDriverPayout = Math.round(computedPrice * 0.75);
+  const computedPlatformFee = computedPrice - computedDriverPayout;
 
   // Validate and apply promo code.
   // Single atomic UPDATE...RETURNING: the validity checks and the usage
@@ -264,11 +278,11 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       extraStops: Array.isArray(extraStops) && extraStops.length > 0 ? extraStops : null,
       itemDescription: itemDescription.trim(),
       preferredTime,
-      distanceKm: distanceKm?.toString() || null,
-      priceTotal: priceTotal.toString(),
-      driverPayout: (driverPayout ?? Math.round(priceTotal * 0.75)).toString(),
-      platformFee: (platformFee ?? Math.round(priceTotal * 0.25)).toString(),
-      customerPrice: resolvedCustomerPrice != null ? resolvedCustomerPrice.toString() : null,
+      distanceKm: computedDistance > 0 ? computedDistance.toString() : null,
+      priceTotal: computedPrice.toString(),
+      driverPayout: computedDriverPayout.toString(),
+      platformFee: computedPlatformFee.toString(),
+      customerPrice: null,
       paymentStatus: "unpaid",
       city: resolvedCity,
       photosCustomer: Array.isArray(customerPhotos) ? customerPhotos : [],
