@@ -46,6 +46,9 @@ export const usersTable = pgTable("users", {
   bankAccountNumber: text("bank_account_number"),
   dac7Consented: boolean("dac7_consented").notNull().default(false),
   dac7ConsentDate: timestamp("dac7_consent_date"),
+  // Set true when the carrier crosses a DAC7 reporting threshold
+  // (30 completed jobs OR 22,000 SEK gross in a calendar year) without consent.
+  dac7Required: boolean("dac7_required").notNull().default(false),
   // B2B lead-gen pivot: partner business profile
   companyName: text("company_name"),
   orgNumber: text("org_number"),

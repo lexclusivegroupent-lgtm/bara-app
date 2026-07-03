@@ -444,12 +444,24 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
       annualEarnings: usersTable.annualEarnings,
       ftaxRegistered: usersTable.ftaxRegistered,
       driverOnboardingComplete: usersTable.driverOnboardingComplete,
+      dac7Required: usersTable.dac7Required,
+      dac7Consented: usersTable.dac7Consented,
     }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
 
     // Role escalation guard: customer accounts cannot accept jobs — driver
     // capability is only granted through the onboarding endpoint.
     if (driverRecord?.role === "customer") {
       res.status(403).json({ error: "Complete driver onboarding to accept jobs" });
+      return;
+    }
+
+    // DAC7 gate: carriers past the reporting threshold must complete tax
+    // verification (consent + KYC) before accepting more jobs.
+    if (driverRecord?.dac7Required && !driverRecord?.dac7Consented) {
+      res.status(403).json({
+        error: "DAC7_REQUIRED",
+        message: "Complete tax verification in your profile to continue accepting jobs.",
+      });
       return;
     }
 
@@ -715,10 +727,43 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
     }).where(eq(jobsTable.id, jobId));
 
     const payout = Math.round(parseFloat(existing.driverPayout));
-    await db.update(usersTable).set({
+
+    // DAC7 threshold enforcement (EU 2021/514): carriers crossing 30 completed
+    // jobs OR 22,000 SEK annual gross must complete tax verification before
+    // accepting further jobs. Warn at ~80% of either threshold.
+    const [driverStats] = await db.select({
+      annualEarnings: usersTable.annualEarnings,
+      totalJobs: usersTable.totalJobs,
+      dac7Consented: usersTable.dac7Consented,
+      pushToken: usersTable.pushToken,
+    }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+
+    const newEarnings = (driverStats?.annualEarnings ?? 0) + payout;
+    const newJobCount = (driverStats?.totalJobs ?? 0) + 1;
+
+    const driverUpdates: Record<string, unknown> = {
       totalJobs: sql`${usersTable.totalJobs} + 1`,
       annualEarnings: sql`${usersTable.annualEarnings} + ${payout}`,
-    }).where(eq(usersTable.id, req.userId!));
+    };
+
+    if ((newEarnings >= 22000 || newJobCount >= 30) && !driverStats?.dac7Consented) {
+      driverUpdates.dac7Required = true;
+      sendPushToUser(
+        driverStats?.pushToken,
+        "Action required",
+        "Complete your tax verification to continue accepting jobs.",
+        { screen: "tax-info" }
+      ).catch(() => {});
+    } else if ((newEarnings >= 18000 || newJobCount >= 25) && !driverStats?.dac7Consented) {
+      sendPushToUser(
+        driverStats?.pushToken,
+        "Heads up",
+        "You're approaching the annual reporting threshold. Complete tax verification soon.",
+        { screen: "tax-info" }
+      ).catch(() => {});
+    }
+
+    await db.update(usersTable).set(driverUpdates).where(eq(usersTable.id, req.userId!));
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
