@@ -1,7 +1,8 @@
-import { Router, type IRouter } from "express";
+import { Router, type IRouter, type Request } from "express";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "node:crypto";
 import { Resend } from "resend";
+import rateLimit from "express-rate-limit";
 import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -9,13 +10,42 @@ import { authenticate, signToken, AuthenticatedRequest } from "../middlewares/au
 
 const router: IRouter = Router();
 
+// ─── Per-route auth rate limits (always on, per IP) ─────────────────────────
+// Brute-force protection. Unlike the app-level limiter these are NOT skipped
+// outside production.
+
+function clientIp(req: Request): string {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (typeof forwarded === "string") {
+    return forwarded.split(",")[0]?.trim() ?? req.ip ?? "unknown";
+  }
+  return req.ip ?? "unknown";
+}
+
+function makeAuthLimiter(limit: number, windowMs = 15 * 60 * 1000) {
+  return rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    keyGenerator: (req) => clientIp(req),
+    handler: (_req, res) => {
+      res.status(429).json({ error: "Too many attempts. Please wait before trying again." });
+    },
+  });
+}
+
+const registerLimiter = makeAuthLimiter(5);
+const loginLimiter = makeAuthLimiter(10);
+const forgotPasswordLimiter = makeAuthLimiter(5);
+
 function getResend(): Resend | null {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) return null;
   return new Resend(apiKey);
 }
 
-router.post("/register", async (req, res) => {
+router.post("/register", registerLimiter, async (req, res) => {
   const { email, password, fullName, role, city, vehicleDescription, vehicleType } = req.body;
 
   if (!email || !password || !fullName || !role || !city) {
@@ -138,7 +168,7 @@ router.post("/register", async (req, res) => {
   }
 });
 
-router.post("/login", async (req, res) => {
+router.post("/login", loginLimiter, async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
@@ -184,7 +214,7 @@ router.get("/me", authenticate, async (req: AuthenticatedRequest, res) => {
   }
 });
 
-router.post("/forgot-password", async (req, res) => {
+router.post("/forgot-password", forgotPasswordLimiter, async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
