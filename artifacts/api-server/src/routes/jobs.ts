@@ -444,10 +444,18 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
 
     // F-tax requirement: once cumulative earnings exceed 1,000 SEK, F-skatt is required
     const [driverRecord] = await db.select({
+      role: usersTable.role,
       annualEarnings: usersTable.annualEarnings,
       ftaxRegistered: usersTable.ftaxRegistered,
       driverOnboardingComplete: usersTable.driverOnboardingComplete,
     }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+
+    // Role escalation guard: customer accounts cannot accept jobs — driver
+    // capability is only granted through the onboarding endpoint.
+    if (driverRecord?.role === "customer") {
+      res.status(403).json({ error: "Complete driver onboarding to accept jobs" });
+      return;
+    }
 
     if (!driverRecord?.driverOnboardingComplete) {
       res.status(400).json({

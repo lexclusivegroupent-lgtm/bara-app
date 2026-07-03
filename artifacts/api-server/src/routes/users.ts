@@ -44,13 +44,16 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     if (serviceAreas !== undefined) updateData.serviceAreas = Array.isArray(serviceAreas) ? serviceAreas : null;
     if (serviceCategories !== undefined) updateData.serviceCategories = Array.isArray(serviceCategories) ? serviceCategories : null;
 
+    // Role escalation guard: customers can NOT grant themselves driver/partner
+    // capabilities here — that only happens via POST /complete-driver-onboarding
+    // after the checklist and agreement are done. The only role change allowed
+    // through the profile endpoint is driver → both, which merely ADDS customer
+    // mode and grants no new provider capability.
     if (role !== undefined) {
-      if (role !== "both") {
-        res.status(400).json({ error: "Role can only be upgraded to 'both'" }); return;
-      }
       const [current] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!));
-      if (current.role === "both") {
-        res.status(400).json({ error: "Account is already a Customer and Driver" }); return;
+      if (role !== "both" || current.role !== "driver") {
+        res.status(403).json({ error: "Role changes are only allowed via driver onboarding" });
+        return;
       }
       updateData.role = "both";
     }
@@ -83,8 +86,21 @@ router.post("/accept-driver-agreement", authenticate, async (req: AuthenticatedR
 
 router.post("/complete-driver-onboarding", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
+    const [current] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+    if (!current) { res.status(404).json({ error: "User not found" }); return; }
+
+    // Driver capability requires the signed agreement — the checklist alone
+    // is not enough. This is the ONLY path that upgrades customer → both.
+    if (!current.driverAgreementAccepted) {
+      res.status(400).json({ error: "Complete all onboarding steps before activating driver mode" });
+      return;
+    }
+
     const [user] = await db.update(usersTable)
-      .set({ driverOnboardingComplete: true })
+      .set({
+        driverOnboardingComplete: true,
+        role: current.role === "customer" ? "both" : current.role,
+      })
       .where(eq(usersTable.id, req.userId!))
       .returning();
     res.json(formatUser(user));
