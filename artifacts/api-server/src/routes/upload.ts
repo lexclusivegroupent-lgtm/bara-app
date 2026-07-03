@@ -86,7 +86,10 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     );
     const result = (await response.json()) as any;
     if (!response.ok) {
-      res.status(502).json({ error: result?.error?.message || "Upload failed" });
+      // Log the provider error server-side; never forward third-party
+      // error details to the client.
+      console.error("[upload] Cloudinary error:", result?.error?.message);
+      res.status(502).json({ error: "Upload failed" });
       return;
     }
     res.json({ url: result.secure_url as string });

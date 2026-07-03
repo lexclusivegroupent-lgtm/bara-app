@@ -784,8 +784,9 @@ router.post("/seed-demo", async (req: Request, res: Response) => {
     const inserted = await db.insert(jobsTable).values(sampleJobs).returning({ id: jobsTable.id });
     res.json({ success: true, created: { demoCustomerId: demoUserId, demoDriverId, jobs: inserted.map(j => j.id) } });
   } catch (err: any) {
-    console.error("Seed demo error:", err);
-    res.status(500).json({ error: "Failed to seed demo data", detail: err.message });
+    console.error("[admin] Seed demo error:", err);
+    res.status(500).json({ error: "Internal server error" });
+    return;
   }
 });
 
