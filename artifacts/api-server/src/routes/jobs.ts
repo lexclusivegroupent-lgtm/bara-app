@@ -224,22 +224,31 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     resolvedCustomerPrice = Math.round(cp);
   }
 
-  // Validate and apply promo code
+  // Validate and apply promo code.
+  // Single atomic UPDATE...RETURNING: the validity checks and the usage
+  // increment happen in one statement, so two simultaneous requests cannot
+  // both redeem the last use of a limited promo (TOCTOU race).
   let discountAmount: number | null = null;
   let appliedPromoCode: string | null = null;
   if (promoCode && promoCode.trim()) {
     try {
-      const [promo] = await db.select().from(promoCodesTable)
-        .where(eq(promoCodesTable.code, promoCode.trim().toUpperCase()))
-        .limit(1);
-      if (promo && promo.active &&
-        (!promo.expiresAt || promo.expiresAt > new Date()) &&
-        (!promo.maxUses || promo.usedCount < promo.maxUses)) {
+      const code = promoCode.trim().toUpperCase();
+      const [promo] = await db
+        .update(promoCodesTable)
+        .set({ usedCount: sql`${promoCodesTable.usedCount} + 1` })
+        .where(
+          and(
+            eq(promoCodesTable.code, code),
+            eq(promoCodesTable.active, true),
+            sql`(${promoCodesTable.expiresAt} IS NULL OR ${promoCodesTable.expiresAt} > now())`,
+            sql`(${promoCodesTable.maxUses} IS NULL OR ${promoCodesTable.usedCount} < ${promoCodesTable.maxUses})`
+          )
+        )
+        .returning();
+
+      if (promo) {
         discountAmount = parseFloat(promo.discountAmount);
         appliedPromoCode = promo.code;
-        await db.update(promoCodesTable).set({
-          usedCount: sql`${promoCodesTable.usedCount} + 1`,
-        }).where(eq(promoCodesTable.id, promo.id));
       }
     } catch {}
   }
