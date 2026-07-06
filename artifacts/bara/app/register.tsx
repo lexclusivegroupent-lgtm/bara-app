@@ -35,6 +35,7 @@ export default function RegisterScreen() {
   const [city, setCity] = useState("Stockholm");
   const [vehicleDescription, setVehicleDescription] = useState("");
   const [vehicleType, setVehicleType] = useState("regular_car");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -54,9 +55,29 @@ export default function RegisterScreen() {
       Alert.alert(t("termsRequired"), t("pleaseAgreeTerms"));
       return;
     }
+    // Carriers must be adults — validated client-side for instant feedback,
+    // enforced server-side regardless.
+    if (showVehicle) {
+      if (!dateOfBirth.trim() || !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth.trim())) {
+        Alert.alert(
+          isSv ? "Födelsedatum krävs" : "Date of birth required",
+          isSv ? "Ange ditt födelsedatum som ÅÅÅÅ-MM-DD." : "Enter your date of birth as YYYY-MM-DD."
+        );
+        return;
+      }
+      const dob = new Date(dateOfBirth.trim());
+      const ageYears = (Date.now() - dob.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+      if (isNaN(dob.getTime()) || ageYears < 18) {
+        Alert.alert(
+          isSv ? "Åldersgräns" : "Age requirement",
+          isSv ? "Du måste vara minst 18 år för att bli bärare." : "You must be at least 18 years old to become a carrier."
+        );
+        return;
+      }
+    }
     setLoading(true);
     try {
-      await register({
+      const result = await register({
         fullName: fullName.trim(),
         email: email.trim(),
         password,
@@ -64,10 +85,16 @@ export default function RegisterScreen() {
         city,
         vehicleDescription: vehicleDescription.trim() || undefined,
         vehicleType: showVehicle ? vehicleType : undefined,
+        dateOfBirth: showVehicle ? dateOfBirth.trim() : undefined,
       });
+      if (result.requiresVerification) {
+        router.push({ pathname: "/verify-email", params: { email: email.trim() } });
+        return;
+      }
       router.replace("/onboarding");
     } catch (e: any) {
       Alert.alert(t("registrationFailed"), e.message || t("somethingWentWrong"));
+    } finally {
       setLoading(false);
     }
   }
@@ -219,6 +246,16 @@ export default function RegisterScreen() {
                 value={vehicleDescription}
                 onChangeText={setVehicleDescription}
                 placeholder={t("vehiclePlaceholder")}
+              />
+
+              <InputField
+                label={isSv ? "Födelsedatum (ÅÅÅÅ-MM-DD)" : "Date of birth (YYYY-MM-DD)"}
+                icon="calendar"
+                value={dateOfBirth}
+                onChangeText={setDateOfBirth}
+                placeholder="1995-06-15"
+                keyboardType="numbers-and-punctuation"
+                autoCapitalize="none"
               />
             </>
           )}

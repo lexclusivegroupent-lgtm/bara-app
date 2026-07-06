@@ -47,6 +47,10 @@ export default function LoginScreen() {
       console.log("[Login] router.replace() called successfully");
     } catch (e: any) {
       console.log("[Login] login() threw error:", e.message);
+      if (e.message === "EMAIL_NOT_VERIFIED") {
+        router.push({ pathname: "/verify-email", params: { email: email.trim() } });
+        return;
+      }
       setError(e.message || "Invalid credentials. Please try again.");
       setLoading(false);
     }

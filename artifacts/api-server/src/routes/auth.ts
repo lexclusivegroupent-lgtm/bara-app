@@ -297,6 +297,13 @@ router.post("/login", loginLimiter, async (req, res) => {
       return;
     }
 
+    // Unverified accounts get a clear error instead of a token that every
+    // authenticated route would reject — the app routes them to the OTP screen.
+    if (user.emailVerified === false) {
+      res.status(403).json({ error: "EMAIL_NOT_VERIFIED" });
+      return;
+    }
+
     const token = signToken(user.id, user.role);
     res.json({
       token,

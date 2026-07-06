@@ -54,7 +54,8 @@ interface AuthContextType {
   activeMode: "customer" | "driver";
   setActiveMode: (mode: "customer" | "driver") => void;
   login: (email: string, password: string) => Promise<{ user: User; mode: "customer" | "driver" }>;
-  register: (data: RegisterData) => Promise<{ user: User; mode: "customer" | "driver" }>;
+  register: (data: RegisterData) => Promise<{ user: User | null; mode: "customer" | "driver"; requiresVerification?: boolean }>;
+  completeEmailVerification: (token: string, user: User) => Promise<"customer" | "driver">;
   logout: () => Promise<void>;
   updateUser: (user: User) => void;
 }
@@ -67,6 +68,7 @@ interface RegisterData {
   city: string;
   vehicleDescription?: string;
   vehicleType?: string;
+  dateOfBirth?: string; // YYYY-MM-DD, required by the API for driver/both
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -139,7 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { user: data.user, mode };
   }
 
-  async function register(registerData: RegisterData): Promise<{ user: User; mode: "customer" | "driver" }> {
+  async function register(registerData: RegisterData): Promise<{ user: User | null; mode: "customer" | "driver"; requiresVerification?: boolean }> {
     let res: Response;
     try {
       res = await fetch(`${BASE_URL}/api/auth/register`, {
@@ -152,11 +154,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     const data = await safeJson(res);
     if (!res.ok) throw new Error(data.error || "Registration failed");
+    // Email verification flow: no JWT yet — the caller routes to the OTP screen.
+    if (data.requiresVerification) {
+      return { user: null, mode: "customer", requiresVerification: true };
+    }
     const mode = defaultMode(data.user.role);
     setActiveModeState(mode);
     await AsyncStorage.setItem("bara_mode", mode);
     await persistAuth(data.token, data.user);
     return { user: data.user, mode };
+  }
+
+  // Called by the verify-email screen after POST /auth/verify-email succeeds —
+  // persists the session exactly the way login() does.
+  async function completeEmailVerification(tok: string, userData: User): Promise<"customer" | "driver"> {
+    const mode = defaultMode(userData.role);
+    setActiveModeState(mode);
+    await AsyncStorage.setItem("bara_mode", mode);
+    await persistAuth(tok, userData);
+    return mode;
   }
 
   async function persistAuth(tok: string, userData: User) {
@@ -199,7 +215,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, activeMode, setActiveMode, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, token, isLoading, activeMode, setActiveMode, login, register, completeEmailVerification, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );
