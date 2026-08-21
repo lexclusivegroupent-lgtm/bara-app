@@ -9,7 +9,8 @@ export type Lang = "sv" | "en";
 // confirms nothing new references them:
 //   sideGigIncome, independentContractor, carrierContractorFooter,
 //   hobbyIncomeTitle, platformTagline, customerDisclaimerShort,
-//   jobPostingDisclaimer, viewDriverAgreement
+//   jobPostingDisclaimer, viewDriverAgreement, noVanNeeded, fitsAnyCarBadge,
+//   vehicleHintSmall, freeBanner, bulkyDelivery (says "Marketplace Pickup")
 // Also note: aboutTextEN/aboutTextSV are NOT localized by lang — both keys
 // hold fixed-language content in both the en and sv blocks below. Callers
 // must pick the right key explicitly (see (driver)/settings.tsx and
@@ -33,7 +34,7 @@ const translations = {
     electronics: "Electronics",
     otherSmall: "Other Small Items",
     moveSofas: "Blocket, Facebook & more",
-    clearOut: "Fits in any regular car",
+    clearOut: "Handled by verified companies",
     noVanNeeded: "No van or trailer needed",
     fitsAnyCarBadge: "Fits in any car · From 99 SEK · 30 min",
     sizeGuideTitle: "What qualifies?",
@@ -550,7 +551,7 @@ const translations = {
     electronics: "Elektronik",
     otherSmall: "Övrigt litet",
     moveSofas: "Blocket, Facebook & mer",
-    clearOut: "Ryms i vilken bil som helst",
+    clearOut: "Utförs av verifierade företag",
     noVanNeeded: "Ingen skåpbil eller trailer behövs",
     fitsAnyCarBadge: "Ryms i vilken bil · Från 99 kr · 30 min",
     sizeGuideTitle: "Vad är okej?",
