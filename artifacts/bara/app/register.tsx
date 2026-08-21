@@ -18,7 +18,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
-import { SWEDISH_CITIES } from "@/constants/config";
+import { SWEDISH_CITIES, BASE_URL, LEAD_GEN_MODE } from "@/constants/config";
+import { safeJson } from "@/utils/api";
 
 type Role = "customer" | "driver" | "both";
 
@@ -27,6 +28,10 @@ export default function RegisterScreen() {
   const { t, lang } = useLanguage();
   const isSv = lang === "sv";
   const insets = useSafeAreaInsets();
+  // In lead-gen mode, public self-registration is customer-only — partner
+  // companies are onboarded by admin (see the "Are you a transport company?"
+  // interest card below and Admin → Partners). The role picker and
+  // individual-gig vehicle picker only render with LEAD_GEN_MODE off.
   const [role, setRole] = useState<Role>("customer");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -39,6 +44,46 @@ export default function RegisterScreen() {
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Partner interest — lightweight, no-account submission for transport
+  // companies. Captured via /api/waitlist (type: partner_interest); admin
+  // follows up and onboards through the Partners tab.
+  const [showPartnerInterest, setShowPartnerInterest] = useState(false);
+  const [interestCompanyName, setInterestCompanyName] = useState("");
+  const [interestEmail, setInterestEmail] = useState("");
+  const [interestPhone, setInterestPhone] = useState("");
+  const [interestSubmitting, setInterestSubmitting] = useState(false);
+  const [interestSubmitted, setInterestSubmitted] = useState(false);
+
+  async function handlePartnerInterestSubmit() {
+    if (!interestCompanyName.trim() || !interestEmail.trim()) {
+      Alert.alert(
+        isSv ? "Uppgifter saknas" : "Missing information",
+        isSv ? "Ange företagsnamn och e-post." : "Enter a company name and email."
+      );
+      return;
+    }
+    setInterestSubmitting(true);
+    try {
+      const res = await fetch(`${BASE_URL}/api/waitlist`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: interestEmail.trim(),
+          type: "partner_interest",
+          companyName: interestCompanyName.trim(),
+          phone: interestPhone.trim() || undefined,
+        }),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to submit");
+      setInterestSubmitted(true);
+    } catch (e: any) {
+      Alert.alert(isSv ? "Fel" : "Error", e.message || (isSv ? "Kunde inte skicka." : "Could not submit."));
+    } finally {
+      setInterestSubmitting(false);
+    }
+  }
 
   const ROLES: { id: Role; label: string; icon: string }[] = [
     { id: "customer", label: t("customer"), icon: "account" },
@@ -99,7 +144,11 @@ export default function RegisterScreen() {
     }
   }
 
-  const showVehicle = role === "driver" || role === "both";
+  // Also gated on !LEAD_GEN_MODE directly (belt and suspenders): role can
+  // only become "driver"/"both" via the picker above, which is itself
+  // hidden in lead-gen mode, but this keeps the vehicle section safe even
+  // if role is ever set some other way in the future.
+  const showVehicle = !LEAD_GEN_MODE && (role === "driver" || role === "both");
 
   return (
     <View style={[styles.container, { backgroundColor: Colors.navy }]}>
@@ -128,27 +177,112 @@ export default function RegisterScreen() {
           <Text style={styles.subtitle}>{t("joinBara")}</Text>
         </View>
 
-        <View style={styles.rolePicker}>
-          {ROLES.map((r) => (
-            <TouchableOpacity
-              key={r.id}
-              style={[styles.roleBtn, role === r.id && styles.roleBtnActive]}
-              onPress={() => setRole(r.id)}
-            >
-              <MaterialCommunityIcons
-                name={r.icon as any}
-                size={16}
-                color={role === r.id ? Colors.navy : Colors.textMuted}
-              />
-              <Text style={[styles.roleText, role === r.id && styles.roleTextActive]}>{r.label}</Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        {/* Legacy individual-gig signup — role picker + "any car" vehicle
+            picker below. Not shown in lead-gen mode: public registration is
+            customer-only, and partner companies are onboarded by admin. */}
+        {!LEAD_GEN_MODE && (
+          <>
+            <View style={styles.rolePicker}>
+              {ROLES.map((r) => (
+                <TouchableOpacity
+                  key={r.id}
+                  style={[styles.roleBtn, role === r.id && styles.roleBtnActive]}
+                  onPress={() => setRole(r.id)}
+                >
+                  <MaterialCommunityIcons
+                    name={r.icon as any}
+                    size={16}
+                    color={role === r.id ? Colors.navy : Colors.textMuted}
+                  />
+                  <Text style={[styles.roleText, role === r.id && styles.roleTextActive]}>{r.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
 
-        {role === "both" && (
-          <View style={styles.bothHint}>
-            <Feather name="info" size={13} color={Colors.gold} />
-            <Text style={styles.bothHintText}>{t("bothHint")}</Text>
+            {role === "both" && (
+              <View style={styles.bothHint}>
+                <Feather name="info" size={13} color={Colors.gold} />
+                <Text style={styles.bothHintText}>{t("bothHint")}</Text>
+              </View>
+            )}
+          </>
+        )}
+
+        {/* Partner interest — for transport companies, not individuals.
+            No account is created here; admin follows up and onboards via
+            the Partners tab once F-skatt and insurance are confirmed. */}
+        {LEAD_GEN_MODE && (
+          <View style={styles.partnerCard}>
+            <TouchableOpacity
+              style={styles.partnerCardHeader}
+              onPress={() => setShowPartnerInterest(!showPartnerInterest)}
+              activeOpacity={0.85}
+            >
+              <MaterialCommunityIcons name="domain" size={18} color={Colors.gold} />
+              <Text style={styles.partnerCardTitle}>
+                {isSv ? "Är du ett transportföretag?" : "Are you a transport company?"}
+              </Text>
+              <Feather name={showPartnerInterest ? "chevron-up" : "chevron-down"} size={16} color={Colors.textMuted} />
+            </TouchableOpacity>
+            {!showPartnerInterest && (
+              <Text style={styles.partnerCardSub}>
+                {isSv
+                  ? "Bli partner och få kvalificerade förfrågningar i ditt område."
+                  : "Become a partner and receive qualified requests in your area."}
+              </Text>
+            )}
+
+            {showPartnerInterest && (
+              interestSubmitted ? (
+                <View style={styles.partnerSuccessRow}>
+                  <Feather name="check-circle" size={16} color={Colors.success} />
+                  <Text style={styles.partnerSuccessText}>
+                    {isSv ? "Tack! Vi hör av oss inom kort." : "Thanks! We'll be in touch soon."}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.partnerForm}>
+                  <TextInput
+                    style={styles.partnerInput}
+                    placeholder={isSv ? "Företagsnamn" : "Company name"}
+                    placeholderTextColor={Colors.textMuted}
+                    value={interestCompanyName}
+                    onChangeText={setInterestCompanyName}
+                  />
+                  <TextInput
+                    style={styles.partnerInput}
+                    placeholder={isSv ? "E-post" : "Email"}
+                    placeholderTextColor={Colors.textMuted}
+                    value={interestEmail}
+                    onChangeText={setInterestEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                  <TextInput
+                    style={styles.partnerInput}
+                    placeholder={isSv ? "Telefon (valfritt)" : "Phone (optional)"}
+                    placeholderTextColor={Colors.textMuted}
+                    value={interestPhone}
+                    onChangeText={setInterestPhone}
+                    keyboardType="phone-pad"
+                  />
+                  <TouchableOpacity
+                    style={[styles.partnerSubmitBtn, interestSubmitting && styles.disabled]}
+                    onPress={handlePartnerInterestSubmit}
+                    disabled={interestSubmitting}
+                    activeOpacity={0.85}
+                  >
+                    {interestSubmitting ? (
+                      <ActivityIndicator color={Colors.navy} size="small" />
+                    ) : (
+                      <Text style={styles.partnerSubmitBtnText}>
+                        {isSv ? "Skicka intresseanmälan" : "Send interest"}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )
+            )}
           </View>
         )}
 
@@ -500,5 +634,70 @@ const styles = StyleSheet.create({
   vehicleTypeBtnTextActive: {
     color: Colors.navy,
     fontFamily: "Inter_600SemiBold",
+  },
+  partnerCard: {
+    backgroundColor: `${Colors.gold}12`,
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: `${Colors.gold}30`,
+    marginBottom: 16,
+  },
+  partnerCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  partnerCardTitle: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.text,
+  },
+  partnerCardSub: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    marginTop: 6,
+    lineHeight: 17,
+  },
+  partnerForm: {
+    gap: 8,
+    marginTop: 12,
+  },
+  partnerInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    fontSize: 14,
+    fontFamily: "Inter_400Regular",
+    color: Colors.text,
+  },
+  partnerSubmitBtn: {
+    backgroundColor: Colors.gold,
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 2,
+  },
+  partnerSubmitBtnText: {
+    fontSize: 14,
+    fontFamily: "Inter_600SemiBold",
+    color: Colors.navy,
+  },
+  partnerSuccessRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginTop: 12,
+  },
+  partnerSuccessText: {
+    fontSize: 13,
+    fontFamily: "Inter_500Medium",
+    color: Colors.success,
+    flex: 1,
   },
 });

@@ -19,12 +19,18 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
 import { StarRating } from "@/components/StarRating";
-import { BASE_URL } from "@/constants/config";
+import { BASE_URL, LEAD_GEN_MODE } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { BottomNav } from "@/components/BottomNav";
 import { JobCard, Job } from "@/components/JobCard";
 import { DriverMapView } from "@/components/DriverMapView";
 
+// Legacy open marketplace feed — any available driver could accept any
+// pending job first-come-first-served. No longer part of the professional,
+// company-only lead-gen model (requests are routed by admin, see
+// (driver)/leads.tsx). Kept for LEAD_GEN_MODE=false, otherwise unreachable:
+// nothing in the app links here, and this guard redirects away defensively
+// in case of a stale deep link or bookmark.
 export default function DriverMapScreen() {
   const { user, token, updateUser, activeMode, setActiveMode } = useAuth();
   const { t, lang } = useLanguage();
@@ -36,6 +42,12 @@ export default function DriverMapScreen() {
   const [surchargeStairs, setSurchargeStairs] = useState(false);
   const [surchargeDistance, setSurchargeDistance] = useState(false);
   const isSv = lang === "sv";
+
+  useEffect(() => {
+    if (LEAD_GEN_MODE) {
+      router.replace("/(driver)/leads");
+    }
+  }, []);
 
   useEffect(() => {
     if (user && !user.driverOnboardingComplete) {

@@ -87,9 +87,10 @@ export default function HomeScreen() {
             resizeMode="contain"
           />
           <Text style={styles.appName}>Bära</Text>
-          {/* Brand tagline stays bilingual always — part of brand identity */}
-          <Text style={styles.taglineEN}>Small items, any car, from 99 SEK</Text>
-          <Text style={styles.taglineSV}>Litet föremål · Vilken bil · Från 99 kr</Text>
+          {/* Brand tagline stays bilingual always — part of brand identity.
+              Professional, company-only positioning: no "any car"/individual-gig framing. */}
+          <Text style={styles.taglineEN}>Verified local companies, from 99 SEK</Text>
+          <Text style={styles.taglineSV}>Verifierade lokala företag · Från 99 kr</Text>
           <View style={styles.freeLaunchBadge}>
             <Feather name="gift" size={12} color={Colors.success} />
             <Text style={styles.freeLaunchText}>{t("freeDuringLaunch")}</Text>

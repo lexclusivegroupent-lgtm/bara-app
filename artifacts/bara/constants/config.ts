@@ -316,9 +316,25 @@ export const BASE_URL = getBaseUrl();
 
 export const MAPBOX_TOKEN = process.env.EXPO_PUBLIC_MAPBOX_TOKEN || "";
 
-// Platform identity — Bära routes customer requests to vetted local service providers.
-export const PLATFORM_TAGLINE_EN = "We route your request to the right local partner";
-export const PLATFORM_TAGLINE_SV = "Vi skickar din förfrågan till rätt lokal partner";
+// B2B lead-gen pivot feature flag — mirrors LEAD_GEN_MODE on the API server
+// (artifacts/api-server/src/lib/leadGen.ts). Controls whether the app UI
+// surfaces the professional, company-only lead-gen flows (default) or the
+// legacy open gig-marketplace screens (map feed, individual driver signup,
+// driver welfare/rights page). Set EXPO_PUBLIC_LEAD_GEN_MODE=false to match
+// a server running in marketplace mode — keep both flags in sync.
+export const LEAD_GEN_MODE = process.env.EXPO_PUBLIC_LEAD_GEN_MODE !== "false";
+
+// Public marketing/web domain — the customer- and partner-facing web
+// presence lives here. Distinct from BASE_URL/EXPO_PUBLIC_DOMAIN, which
+// points at the API-serving app origin (app.baraapp.se).
+export const PUBLIC_WEB_DOMAIN = "baraapp.se";
+export const PUBLIC_WEB_URL = `https://${PUBLIC_WEB_DOMAIN}`;
+
+// Platform identity — Bära routes customer requests to vetted, insured
+// partner companies. Only registered businesses with F-skatt and liability
+// insurance perform jobs — this is not an open gig marketplace.
+export const PLATFORM_TAGLINE_EN = "Verified local companies, booked through Bära";
+export const PLATFORM_TAGLINE_SV = "Verifierade lokala företag, bokade genom Bära";
 
 export const CITY_COORDINATES: Record<string, { latitude: number; longitude: number }> = {
   // Stockholms län
