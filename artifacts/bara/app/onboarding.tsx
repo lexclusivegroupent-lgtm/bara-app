@@ -162,12 +162,21 @@ export default function OnboardingScreen() {
               desc={isSv ? "Ni bekräftar detaljer och pris tillsammans — sedan är bokningen klar." : "You confirm details and price together — then your booking is set."}
             />
           </View>
+
+          {/* Trust signal: only verified, insured companies perform jobs */}
+          <View style={styles.contractorNote}>
+            <Text style={styles.contractorNoteText}>
+              {isSv
+                ? "Alla partners är registrerade företag med F-skatt och ansvarsförsäkring — aldrig privatpersoner."
+                : "All partners are registered companies with F-skatt and liability insurance — never private individuals."}
+            </Text>
+          </View>
         </View>
 
-        {/* Slide 4 — Earn as a carrier */}
+        {/* Slide 4 — Partner recruitment */}
         <View style={[styles.slide, { paddingTop: insets.top + (Platform.OS === "web" ? 87 : 60) }]}>
           <View style={styles.iconCircle}>
-            <MaterialCommunityIcons name="car-hatchback" size={56} color={Colors.gold} />
+            <MaterialCommunityIcons name="domain" size={56} color={Colors.gold} />
           </View>
           <Text style={styles.slideTitle}>
             {isSv ? "Driver du ett transportföretag?" : "Run a transport business?"}

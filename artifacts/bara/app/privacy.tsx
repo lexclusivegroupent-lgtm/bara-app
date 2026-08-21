@@ -23,7 +23,7 @@ export default function PrivacyScreen() {
 
         <Text style={styles.sectionTitle}>1. Who We Are</Text>
         <Text style={styles.body}>
-          Bära AB operates the Bära platform — a marketplace connecting customers with independent drivers in Sweden for furniture transport and junk pickup services.
+          Bära AB operates the Bära platform — connecting customers in Sweden with verified partner companies for furniture transport, bulky item pickup, junk removal and second-hand delivery services.
         </Text>
 
         <Text style={styles.sectionTitle}>2. Data We Collect</Text>

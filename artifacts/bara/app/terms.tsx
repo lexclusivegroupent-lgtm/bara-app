@@ -24,22 +24,25 @@ export default function TermsScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <Text style={styles.updated}>{isSv ? "Uppdaterad: April 2025" : "Updated: April 2025"}</Text>
 
+        {/* ⚖️ Requires Swedish legal review before launch — updated for the
+            professional, company-only positioning (no longer describes
+            individual gig drivers). */}
         <Text style={styles.sectionTitle}>
           {isSv ? "1. Plattformens natur" : "1. Platform Nature"}
         </Text>
         <Text style={styles.body}>
           {isSv
-            ? "Bära är en teknologiplattform som kopplar samman kunder med oberoende förare. Bära är inte ett transportföretag och tillhandahåller inte transporttjänster direkt."
-            : "Bära is a technology platform that connects customers with independent drivers. Bära is not a transport company and does not provide transport services directly."}
+            ? "Bära är en teknologiplattform som kopplar samman kunder med verifierade partnerföretag för möbeltransport, skrymmande föremål, grovsopor och second hand-leveranser. Bära är inte ett transportföretag och tillhandahåller inte transporttjänster direkt."
+            : "Bära is a technology platform that connects customers with verified partner companies for furniture transport, bulky item pickup, junk removal and second-hand deliveries. Bära is not a transport company and does not provide transport services directly."}
         </Text>
 
         <Text style={styles.sectionTitle}>
-          {isSv ? "2. Oberoende uppdragstagare" : "2. Independent Contractors"}
+          {isSv ? "2. Partnerföretag" : "2. Partner Companies"}
         </Text>
         <Text style={styles.body}>
           {isSv
-            ? "Förare på Bäras plattform är oberoende uppdragstagare, inte anställda av Bära AB. De driver sina egna fordon, sätter sina egna scheman och ansvarar för sina egna skatter och försäkringar. Bära garanterar inte minsta inkomst eller arbetstimmar."
-            : "Drivers on the Bära platform are independent contractors, not employees of Bära AB. They operate their own vehicles, set their own schedules, and are responsible for their own taxes and insurance. Bära does not guarantee minimum earnings or hours."}
+            ? "Jobb på Bäras plattform utförs av registrerade partnerföretag, inte av privatpersoner. Partners är oberoende uppdragstagare, inte anställda av Bära AB. De driver sina egna verksamheter, sätter sina egna scheman och förväntas ha F-skatt samt ansvarsförsäkring som täcker transportverksamhet. Bära garanterar inte minsta inkomst eller antal uppdrag."
+            : "Jobs on the Bära platform are performed by registered partner companies, not private individuals. Partners are independent contractors, not employees of Bära AB. They operate their own businesses, set their own schedules, and are expected to hold F-skatt and liability insurance covering transport activities. Bära does not guarantee minimum earnings or a minimum number of jobs."}
         </Text>
 
         <Text style={styles.sectionTitle}>

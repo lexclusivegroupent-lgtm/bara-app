@@ -29,7 +29,7 @@
       "favicon": "./assets/images/icon.png",
       "name": "Bära",
       "shortName": "Bära",
-      "description": "On-demand furniture transport and junk pickup in Sweden",
+      "description": "Verified local companies for furniture transport, bulky item pickup, junk removal and second-hand deliveries in Sweden",
       "themeColor": "#1B2A4A",
       "backgroundColor": "#1B2A4A",
       "display": "standalone",
@@ -48,8 +48,8 @@
       [
         "expo-location",
         {
-          "locationAlwaysAndWhenInUsePermission": "Bära needs your location to show nearby jobs on the map.",
-          "locationWhenInUsePermission": "Bära needs your location to show nearby jobs on the map."
+          "locationAlwaysAndWhenInUsePermission": "Bära uses your location to find nearby addresses and service areas.",
+          "locationWhenInUsePermission": "Bära uses your location to find nearby addresses and service areas."
         }
       ],
       [
