@@ -174,6 +174,7 @@ main{flex:1;padding:20px}
     <nav>
       <button class="tab-btn active" data-tab="overview" onclick="showTab('overview')">Overview</button>
       <button class="tab-btn" data-tab="requests" onclick="showTab('requests')">Requests <span id="requests-badge"></span></button>
+      <button class="tab-btn" data-tab="partners" onclick="showTab('partners')">Partners <span id="partner-interest-badge"></span></button>
       <button class="tab-btn" data-tab="jobs" onclick="showTab('jobs')">Jobs</button>
       <button class="tab-btn" data-tab="users" onclick="showTab('users')">Users</button>
       <button class="tab-btn" data-tab="drivers" onclick="showTab('drivers')">Drivers</button>
@@ -225,6 +226,48 @@ main{flex:1;padding:20px}
         <table class="data-table">
           <thead><tr><th>#</th><th>Category</th><th>City</th><th>Item</th><th>Customer</th><th>Contact</th><th>Status</th><th>Partner</th><th>Assign / Actions</th></tr></thead>
           <tbody id="requests-tbody"><tr><td colspan="9" class="loading-text">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- PARTNERS (professional, company-only supply side) -->
+    <div class="tab-content" id="tab-partners">
+      <div class="page-header">
+        <div class="page-title">Partner companies</div>
+        <button class="btn-ghost" onclick="reloadTab('partners')">↻ Refresh</button>
+      </div>
+
+      <div class="card" style="margin-bottom:14px">
+        <h3>Add a partner company</h3>
+        <div class="filter-bar" style="flex-wrap:wrap">
+          <input id="np-companyName" placeholder="Company name *" style="width:180px">
+          <input id="np-orgNumber" placeholder="Org. number" style="width:130px">
+          <input id="np-email" placeholder="Email *" style="width:180px">
+          <input id="np-phone" placeholder="Phone" style="width:130px">
+          <input id="np-city" placeholder="City *" style="width:130px">
+          <input id="np-insuranceProvider" placeholder="Insurance provider" style="width:150px">
+          <button class="btn-primary" onclick="createPartner()">Add partner</button>
+        </div>
+        <p style="font-size:12px;color:#999;margin:8px 0 0">
+          Partners are onboarded by admin — there is no public self-serve company signup.
+          Service areas / categories can be refined later via the API.
+        </p>
+      </div>
+
+      <div class="table-wrap" style="margin-bottom:20px">
+        <table class="data-table">
+          <thead><tr><th>Company</th><th>Org. number</th><th>Contact</th><th>City</th><th>F-skatt</th><th>Insurance</th><th>Jobs</th><th>Rating</th></tr></thead>
+          <tbody id="partners-tbody"><tr><td colspan="8" class="loading-text">Loading…</td></tr></tbody>
+        </table>
+      </div>
+
+      <div class="page-header">
+        <div class="page-title">Partner interest (recruitment follow-up)</div>
+      </div>
+      <div class="table-wrap">
+        <table class="data-table">
+          <thead><tr><th>Company</th><th>Email</th><th>Phone</th><th>Note</th><th>Submitted</th></tr></thead>
+          <tbody id="partner-interest-tbody"><tr><td colspan="5" class="loading-text">Loading…</td></tr></tbody>
         </table>
       </div>
     </div>
@@ -395,6 +438,7 @@ async function loadTab(name) {
   S.loaded[name] = true;
   if (name === 'overview') await renderOverview();
   if (name === 'requests') await renderRequests();
+  if (name === 'partners') await renderPartners();
   if (name === 'jobs')     await renderJobs();
   if (name === 'users')    await renderUsers();
   if (name === 'drivers')  await renderDrivers();
@@ -573,6 +617,75 @@ async function setRequestStatus(id, status) {
   });
   if (res && res.ok) { showToast('Request #' + id + ' → ' + status); reloadTab('requests'); }
   else showToast((res && res.error) || 'Failed to update', 'error');
+}
+
+// ── Partners (professional, company-only supply side) ────────────────
+async function renderPartners() {
+  const tbody = document.getElementById('partners-tbody');
+  const interestTbody = document.getElementById('partner-interest-tbody');
+  tbody.innerHTML = '<tr><td colspan="8" class="loading-text">Loading…</td></tr>';
+  interestTbody.innerHTML = '<tr><td colspan="5" class="loading-text">Loading…</td></tr>';
+
+  const [partners, interest] = await Promise.all([
+    api('/api/admin/partners'),
+    api('/api/admin/partner-interest'),
+  ]);
+
+  if (partners) {
+    S.partnersData = partners;
+    tbody.innerHTML = partners.length ? partners.map(p => \`
+      <tr>
+        <td><strong>\${(p.companyName || p.fullName || '—').replace(/</g,'&lt;')}</strong></td>
+        <td>\${p.orgNumber || '—'}</td>
+        <td>\${p.email}\${p.phone ? '<br><span style="color:#999">' + p.phone + '</span>' : ''}</td>
+        <td>\${p.city || '—'}</td>
+        <td>\${p.ftaxRegistered ? (p.ftaxVerifiedByAdmin ? '✅ Verified' : '⏳ Unverified') : '—'}</td>
+        <td>\${p.insuranceRegistered ? (p.insuranceVerifiedByAdmin ? '✅ Verified' : '⏳ Unverified') : '—'}</td>
+        <td>\${p.totalJobs ?? 0}</td>
+        <td>\${fmtRating(p.rating)}</td>
+      </tr>
+    \`).join('') : '<tr><td colspan="8" style="text-align:center;padding:24px;color:#999">No partner companies yet — add one above.</td></tr>';
+  }
+
+  if (interest) {
+    const badge = document.getElementById('partner-interest-badge');
+    if (badge) badge.textContent = interest.length > 0 ? \`(\${interest.length})\` : '';
+    interestTbody.innerHTML = interest.length ? interest.map(w => \`
+      <tr>
+        <td>\${(w.companyName || '—').replace(/</g,'&lt;')}</td>
+        <td>\${w.email}</td>
+        <td>\${w.phone || '—'}</td>
+        <td>\${truncate(w.note, 60)}</td>
+        <td style="color:#999;font-size:12px">\${fmtDate(w.createdAt)}</td>
+      </tr>
+    \`).join('') : '<tr><td colspan="5" style="text-align:center;padding:24px;color:#999">No pending interest submissions</td></tr>';
+  }
+}
+
+async function createPartner() {
+  const companyName = document.getElementById('np-companyName').value.trim();
+  const email = document.getElementById('np-email').value.trim();
+  const city = document.getElementById('np-city').value.trim();
+  if (!companyName || !email || !city) {
+    showToast('Company name, email, and city are required', 'error');
+    return;
+  }
+  const body = {
+    companyName,
+    email,
+    city,
+    orgNumber: document.getElementById('np-orgNumber').value.trim() || undefined,
+    phone: document.getElementById('np-phone').value.trim() || undefined,
+    insuranceProvider: document.getElementById('np-insuranceProvider').value.trim() || undefined,
+  };
+  const res = await api('/api/admin/partners', { method: 'POST', body: JSON.stringify(body) });
+  if (res && res.ok) {
+    showToast((res.created ? 'Partner created: ' : 'Partner updated: ') + companyName);
+    ['np-companyName','np-orgNumber','np-email','np-phone','np-city','np-insuranceProvider'].forEach(id => document.getElementById(id).value = '');
+    reloadTab('partners');
+  } else {
+    showToast((res && res.error) || 'Failed to create partner', 'error');
+  }
 }
 
 async function renderJobs() {
