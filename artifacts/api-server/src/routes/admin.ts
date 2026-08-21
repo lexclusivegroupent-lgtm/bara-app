@@ -1,9 +1,10 @@
 import { Router, type IRouter, Request, Response } from "express";
 import { db } from "@workspace/db";
-import { jobsTable, usersTable, mapsApiCallsTable } from "@workspace/db";
+import { jobsTable, usersTable, mapsApiCallsTable, waitlistTable } from "@workspace/db";
 import { eq, sql, count, desc, inArray, and } from "drizzle-orm";
 import { adminDashboardHtml } from "./admin-html";
 import { sendPushToUser } from "../utils/push";
+import { sendPartnerLeadAssignedEmail } from "../utils/email";
 import { decrypt } from "../utils/crypto";
 
 const VAT_WARNING_SEK = 80_000;
@@ -521,7 +522,15 @@ router.get("/maps/usage", async (req: Request, res: Response) => {
 router.get("/partners", async (req: Request, res: Response) => {
   if (!checkAdminKey(req, res)) return;
   try {
-    const { city, category } = req.query as Record<string, string>;
+    const { city, category, includeLegacy } = req.query as Record<string, string>;
+
+    // Partners are the primary supply-side role now. Legacy driver/both
+    // (gig) accounts are excluded from the assign-to-partner dropdown by
+    // default — pass ?includeLegacy=true to see them too (useful only
+    // while transitioning old accounts, or with LEAD_GEN_MODE=false).
+    const roleFilter = includeLegacy === "true"
+      ? sql`${usersTable.role} in ('partner', 'driver', 'both')`
+      : eq(usersTable.role, "partner");
 
     const partners = await db.select({
       id: usersTable.id,
@@ -537,12 +546,14 @@ router.get("/partners", async (req: Request, res: Response) => {
       isAvailable: usersTable.isAvailable,
       rating: usersTable.rating,
       totalJobs: usersTable.totalJobs,
+      ftaxRegistered: usersTable.ftaxRegistered,
+      ftaxVerifiedByAdmin: usersTable.ftaxVerifiedByAdmin,
+      insuranceRegistered: usersTable.insuranceRegistered,
+      insuranceProvider: usersTable.insuranceProvider,
+      insuranceVerifiedByAdmin: usersTable.insuranceVerifiedByAdmin,
       createdAt: usersTable.createdAt,
     }).from(usersTable)
-      .where(and(
-        sql`${usersTable.role} in ('partner', 'driver', 'both')`,
-        eq(usersTable.isDeactivated, false),
-      ))
+      .where(and(roleFilter, eq(usersTable.isDeactivated, false)))
       .orderBy(desc(usersTable.createdAt))
       .limit(500);
 
@@ -575,7 +586,8 @@ router.get("/partners", async (req: Request, res: Response) => {
 router.post("/partners", async (req: Request, res: Response) => {
   if (!checkAdminKey(req, res)) return;
   try {
-    const { email, fullName, companyName, orgNumber, phone, city, serviceAreas, serviceCategories } = req.body;
+    const { email, fullName, companyName, orgNumber, phone, city, serviceAreas, serviceCategories,
+      insuranceProvider, insuranceRegistered } = req.body;
     if (!email || !companyName || !city) {
       return res.status(400).json({ error: "email, companyName, and city are required" });
     }
@@ -589,6 +601,8 @@ router.post("/partners", async (req: Request, res: Response) => {
       city: city.trim(),
       serviceAreas: Array.isArray(serviceAreas) && serviceAreas.length ? serviceAreas : [city.trim()],
       serviceCategories: Array.isArray(serviceCategories) && serviceCategories.length ? serviceCategories : null,
+      insuranceProvider: insuranceProvider?.trim() || null,
+      insuranceRegistered: Boolean(insuranceRegistered),
     };
 
     if (existing) {
@@ -649,10 +663,71 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
       `${job.jobType.replace(/_/g, " ")} i ${job.city} — öppna appen för detaljer.`,
       { screen: "driver-job", jobId: id }
     ).catch(() => {});
+    sendPartnerLeadAssignedEmail(partner.email, {
+      companyName: partner.companyName || partner.fullName,
+      jobType: job.jobType,
+      city: job.city,
+      itemDescription: job.itemDescription,
+    }).catch(() => {});
     return;
   } catch (err: any) {
     console.error("Admin assign error:", err);
     return res.status(500).json({ error: "Failed to assign request" });
+  }
+});
+
+/**
+ * Admin-verified liability insurance status for a partner (mirrors the
+ * F-skatt verification endpoint above).
+ */
+router.put("/partners/:id/insurance", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const id = Number(req.params.id);
+    const { verified, insuranceProvider } = req.body as { verified: boolean; insuranceProvider?: string };
+    if (typeof verified !== "boolean") {
+      res.status(400).json({ error: "verified (boolean) is required" }); return;
+    }
+
+    const [updated] = await db.update(usersTable)
+      .set({
+        insuranceVerifiedByAdmin: verified,
+        ...(insuranceProvider !== undefined ? { insuranceProvider: insuranceProvider.trim() || null } : {}),
+      })
+      .where(eq(usersTable.id, id))
+      .returning({
+        id: usersTable.id,
+        companyName: usersTable.companyName,
+        insuranceRegistered: usersTable.insuranceRegistered,
+        insuranceProvider: usersTable.insuranceProvider,
+        insuranceVerifiedByAdmin: usersTable.insuranceVerifiedByAdmin,
+      });
+
+    if (!updated) { res.status(404).json({ error: "Partner not found" }); return; }
+    res.json({ success: true, partner: updated });
+  } catch (err: any) {
+    console.error("Admin insurance verify error:", err);
+    res.status(500).json({ error: "Failed to update insurance status" });
+  }
+});
+
+/**
+ * Companies that expressed interest in becoming a partner via the register
+ * screen's lightweight form (no account created — see routes/waitlist.ts).
+ * Recruitment follow-up list for admin; onboarding still happens through
+ * POST /admin/partners once contacted.
+ */
+router.get("/partner-interest", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const rows = await db.select().from(waitlistTable)
+      .where(eq(waitlistTable.type, "partner_interest"))
+      .orderBy(desc(waitlistTable.createdAt))
+      .limit(500);
+    res.json(rows);
+  } catch (err: any) {
+    console.error("Admin partner-interest error:", err);
+    res.status(500).json({ error: "Failed to fetch partner interest submissions" });
   }
 });
 

@@ -25,6 +25,7 @@ router.put("/push-token", authenticate, async (req: AuthenticatedRequest, res) =
 
 router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
   const { fullName, city, vehicleType, vehicleDescription, isAvailable, profilePhoto, role, ftaxRegistered, ftaxNumber,
+    insuranceRegistered, insuranceProvider,
     companyName, orgNumber, phone, serviceAreas, serviceCategories } = req.body;
 
   try {
@@ -37,6 +38,10 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
     if (profilePhoto !== undefined) updateData.profilePhoto = profilePhoto;
     if (ftaxRegistered !== undefined) updateData.ftaxRegistered = Boolean(ftaxRegistered);
     if (ftaxNumber !== undefined) updateData.ftaxNumber = ftaxNumber?.trim() || null;
+    // ⚖️ Liability insurance — self-declared; admin verification is a separate
+    // endpoint (mirrors the F-skatt verification pattern).
+    if (insuranceRegistered !== undefined) updateData.insuranceRegistered = Boolean(insuranceRegistered);
+    if (insuranceProvider !== undefined) updateData.insuranceProvider = insuranceProvider?.trim() || null;
     // Partner business profile (lead-gen)
     if (companyName !== undefined) updateData.companyName = companyName?.trim() || null;
     if (orgNumber !== undefined) updateData.orgNumber = orgNumber?.trim() || null;

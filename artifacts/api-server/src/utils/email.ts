@@ -15,7 +15,8 @@ function jobTypeLabel(jobType: string): string {
     case "furniture_transport": return "Furniture Transport";
     case "bulky_delivery":      return "Bulky Item Delivery";
     case "junk_pickup":         return "Junk & Trash Pickup";
-    default:                    return jobType;
+    case "secondhand_delivery": return "Second-hand Delivery";
+    default:                    return jobType.replace(/_/g, " ");
   }
 }
 
@@ -284,5 +285,48 @@ export async function sendVerificationEmail(email: string, otp: string): Promise
     });
   } catch (err) {
     console.error("[email] Failed to send verification email:", err);
+  }
+}
+
+interface PartnerLeadAssignedData {
+  companyName: string;
+  jobType: string;
+  city: string;
+  itemDescription: string;
+}
+
+/**
+ * Notifies a partner company by email that a new request has been routed to
+ * them (companion to the push notification sent from the same call site).
+ * No-op when RESEND_API_KEY is unset — push notification still fires.
+ */
+export async function sendPartnerLeadAssignedEmail(email: string, data: PartnerLeadAssignedData): Promise<void> {
+  const resend = getResend();
+  if (!resend) return;
+  try {
+    await resend.emails.send({
+      from: getFrom(),
+      to: email,
+      subject: "Ny förfrågan tilldelad – Bära",
+      html: `
+        <div style="font-family:sans-serif;max-width:520px;margin:0 auto;background:#1B2A4A;color:#fff;border-radius:16px;overflow:hidden;">
+          <div style="background:#C9A84C;padding:32px;text-align:center;">
+            <h1 style="margin:0;color:#1B2A4A;font-size:28px;font-weight:800;">Bära</h1>
+          </div>
+          <div style="padding:32px;">
+            <h2 style="color:#C9A84C;margin:0 0 8px;">Hej ${data.companyName}! 📋</h2>
+            <p style="color:#C4C9D4;">Bära har tilldelat er en ny förfrågan:</p>
+            <div style="background:#243252;border-radius:12px;padding:16px;margin:16px 0;">
+              <p style="margin:0 0 6px;font-size:13px;color:#6B7280;text-transform:uppercase;">${jobTypeLabel(data.jobType)}</p>
+              <p style="margin:0 0 6px;color:#fff;">${data.itemDescription}</p>
+              <p style="margin:0;color:#C4C9D4;font-size:13px;">${data.city}</p>
+            </div>
+            <p style="color:#C4C9D4;font-size:14px;">Öppna appen för att se detaljer, kontakta kunden och acceptera eller tacka nej.</p>
+          </div>
+        </div>
+      `,
+    });
+  } catch (err) {
+    console.error("[email] Failed to send partner lead assigned email:", err);
   }
 }

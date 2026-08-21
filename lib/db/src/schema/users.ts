@@ -42,6 +42,12 @@ export const usersTable = pgTable("users", {
   ftaxRegistered: boolean("ftax_registered").notNull().default(false),
   ftaxNumber: text("ftax_number"),
   ftaxVerifiedByAdmin: boolean("ftax_verified_by_admin").notNull().default(false),
+  // ⚖️ Liability insurance — self-declared by the partner, verified by admin.
+  // Bära positions itself as a professional, insured, company-only service:
+  // partners are expected to carry liability insurance for transport work.
+  insuranceRegistered: boolean("insurance_registered").notNull().default(false),
+  insuranceProvider: text("insurance_provider"),
+  insuranceVerifiedByAdmin: boolean("insurance_verified_by_admin").notNull().default(false),
   // ⚖️ DAC7 EU directive — KYC data required for annual Skatteverket reporting
   personnummer: text("personnummer"),
   fullLegalName: text("full_legal_name"),
