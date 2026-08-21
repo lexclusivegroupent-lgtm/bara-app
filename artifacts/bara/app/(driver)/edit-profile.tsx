@@ -30,9 +30,16 @@ export default function DriverEditProfileScreen() {
   const [vehicleDescription, setVehicleDescription] = useState(user?.vehicleDescription || "");
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [loading, setLoading] = useState(false);
+  // Partner business identity
+  const [companyName, setCompanyName] = useState(user?.companyName || "");
+  const [orgNumber, setOrgNumber] = useState(user?.orgNumber || "");
+  const [phone, setPhone] = useState(user?.phone || "");
   // F-tax (F-skatt) fields
   const [ftaxRegistered, setFtaxRegistered] = useState(user?.ftaxRegistered ?? false);
   const [ftaxNumber, setFtaxNumber] = useState(user?.ftaxNumber || "");
+  // Liability insurance
+  const [insuranceRegistered, setInsuranceRegistered] = useState(user?.insuranceRegistered ?? false);
+  const [insuranceProvider, setInsuranceProvider] = useState(user?.insuranceProvider || "");
 
   async function handleSave() {
     if (!fullName.trim()) {
@@ -51,8 +58,13 @@ export default function DriverEditProfileScreen() {
           fullName: fullName.trim(),
           city,
           vehicleDescription: vehicleDescription.trim() || null,
+          companyName: companyName.trim() || null,
+          orgNumber: orgNumber.trim() || null,
+          phone: phone.trim() || null,
           ftaxRegistered,
           ftaxNumber: ftaxNumber.trim() || null,
+          insuranceRegistered,
+          insuranceProvider: insuranceProvider.trim() || null,
         }),
       });
       const data = await safeJson(res);
@@ -89,18 +101,59 @@ export default function DriverEditProfileScreen() {
           </View>
         </View>
 
-        {/* ⚖️ Contractor disclaimer — requires Swedish legal review before launch */}
+        {/* ⚖️ Partner disclaimer — requires Swedish legal review before launch */}
         <View style={styles.contractorNote}>
           <Feather name="info" size={13} color={Colors.textMuted} />
           <Text style={styles.contractorNoteText}>
             {isSv
-              ? "Bära är en teknologiplattform som kopplar ihop kunder med oberoende förare. Förare är egenföretagare, inte anställda hos Bära."
-              : "Bära is a technology platform connecting customers with independent drivers. Drivers are independent contractors, not employees of Bära."}
+              ? "Bära är en teknologiplattform som kopplar ihop kunder med verifierade partnerföretag. Partners är självständiga företag, inte anställda hos Bära, och ska ha F-skatt och ansvarsförsäkring."
+              : "Bära is a technology platform connecting customers with verified partner companies. Partners are independent businesses, not employees of Bära, and are expected to hold F-skatt and liability insurance."}
           </Text>
         </View>
 
+        {/* Partner business identity */}
         <View style={styles.field}>
-          <Text style={styles.label}>{t("fullName")}</Text>
+          <Text style={styles.label}>{isSv ? "Företagsnamn" : "Company name"}</Text>
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              value={companyName}
+              onChangeText={setCompanyName}
+              placeholder={isSv ? "t.ex. Andersson Transport AB" : "e.g. Andersson Transport AB"}
+              placeholderTextColor={Colors.textMuted}
+            />
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{isSv ? "Organisationsnummer" : "Org. number"}</Text>
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              value={orgNumber}
+              onChangeText={setOrgNumber}
+              placeholder="XXXXXX-XXXX"
+              placeholderTextColor={Colors.textMuted}
+            />
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{isSv ? "Telefon" : "Phone"}</Text>
+          <View style={styles.inputWrap}>
+            <TextInput
+              style={styles.input}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="070-123 45 67"
+              placeholderTextColor={Colors.textMuted}
+              keyboardType="phone-pad"
+            />
+          </View>
+        </View>
+
+        <View style={styles.field}>
+          <Text style={styles.label}>{isSv ? "Kontaktperson" : "Contact person"}</Text>
           <View style={styles.inputWrap}>
             <TextInput
               style={styles.input}
@@ -210,6 +263,69 @@ export default function DriverEditProfileScreen() {
               <Feather name="check-circle" size={13} color={Colors.success} />
               <Text style={styles.ftaxVerifiedText}>
                 {isSv ? "F-skatt verifierad av Bära" : "F-tax verified by Bära"}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Liability insurance — Bära positions itself as an insured,
+            company-only service; partners are expected to carry cover. */}
+        <View style={styles.ftaxSection}>
+          <Text style={styles.ftaxSectionTitle}>
+            {isSv ? "Ansvarsförsäkring" : "Liability insurance"}
+          </Text>
+          <Text style={styles.ftaxSectionSub}>
+            {isSv
+              ? "Bära rekommenderar starkt att partners har en ansvarsförsäkring som täcker transportverksamhet."
+              : "Bära strongly recommends partners hold liability insurance covering transport activities."}
+          </Text>
+
+          <View style={styles.ftaxToggleRow}>
+            <Text style={styles.ftaxToggleLabel}>
+              {isSv ? "Jag har ansvarsförsäkring" : "I have liability insurance"}
+            </Text>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {([true, false] as const).map((v) => (
+                <TouchableOpacity
+                  key={String(v)}
+                  style={[
+                    styles.ftaxToggleBtn,
+                    insuranceRegistered === v && (v ? styles.ftaxToggleBtnYes : styles.ftaxToggleBtnNo),
+                  ]}
+                  onPress={() => setInsuranceRegistered(v)}
+                  activeOpacity={0.8}
+                >
+                  <Text style={[
+                    styles.ftaxToggleBtnText,
+                    insuranceRegistered === v && { fontFamily: "Inter_600SemiBold", color: Colors.navy },
+                  ]}>
+                    {v ? (isSv ? "Ja" : "Yes") : (isSv ? "Nej" : "No")}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+
+          {insuranceRegistered && (
+            <View style={styles.field}>
+              <Text style={styles.label}>{isSv ? "Försäkringsbolag" : "Insurance provider"}</Text>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={styles.input}
+                  value={insuranceProvider}
+                  onChangeText={setInsuranceProvider}
+                  placeholder={isSv ? "t.ex. Trygg-Hansa" : "e.g. Trygg-Hansa"}
+                  placeholderTextColor={Colors.textMuted}
+                />
+              </View>
+            </View>
+          )}
+
+          {user?.insuranceVerifiedByAdmin && (
+            <View style={styles.ftaxVerifiedBadge}>
+              <Feather name="check-circle" size={13} color={Colors.success} />
+              <Text style={styles.ftaxVerifiedText}>
+                {isSv ? "Försäkring verifierad av Bära" : "Insurance verified by Bära"}
               </Text>
             </View>
           )}

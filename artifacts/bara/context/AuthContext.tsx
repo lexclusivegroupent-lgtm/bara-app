@@ -30,6 +30,9 @@ export interface User {
   ftaxRegistered?: boolean;
   ftaxNumber?: string | null;
   ftaxVerifiedByAdmin?: boolean;
+  insuranceRegistered?: boolean;
+  insuranceProvider?: string | null;
+  insuranceVerifiedByAdmin?: boolean;
   // DAC7
   dac7Consented?: boolean;
   personnummer?: string | null;
