@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { Colors } from "@/constants/colors";
-import { BASE_URL } from "@/constants/config";
+import { BASE_URL, LEAD_GEN_MODE } from "@/constants/config";
 import { safeJson } from "@/utils/api";
 import { BottomNav } from "@/components/BottomNav";
 
@@ -130,7 +130,7 @@ export default function DriverSettingsScreen() {
             <Feather name="user" size={28} color={Colors.gold} />
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>{user?.fullName}</Text>
+            <Text style={styles.profileName}>{user?.companyName || user?.fullName}</Text>
             <Text style={styles.profileEmail}>{user?.email}</Text>
             <View style={styles.profileBadge}>
               <Text style={styles.profileBadgeText}>
@@ -257,7 +257,9 @@ export default function DriverSettingsScreen() {
             <MaterialCommunityIcons name="information-outline" size={16} color={Colors.gold} />
             <Text style={styles.aboutTitle}>{t("aboutBara")}</Text>
           </View>
-          <Text style={styles.aboutText}>{t("aboutTextSV")}</Text>
+          {/* aboutTextSV/aboutTextEN are fixed-language keys, not localized
+              by t() — pick the one matching the active language explicitly. */}
+          <Text style={styles.aboutText}>{t(lang === "sv" ? "aboutTextSV" : "aboutTextEN")}</Text>
           <View style={styles.aboutFreeBadge}>
             <Feather name="gift" size={12} color={Colors.gold} />
             <Text style={[styles.aboutFreeBadgeText, { color: Colors.gold }]}>{t("freeLaunchBadge")}</Text>
@@ -266,7 +268,12 @@ export default function DriverSettingsScreen() {
 
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{lang === "sv" ? "Min status" : "My Status"}</Text>
-          <SettingsRow icon="bar-chart-2" label={lang === "sv" ? "Min status & rättigheter" : "My Status & Rights"} onPress={() => router.push("/driver-welfare")} />
+          {/* Individual gig-worker rights page ("side income", "work for other
+              platforms") — not applicable to partner companies. Only shown
+              when LEAD_GEN_MODE is off. */}
+          {!LEAD_GEN_MODE && (
+            <SettingsRow icon="bar-chart-2" label={lang === "sv" ? "Min status & rättigheter" : "My Status & Rights"} onPress={() => router.push("/driver-welfare")} />
+          )}
           <SettingsRow icon="trending-up" label={t("myEarnings")} onPress={() => router.push("/(driver)/earnings")} />
           <SettingsRow icon="file-text" label={lang === "sv" ? "Föraravtal" : "Driver Agreement"} onPress={() => router.push("/driver-agreement")} />
         </View>

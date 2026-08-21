@@ -204,7 +204,9 @@ export default function SettingsScreen() {
             <MaterialCommunityIcons name="information-outline" size={16} color={Colors.gold} />
             <Text style={styles.aboutTitle}>{t("aboutBara")}</Text>
           </View>
-          <Text style={styles.aboutText}>{t("aboutTextSV")}</Text>
+          {/* aboutTextSV/aboutTextEN are fixed-language keys, not localized
+              by t() — pick the one matching the active language explicitly. */}
+          <Text style={styles.aboutText}>{t(lang === "sv" ? "aboutTextSV" : "aboutTextEN")}</Text>
           <View style={styles.aboutFreeBadge}>
             <Feather name="gift" size={12} color={Colors.success} />
             <Text style={styles.aboutFreeBadgeText}>{t("freeLaunchBadge")}</Text>

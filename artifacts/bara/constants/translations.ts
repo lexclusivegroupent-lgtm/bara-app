@@ -1,5 +1,20 @@
 export type Lang = "sv" | "en";
 
+// TODO(positioning): this file predates the pivot from open gig marketplace
+// to professional, company-only lead-gen (see ALMI_READY.md / leadGen.ts)
+// and needs a full copy sweep. Live/used gig-marketplace-era language has
+// been fixed at the call sites as found; the following keys are CONFIRMED
+// DEAD (no live t("...") usage anywhere in artifacts/bara/app or
+// components as of this pass) and can be deleted once a full sweep
+// confirms nothing new references them:
+//   sideGigIncome, independentContractor, carrierContractorFooter,
+//   hobbyIncomeTitle, platformTagline, customerDisclaimerShort,
+//   jobPostingDisclaimer, viewDriverAgreement
+// Also note: aboutTextEN/aboutTextSV are NOT localized by lang — both keys
+// hold fixed-language content in both the en and sv blocks below. Callers
+// must pick the right key explicitly (see (driver)/settings.tsx and
+// (customer)/settings.tsx for the pattern) rather than just calling
+// t("aboutTextSV").
 const translations = {
   en: {
     // Landing
@@ -159,8 +174,8 @@ const translations = {
     customerModeBadge: "Customer Mode",
     driverModeBadge: "Carrier Mode",
     aboutBara: "About Bära",
-    aboutTextEN: "Bära is a technology marketplace connecting customers with independent carriers for small item pickup and delivery — on-demand, fast, and simple.",
-    aboutTextSV: "Bära är en teknologiplattform som kopplar ihop kunder med oberoende bärare för upphämtning och leverans av små föremål — on-demand, snabbt och enkelt.",
+    aboutTextEN: "Bära connects you with verified, insured local companies for furniture transport, bulky item pickup, junk removal and second-hand deliveries — booked in minutes.",
+    aboutTextSV: "Bära kopplar ihop dig med verifierade, försäkrade lokala företag för möbeltransport, skrymmande föremål, grovsopor och second hand-leveranser — bokat på minuter.",
     freeLaunchBadge: "100% free during our launch period · Helt gratis under lansering",
 
     // Settings — carrier
@@ -676,8 +691,8 @@ const translations = {
     customerModeBadge: "Kundläge",
     driverModeBadge: "Bärarläge",
     aboutBara: "Om Bära",
-    aboutTextEN: "Bära is a technology marketplace connecting customers in Sweden with independent carriers for small item pickup and delivery — on-demand, fast, and simple.",
-    aboutTextSV: "Bära är en teknologimarknadsplats som kopplar ihop kunder i Sverige med oberoende bärare för upphämtning och leverans av små föremål — on-demand, snabbt och enkelt.",
+    aboutTextEN: "Bära connects you with verified, insured local companies for furniture transport, bulky item pickup, junk removal and second-hand deliveries — booked in minutes.",
+    aboutTextSV: "Bära kopplar ihop dig med verifierade, försäkrade lokala företag för möbeltransport, skrymmande föremål, grovsopor och second hand-leveranser — bokat på minuter.",
     freeLaunchBadge: "100% gratis under vår lansering · Helt gratis under lansering",
 
     // Settings — driver
