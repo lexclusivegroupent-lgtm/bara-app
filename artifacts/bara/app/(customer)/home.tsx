@@ -114,6 +114,12 @@ export default function CustomerHome() {
                 ? "Butiker och lager skickar förfrågan. Verifierade åkerier tar jobbet på eget ansvar."
                 : "Stores and warehouses send a request. Verified carrier companies take the job on their own responsibility."}
             </Text>
+            {/* Green/pooling: conservative, no CO2/climate-neutral claims */}
+            <Text style={styles.heroBannerNote}>
+              {isSv
+                ? "Färre tomma bilar. När det går slår vi ihop körningar åt samma håll."
+                : "Fewer empty vans. When it fits, we combine runs heading the same way."}
+            </Text>
           </View>
           <View style={styles.heroPriceBadge}>
             <Text style={styles.heroPriceFrom}>{isSv ? "från" : "from"}</Text>
@@ -305,6 +311,14 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_400Regular",
     color: Colors.textMuted,
     lineHeight: 18,
+  },
+  heroBannerNote: {
+    fontSize: 12,
+    fontFamily: "Inter_400Regular",
+    color: Colors.textMuted,
+    lineHeight: 17,
+    marginTop: 6,
+    opacity: 0.85,
   },
   heroPriceBadge: {
     backgroundColor: `${Colors.gold}20`,

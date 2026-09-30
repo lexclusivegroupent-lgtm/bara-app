@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import {
+  Alert,
   View,
   Text,
   TextInput,
@@ -89,6 +90,9 @@ export default function PostJobScreen() {
   // org number optional/preferred.
   const [shipperCompanyName, setShipperCompanyName] = useState("");
   const [shipperOrgNumber, setShipperOrgNumber] = useState("");
+  // Green/pooling: shipper opts in to having this run combined with another
+  // going the same way, if timing and direction line up. Informational only.
+  const [poolAllowed, setPoolAllowed] = useState(true);
   // Promo code
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
@@ -304,10 +308,19 @@ export default function PostJobScreen() {
           contactPhone: contactPhone.trim() || null,
           shipperCompanyName: shipperCompanyName.trim() || null,
           shipperOrgNumber: shipperOrgNumber.trim() || null,
+          poolAllowed: isLeadCategory ? poolAllowed : true,
         }),
       });
       const data = await safeJson(res);
       if (!res.ok) throw new Error(data.error || "Failed to post job");
+      // Green/pooling: conservative note shown on request success — no
+      // climate claims, just that pooling is considered when it fits.
+      Alert.alert(
+        isSv ? "Förfrågan skickad" : "Request sent",
+        isSv
+          ? "Färre tomma bilar. När det går slår vi ihop körningar åt samma håll."
+          : "Fewer empty vans. When it fits, we combine runs heading the same way."
+      );
       router.replace("/(customer)/my-jobs");
     } catch (e: any) {
       setError(e.message || "Failed to post job. Please try again.");
@@ -824,6 +837,24 @@ export default function PostJobScreen() {
                 : "Your local partner uses this to confirm details with you."}
             </Text>
           </FormField>
+        )}
+
+        {/* Green/pooling: informational opt-in, no auto-routing reads this */}
+        {isLeadCategory && (
+          <TouchableOpacity
+            style={styles.ownershipRow}
+            onPress={() => setPoolAllowed(!poolAllowed)}
+            activeOpacity={0.8}
+          >
+            <View style={[styles.checkbox, poolAllowed && styles.checkboxActive]}>
+              {poolAllowed && <Feather name="check" size={12} color={Colors.navy} />}
+            </View>
+            <Text style={styles.ownershipText}>
+              {isSv
+                ? "Det går bra att samlasta med annan körning om det passar tid och riktning."
+                : "It's fine to combine this with another run if the timing and direction fit."}
+            </Text>
+          </TouchableOpacity>
         )}
 
         {/* Mandatory size confirmation checkbox (gig categories only) */}

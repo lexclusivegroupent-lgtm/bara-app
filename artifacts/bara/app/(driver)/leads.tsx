@@ -40,6 +40,9 @@ interface Lead {
   customer: { fullName: string; email: string } | null;
   assignedWorkerId: number | null;
   assignedWorker: { id: number; fullName: string } | null;
+  // Green/pooling: shipper opted in to combining this with another run.
+  // Informational only — no auto-routing reads this.
+  poolAllowed: boolean;
 }
 
 interface Worker {
@@ -205,6 +208,16 @@ export default function PartnerLeadsScreen() {
             </Text>
           </View>
         )}
+        {lead.poolAllowed && (
+          <View style={styles.leadDetailRow}>
+            <MaterialCommunityIcons name="swap-horizontal" size={13} color={Colors.textMuted} />
+            <Text style={styles.leadDetailText}>
+              {isSv
+                ? "Kunden är ok med samlastning om det passar tid och riktning"
+                : "Shipper is OK with pooling if timing and direction fit"}
+            </Text>
+          </View>
+        )}
 
         {isActive && (
           <View style={styles.actionsRow}>
@@ -290,6 +303,12 @@ export default function PartnerLeadsScreen() {
           <Text style={styles.subtitle}>
             {user?.companyName || (isSv ? "Förfrågningar tilldelade av Bära" : "Requests routed to you by Bära")}
           </Text>
+          {/* Green/pooling: conservative, no CO2/climate-neutral claims */}
+          <Text style={styles.poolingNote}>
+            {isSv
+              ? "Färre tomma bilar. När det går slår vi ihop körningar åt samma håll."
+              : "Fewer empty vans. When it fits, we combine runs heading the same way."}
+          </Text>
         </View>
       </View>
 
@@ -341,6 +360,7 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: 24, fontFamily: "Inter_700Bold", color: Colors.text },
   subtitle: { fontSize: 12, color: Colors.textMuted, marginTop: 2 },
+  poolingNote: { fontSize: 11, color: Colors.textMuted, marginTop: 4, opacity: 0.85 },
   content: { padding: 20, gap: 12 },
   sectionLabel: {
     fontSize: 12,

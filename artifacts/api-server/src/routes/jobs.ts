@@ -80,6 +80,10 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     contactPhone: job.contactPhone,
     shipperCompanyName: job.shipperCompanyName,
     shipperOrgNumber: job.shipperOrgNumber,
+    // Green/pooling: shipper-stated willingness to combine this run with
+    // another going the same way, shown to admin/carrier — informational
+    // only, nothing auto-routes or matches on it.
+    poolAllowed: job.poolAllowed,
     // B2B: which of the carrier's own staff is doing this job (set by the
     // carrier's partner_admin after accepting). Null until assigned.
     assignedWorkerId: job.assignedWorkerId,
@@ -172,6 +176,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     weightPreset, involvesHazardous, promoCode,
     contactName, contactPhone,
     shipperCompanyName, shipperOrgNumber,
+    poolAllowed,
   } = req.body;
 
   if (!jobType || !itemDescription || !preferredTime) {
@@ -329,6 +334,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       contactPhone: contactPhone?.trim() || null,
       shipperCompanyName: shipperCompanyName?.trim() || null,
       shipperOrgNumber: shipperOrgNumber?.trim() || null,
+      poolAllowed: poolAllowed !== undefined ? Boolean(poolAllowed) : true,
     }).returning();
 
     const enriched = await getJobWithUsers(job.id);

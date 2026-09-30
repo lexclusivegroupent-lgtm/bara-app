@@ -71,6 +71,19 @@ consumer pickups, not commercial freight — for shipments where it clearly
 doesn't fit, the plan is a manual quote from Bära admin or the carrier
 directly, not an automatic price. No freight tariff engine has been built.
 
+### Green/pooling (informational only)
+
+A shipper can check "Det går bra att samlasta med annan körning om det
+passar tid och riktning" when submitting a request (`jobs.poolAllowed`,
+defaults to `true`). The flag is shown to Bära admin (Requests tab) and to
+the assigned carrier (Leads screen) — it changes no behavior on its own.
+Admin-facing conservative copy: "Färre tomma bilar. När det går slår vi
+ihop körningar åt samma håll." Admin has a manual note only: "Överväg
+samma åkeri om två jobb ligger nära i tid och geografi." There is
+deliberately **no CO2 calculator, no auto-routing/matching, and no
+climate-neutral claim** — pooling, if it happens, is a human carrier
+decision.
+
 ## Running locally
 
 ```bash

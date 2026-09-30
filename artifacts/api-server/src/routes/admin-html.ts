@@ -205,6 +205,10 @@ main{flex:1;padding:20px}
         Bära förmedlar. Åkeriet utför och ansvarar. Assign each request to a verified
         carrier company — never to an individual unattached driver.
       </p>
+      <p style="font-size:12px;color:#999;margin:0 0 12px">
+        🔁 marks requests the shipper said are OK to pool. Admin note only —
+        no auto-routing: Överväg samma åkeri om två jobb ligger nära i tid och geografi.
+      </p>
       <div id="funnel-content" style="margin-bottom:14px"></div>
       <div class="filter-bar">
         <select id="requests-filter-status" onchange="applyRequestFilters()">
@@ -597,7 +601,10 @@ function applyRequestFilters() {
       <td>\${r.id}</td>
       <td>\${fmtJobType(r.jobType)}</td>
       <td>\${r.city || '—'}</td>
-      <td title="\${(r.itemDescription||'').replace(/"/g,'&quot;')}">\${truncate(r.itemDescription, 40)}</td>
+      <td title="\${(r.itemDescription||'').replace(/"/g,'&quot;')}">
+        \${truncate(r.itemDescription, 40)}
+        \${r.poolAllowed ? '<span title="Shipper OK with pooling: Det går bra att samlasta med annan körning om det passar tid och riktning." style="margin-left:6px;font-size:11px;color:#2e7d32">🔁</span>' : ''}
+      </td>
       <td>\${r.customerName || '—'}</td>
       <td>\${r.contactPhone || r.customerEmail || '—'}</td>
       <td>\${statusBadge(r.status)}</td>

@@ -87,6 +87,11 @@ export const jobsTable = pgTable("jobs", {
   // driverId remains the carrier COMPANY's user id — assignedWorkerId is
   // always a usersTable row with parentCompanyId = driverId.
   assignedWorkerId: integer("assigned_worker_id").references(() => usersTable.id),
+  // Green/pooling: shipper-stated willingness to have this run combined
+  // with another going the same way, if timing and direction line up.
+  // Informational only — no auto-routing or matching reads this field yet;
+  // it's surfaced to admin/carrier so a human can decide.
+  poolAllowed: boolean("pool_allowed").notNull().default(true),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });
