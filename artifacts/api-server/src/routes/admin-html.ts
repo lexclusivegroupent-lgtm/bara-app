@@ -201,6 +201,10 @@ main{flex:1;padding:20px}
         <div class="page-title">Requests — assign to partners</div>
         <button class="btn-ghost" onclick="reloadTab('requests')">↻ Refresh</button>
       </div>
+      <p style="font-size:12px;color:#999;margin:0 0 12px">
+        Bära förmedlar. Åkeriet utför och ansvarar. Assign each request to a verified
+        carrier company — never to an individual unattached driver.
+      </p>
       <div id="funnel-content" style="margin-bottom:14px"></div>
       <div class="filter-bar">
         <select id="requests-filter-status" onchange="applyRequestFilters()">
@@ -251,6 +255,11 @@ main{flex:1;padding:20px}
         <p style="font-size:12px;color:#999;margin:8px 0 0">
           Partners are onboarded by admin — there is no public self-serve company signup.
           Service areas / categories can be refined later via the API.
+        </p>
+        <p style="font-size:12px;color:#999;margin:8px 0 0">
+          Bära förmedlar. Åkeriet utför och ansvarar. Bära is not the employer and not the
+          transport operator — the partner company is responsible for its vehicle, driver(s),
+          insurance and the goods in transit.
         </p>
       </div>
 

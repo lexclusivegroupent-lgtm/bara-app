@@ -76,6 +76,21 @@ router.put("/profile", authenticate, async (req: AuthenticatedRequest, res) => {
   }
 });
 
+// B2B: list the calling carrier company's own staff (partner_worker accounts
+// with parentCompanyId = this company). Used by the partner-admin leads
+// screen to pick who a job gets assigned to. Returns nothing for a worker
+// account or a non-partner account — workers don't manage other workers.
+router.get("/workers", authenticate, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workers = await db.select().from(usersTable)
+      .where(eq(usersTable.parentCompanyId, req.userId!));
+    res.json(workers.filter(w => w.partnerRole === "worker").map(formatUser));
+  } catch (err) {
+    req.log?.error(err, "List workers error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/accept-driver-agreement", authenticate, async (req: AuthenticatedRequest, res) => {
   try {
     const [user] = await db.update(usersTable)

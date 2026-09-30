@@ -11,6 +11,15 @@ import { getDistanceKm } from "./distance";
 
 const router: IRouter = Router();
 
+// B2B: a job's physical work (arrived/start/complete/photos) may be done by
+// either the carrier company account itself (driverId) or the specific
+// staff member it assigned internally (assignedWorkerId). Only the company
+// account can accept/decline/assign — see the explicit partnerRole checks
+// at those call sites, which do NOT use this helper.
+function isAssignedActor(job: { driverId: number | null; assignedWorkerId: number | null }, userId: number): boolean {
+  return job.driverId === userId || job.assignedWorkerId === userId;
+}
+
 function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTable.$inferSelect | null, driver?: typeof usersTable.$inferSelect | null, assignedWorker?: typeof usersTable.$inferSelect | null) {
   return {
     id: job.id,
@@ -366,6 +375,15 @@ router.post("/:id/respond", authenticate, async (req: AuthenticatedRequest, res)
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
     if (!existing) { res.status(404).json({ error: "Request not found" }); return; }
+    // Only the carrier COMPANY account can accept/decline/mark contacted —
+    // never a worker, even one this job ends up assigned to later. Workers
+    // never freelance and never make this call.
+    const [caller] = await db.select({ partnerRole: usersTable.partnerRole })
+      .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+    if (caller?.partnerRole === "worker") {
+      res.status(403).json({ error: "Only your company's admin account can respond to requests" });
+      return;
+    }
     if (existing.driverId !== req.userId) {
       res.status(403).json({ error: "This request is not assigned to you" });
       return;
@@ -414,6 +432,70 @@ router.post("/:id/respond", authenticate, async (req: AuthenticatedRequest, res)
   }
 });
 
+// B2B: after accepting, the carrier COMPANY account may assign the job to
+// one of its own staff (a partner_worker with parentCompanyId = this
+// company's user id). This is the only way assignedWorkerId gets set —
+// workers never self-assign, and a company can only assign to its own
+// staff, never another company's.
+router.post("/:id/assign-worker", authenticate, async (req: AuthenticatedRequest, res) => {
+  const jobId = parseInt(req.params.id as string);
+  if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
+
+  const { workerId } = req.body as { workerId?: number };
+  if (!workerId || isNaN(Number(workerId))) {
+    res.status(400).json({ error: "workerId is required" });
+    return;
+  }
+
+  try {
+    const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
+    if (!existing) { res.status(404).json({ error: "Request not found" }); return; }
+
+    // Only the carrier company account itself can assign — never a worker,
+    // even one already assigned to this job.
+    const [caller] = await db.select({ partnerRole: usersTable.partnerRole })
+      .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+    if (caller?.partnerRole === "worker") {
+      res.status(403).json({ error: "Only your company's admin account can assign workers" });
+      return;
+    }
+    if (existing.driverId !== req.userId) {
+      res.status(403).json({ error: "This request is not assigned to you" });
+      return;
+    }
+
+    const ASSIGNABLE = ["accepted", "arrived", "in_progress"];
+    if (!ASSIGNABLE.includes(existing.status)) {
+      res.status(400).json({ error: `Cannot assign a worker while status is '${existing.status}'` });
+      return;
+    }
+
+    const [worker] = await db.select({ id: usersTable.id, parentCompanyId: usersTable.parentCompanyId, partnerRole: usersTable.partnerRole, pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, Number(workerId))).limit(1);
+    if (!worker || worker.partnerRole !== "worker" || worker.parentCompanyId !== req.userId) {
+      res.status(400).json({ error: "workerId must be a worker belonging to your company" });
+      return;
+    }
+
+    await db.update(jobsTable)
+      .set({ assignedWorkerId: worker.id })
+      .where(eq(jobsTable.id, jobId));
+
+    const enriched = await getJobWithUsers(jobId);
+    res.json(enriched);
+
+    sendPushToUser(
+      worker.pushToken,
+      "Nytt jobb tilldelat 📋",
+      "Du har tilldelats ett jobb av ditt företag.",
+      { screen: "driver-job", jobId }
+    ).catch(() => {});
+  } catch (err) {
+    req.log?.error(err, "Assign worker error");
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) => {
   const jobId = parseInt(req.params.id as string);
   if (isNaN(jobId)) { res.status(400).json({ error: "Invalid job ID" }); return; }
@@ -429,6 +511,13 @@ router.post("/:id/accept", authenticate, async (req: AuthenticatedRequest, res) 
     // checklist, F-skatt threshold, cancellation lockout, surcharges) do
     // not apply to partner businesses.
     if (LEAD_GEN_MODE) {
+      // Only the carrier COMPANY account can accept — never a worker.
+      const [caller] = await db.select({ partnerRole: usersTable.partnerRole })
+        .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+      if (caller?.partnerRole === "worker") {
+        res.status(403).json({ error: "Only your company's admin account can accept requests" });
+        return;
+      }
       if (existing.driverId !== req.userId) {
         res.status(403).json({
           error: "Requests are assigned by Bära. This request is not assigned to you.",
@@ -624,8 +713,8 @@ router.post("/:id/arrived", authenticate, async (req: AuthenticatedRequest, res)
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
     if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
-    if (existing.driverId !== req.userId) {
-      res.status(403).json({ error: "Only the assigned driver can mark arrival" });
+    if (!isAssignedActor(existing, req.userId!)) {
+      res.status(403).json({ error: "Only the assigned carrier or their assigned worker can mark arrival" });
       return;
     }
     if (existing.status !== "accepted") {
@@ -661,8 +750,8 @@ router.post("/:id/start", authenticate, async (req: AuthenticatedRequest, res) =
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
     if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
-    if (existing.driverId !== req.userId) {
-      res.status(403).json({ error: "Only the assigned driver can start transport" });
+    if (!isAssignedActor(existing, req.userId!)) {
+      res.status(403).json({ error: "Only the assigned carrier or their assigned worker can start transport" });
       return;
     }
     if (existing.status !== "arrived") {
@@ -699,8 +788,8 @@ router.post("/:id/photos", authenticate, async (req: AuthenticatedRequest, res) 
   try {
     const [existing] = await db.select().from(jobsTable).where(eq(jobsTable.id, jobId)).limit(1);
     if (!existing) { res.status(404).json({ error: "Job not found" }); return; }
-    if (existing.driverId !== req.userId) {
-      res.status(403).json({ error: "Only the assigned driver can upload photos" });
+    if (!isAssignedActor(existing, req.userId!)) {
+      res.status(403).json({ error: "Only the assigned carrier or their assigned worker can upload photos" });
       return;
     }
     const updates: Record<string, any> = {};
@@ -728,8 +817,8 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
       res.status(404).json({ error: "Job not found" });
       return;
     }
-    if (existing.driverId !== req.userId) {
-      res.status(403).json({ error: "Only the assigned driver can complete this job" });
+    if (!isAssignedActor(existing, req.userId!)) {
+      res.status(403).json({ error: "Only the assigned carrier or their assigned worker can complete this job" });
       return;
     }
     if (!["accepted", "arrived", "in_progress"].includes(existing.status)) {
@@ -753,15 +842,20 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
 
     const payout = Math.round(parseFloat(existing.driverPayout));
 
-    // DAC7 threshold enforcement (EU 2021/514): carriers crossing 30 completed
-    // jobs OR 22,000 SEK annual gross must complete tax verification before
-    // accepting further jobs. Warn at ~80% of either threshold.
+    // DAC7 threshold enforcement (EU 2021/514): carrier COMPANIES crossing 30
+    // completed jobs OR 22,000 SEK annual gross must complete tax
+    // verification before accepting further jobs. Warn at ~80% of either
+    // threshold. This always credits existing.driverId (the carrier company
+    // account), never req.userId — a worker completing the job on the
+    // company's behalf must not accumulate personal earnings/DAC7 status;
+    // Bära does not pay or report on individual workers.
+    const carrierCompanyId = existing.driverId!;
     const [driverStats] = await db.select({
       annualEarnings: usersTable.annualEarnings,
       totalJobs: usersTable.totalJobs,
       dac7Consented: usersTable.dac7Consented,
       pushToken: usersTable.pushToken,
-    }).from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1);
+    }).from(usersTable).where(eq(usersTable.id, carrierCompanyId)).limit(1);
 
     const newEarnings = (driverStats?.annualEarnings ?? 0) + payout;
     const newJobCount = (driverStats?.totalJobs ?? 0) + 1;
@@ -788,31 +882,50 @@ router.post("/:id/complete", authenticate, async (req: AuthenticatedRequest, res
       ).catch(() => {});
     }
 
-    await db.update(usersTable).set(driverUpdates).where(eq(usersTable.id, req.userId!));
+    await db.update(usersTable).set(driverUpdates).where(eq(usersTable.id, carrierCompanyId));
 
     const enriched = await getJobWithUsers(jobId);
     res.json(enriched);
 
     const [completedCustomer] = await db.select({ pushToken: usersTable.pushToken })
       .from(usersTable).where(eq(usersTable.id, existing.customerId)).limit(1).catch(() => []);
-    const [completedDriver] = await db.select({ pushToken: usersTable.pushToken })
-      .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1).catch(() => []);
-    sendPush([
+    // Payment goes to the carrier COMPANY, never to an individual worker —
+    // notify carrierCompanyId with the payment message regardless of who
+    // (company account or an assigned worker) actually pressed complete.
+    const [completedCarrier] = await db.select({ pushToken: usersTable.pushToken })
+      .from(usersTable).where(eq(usersTable.id, carrierCompanyId)).limit(1).catch(() => []);
+    const pushMessages = [
       {
         to: completedCustomer?.pushToken ?? "",
         title: "Job completed! ✅",
-        body: "Your job is done. Please take a moment to rate your driver.",
+        body: "Your job is done. Please take a moment to rate your carrier.",
         data: { screen: "customer-job", jobId },
-        sound: "default",
+        sound: "default" as const,
       },
       {
-        to: completedDriver?.pushToken ?? "",
+        to: completedCarrier?.pushToken ?? "",
         title: "Great work! 💰",
         body: "Job marked as complete. Payment is on its way.",
         data: { screen: "driver-job", jobId },
-        sound: "default",
+        sound: "default" as const,
       },
-    ]).catch(() => {});
+    ];
+    // Worker completed it themselves — give them a neutral confirmation
+    // with no payment language (workers are not paid individually by Bära).
+    if (req.userId !== carrierCompanyId) {
+      const [completedWorker] = await db.select({ pushToken: usersTable.pushToken })
+        .from(usersTable).where(eq(usersTable.id, req.userId!)).limit(1).catch(() => []);
+      if (completedWorker?.pushToken) {
+        pushMessages.push({
+          to: completedWorker.pushToken,
+          title: "Job marked complete ✅",
+          body: "Nice work — this job is done.",
+          data: { screen: "driver-job", jobId },
+          sound: "default" as const,
+        });
+      }
+    }
+    sendPush(pushMessages).catch(() => {});
 
     if (enriched?.customer?.email) {
       const finalPrice = enriched.customerPrice ?? enriched.priceTotal;

@@ -532,6 +532,11 @@ router.get("/partners", async (req: Request, res: Response) => {
       ? sql`${usersTable.role} in ('partner', 'driver', 'both')`
       : eq(usersTable.role, "partner");
 
+    // Worker accounts (staff of a carrier company) are not assignable
+    // companies in their own right — only the company (admin) account can
+    // be handed a request. Exclude them from this list.
+    const notWorker = sql`${usersTable.partnerRole} is distinct from 'worker'`;
+
     const partners = await db.select({
       id: usersTable.id,
       fullName: usersTable.fullName,
@@ -553,7 +558,7 @@ router.get("/partners", async (req: Request, res: Response) => {
       insuranceVerifiedByAdmin: usersTable.insuranceVerifiedByAdmin,
       createdAt: usersTable.createdAt,
     }).from(usersTable)
-      .where(and(roleFilter, eq(usersTable.isDeactivated, false)))
+      .where(and(roleFilter, eq(usersTable.isDeactivated, false), notWorker))
       .orderBy(desc(usersTable.createdAt))
       .limit(500);
 
@@ -629,6 +634,75 @@ router.post("/partners", async (req: Request, res: Response) => {
 });
 
 /**
+ * List a carrier company's staff (partner_worker accounts). Workers are
+ * always created by admin — there is no public worker signup — so this
+ * and the POST below are the only way worker accounts come into being.
+ */
+router.get("/partners/:id/workers", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const companyId = Number(req.params.id);
+    const workers = await db.select({
+      id: usersTable.id,
+      fullName: usersTable.fullName,
+      email: usersTable.email,
+      phone: usersTable.phone,
+      isDeactivated: usersTable.isDeactivated,
+      createdAt: usersTable.createdAt,
+    }).from(usersTable)
+      .where(and(eq(usersTable.parentCompanyId, companyId), eq(usersTable.partnerRole, "worker")))
+      .orderBy(desc(usersTable.createdAt));
+    res.json(workers);
+  } catch (err: any) {
+    console.error("Admin list workers error:", err);
+    res.status(500).json({ error: "Failed to fetch workers" });
+  }
+});
+
+/**
+ * Create a staff account for a carrier company. Admin-only — workers never
+ * self-register. The new account has no password; the worker sets one via
+ * the existing forgot-password flow on first login (same pattern used for
+ * partner company accounts created by POST /partners above).
+ */
+router.post("/partners/:id/workers", async (req: Request, res: Response) => {
+  if (!checkAdminKey(req, res)) return;
+  try {
+    const companyId = Number(req.params.id);
+    const [company] = await db.select().from(usersTable).where(eq(usersTable.id, companyId)).limit(1);
+    if (!company || company.role !== "partner" || company.partnerRole === "worker") {
+      return res.status(404).json({ error: "Carrier company not found" });
+    }
+
+    const { email, fullName, phone } = req.body as { email?: string; fullName?: string; phone?: string };
+    if (!email || !fullName) {
+      return res.status(400).json({ error: "email and fullName are required" });
+    }
+
+    const [existing] = await db.select({ id: usersTable.id }).from(usersTable)
+      .where(eq(usersTable.email, email.toLowerCase().trim())).limit(1);
+    if (existing) {
+      return res.status(409).json({ error: "A user with this email already exists" });
+    }
+
+    const [worker] = await db.insert(usersTable).values({
+      email: email.toLowerCase().trim(),
+      fullName: fullName.trim(),
+      phone: phone?.trim() || null,
+      city: company.city,
+      role: "partner",
+      partnerRole: "worker",
+      parentCompanyId: companyId,
+    }).returning({ id: usersTable.id, email: usersTable.email, fullName: usersTable.fullName });
+
+    return res.status(201).json({ ok: true, worker });
+  } catch (err: any) {
+    console.error("Admin create worker error:", err);
+    return res.status(500).json({ error: "Failed to create worker" });
+  }
+});
+
+/**
  * Assign a request to a partner. Reuses the jobs.driverId column as the
  * assigned-partner reference, so all existing screens keep working.
  */
@@ -646,7 +720,10 @@ router.post("/requests/:id/assign", async (req: Request, res: Response) => {
     }
 
     const [partner] = await db.select().from(usersTable).where(eq(usersTable.id, partnerId));
-    if (!partner || !["partner", "driver", "both"].includes(partner.role)) {
+    // Never assign to a worker account directly — only the carrier COMPANY
+    // account can be assigned a request; it assigns internally to staff
+    // afterwards via POST /jobs/:id/assign-worker.
+    if (!partner || !["partner", "driver", "both"].includes(partner.role) || partner.partnerRole === "worker") {
       return res.status(404).json({ error: "Partner not found" });
     }
 

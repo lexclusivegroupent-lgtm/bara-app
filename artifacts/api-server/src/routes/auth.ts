@@ -488,6 +488,9 @@ function formatUser(user: typeof usersTable.$inferSelect) {
     phone: user.phone,
     serviceAreas: user.serviceAreas || [],
     serviceCategories: user.serviceCategories || [],
+    // B2B carrier sub-role — only meaningful when role includes "partner"
+    partnerRole: user.partnerRole,
+    parentCompanyId: user.parentCompanyId,
     createdAt: user.createdAt.toISOString(),
   };
 }
