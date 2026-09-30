@@ -11,7 +11,7 @@ import { getDistanceKm } from "./distance";
 
 const router: IRouter = Router();
 
-function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTable.$inferSelect | null, driver?: typeof usersTable.$inferSelect | null) {
+function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTable.$inferSelect | null, driver?: typeof usersTable.$inferSelect | null, assignedWorker?: typeof usersTable.$inferSelect | null) {
   return {
     id: job.id,
     customerId: job.customerId,
@@ -69,6 +69,12 @@ function formatJob(job: typeof jobsTable.$inferSelect, customer?: typeof usersTa
     declineReason: job.declineReason,
     contactName: job.contactName,
     contactPhone: job.contactPhone,
+    shipperCompanyName: job.shipperCompanyName,
+    shipperOrgNumber: job.shipperOrgNumber,
+    // B2B: which of the carrier's own staff is doing this job (set by the
+    // carrier's partner_admin after accepting). Null until assigned.
+    assignedWorkerId: job.assignedWorkerId,
+    assignedWorker: assignedWorker ? formatUser(assignedWorker) : null,
     customer: customer ? formatUser(customer) : null,
     driver: driver ? formatUser(driver) : null,
   };
@@ -82,8 +88,11 @@ async function getJobWithUsers(jobId: number) {
   const driver = job.driverId
     ? (await db.select().from(usersTable).where(eq(usersTable.id, job.driverId)).limit(1))[0]
     : null;
+  const assignedWorker = job.assignedWorkerId
+    ? (await db.select().from(usersTable).where(eq(usersTable.id, job.assignedWorkerId)).limit(1))[0]
+    : null;
 
-  return formatJob(job, customer, driver);
+  return formatJob(job, customer, driver, assignedWorker);
 }
 
 router.get("/", authenticate, async (req: AuthenticatedRequest, res) => {
@@ -95,11 +104,13 @@ router.get("/", authenticate, async (req: AuthenticatedRequest, res) => {
     if (status) conditions.push(eq(jobsTable.status, status as any));
 
     // Lead-gen mode: no open marketplace feed. Users only see requests they
-    // submitted (customer) or requests assigned to them (partner). Admin
-    // routes requests via /api/admin — providers cannot browse open jobs.
+    // submitted (customer), requests assigned to their company (partner
+    // admin — driverId), or requests their company assigned to them
+    // specifically (worker — assignedWorkerId). Admin routes requests via
+    // /api/admin — providers cannot browse open jobs.
     if (LEAD_GEN_MODE) {
       conditions.push(
-        sql`(${jobsTable.customerId} = ${req.userId!} OR ${jobsTable.driverId} = ${req.userId!})`
+        sql`(${jobsTable.customerId} = ${req.userId!} OR ${jobsTable.driverId} = ${req.userId!} OR ${jobsTable.assignedWorkerId} = ${req.userId!})`
       );
     }
 
@@ -112,7 +123,10 @@ router.get("/", authenticate, async (req: AuthenticatedRequest, res) => {
       const driver = job.driverId
         ? (await db.select().from(usersTable).where(eq(usersTable.id, job.driverId)).limit(1))[0]
         : null;
-      return formatJob(job, customer, driver);
+      const assignedWorker = job.assignedWorkerId
+        ? (await db.select().from(usersTable).where(eq(usersTable.id, job.assignedWorkerId)).limit(1))[0]
+        : null;
+      return formatJob(job, customer, driver, assignedWorker);
     }));
 
     res.json(enriched);
@@ -148,6 +162,7 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
     floorNumber, hasElevator, helpersNeeded, estimatedWeightKg,
     weightPreset, involvesHazardous, promoCode,
     contactName, contactPhone,
+    shipperCompanyName, shipperOrgNumber,
   } = req.body;
 
   if (!jobType || !itemDescription || !preferredTime) {
@@ -214,6 +229,14 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
   // Distance and price are computed here from the addresses. Client-sent
   // values are never trusted; on geocoding failure we refuse the request
   // rather than fall back to anything client-supplied.
+  //
+  // TODO(B2B pricing): this 99–299 SEK band was designed for small consumer
+  // pickups, not commercial freight (pallets, multi-stop distribution,
+  // same-day extra-vehicle dispatch). Kept as-is at launch — do not build a
+  // full freight tariff engine here. Shipments this band doesn't fit are
+  // expected to get a manual quote from Bära admin / the carrier directly
+  // rather than an automatic price. Revisit once real B2B volume shows what
+  // a commercial pricing model actually needs.
   const BASE_PRICE = 99;
   const PRICE_PER_KM = 10;
   const MAX_PRICE = 299;
@@ -295,6 +318,8 @@ router.post("/", authenticate, async (req: AuthenticatedRequest, res) => {
       discountAmount: discountAmount != null ? discountAmount.toString() : null,
       contactName: contactName?.trim() || null,
       contactPhone: contactPhone?.trim() || null,
+      shipperCompanyName: shipperCompanyName?.trim() || null,
+      shipperOrgNumber: shipperOrgNumber?.trim() || null,
     }).returning();
 
     const enriched = await getJobWithUsers(job.id);

@@ -64,6 +64,16 @@ export const usersTable = pgTable("users", {
   phone: text("phone"),
   serviceAreas: text("service_areas").array(),
   serviceCategories: text("service_categories").array(),
+  // Carrier-company sub-role. Only meaningful when role = "partner":
+  // "admin" (default) is the company account itself — can accept, decline,
+  // mark contacted, and assign jobs to its own workers. "worker" is staff
+  // of that company (parentCompanyId points at the admin account) — can
+  // only view and update status/photos on jobs assigned to them via
+  // jobs.assignedWorkerId. Workers never freelance and never appear as a
+  // job's driverId. Nullable/no plain FK, same pattern as
+  // jobs.cancelledByDriverId elsewhere in this schema.
+  partnerRole: text("partner_role").$type<"admin" | "worker">(),
+  parentCompanyId: integer("parent_company_id"),
   // Referral programme
   referralCode: text("referral_code"),
   referredBy: text("referred_by"),

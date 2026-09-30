@@ -203,10 +203,10 @@ export type JobType =
   | "other_small";
 
 export const JOB_TYPE_ICONS: Record<JobType, string> = {
-  furniture_transport: "sofa-outline",
+  furniture_transport: "store-outline",
   bulky_delivery: "package-variant",
-  junk_pickup: "trash-can-outline",
-  secondhand_delivery: "tag-outline",
+  junk_pickup: "truck-fast-outline",
+  secondhand_delivery: "warehouse",
   blocket_pickup: "tag-outline",
   facebook_pickup: "store-outline",
   small_furniture: "chair-rolling",
@@ -216,6 +216,13 @@ export const JOB_TYPE_ICONS: Record<JobType, string> = {
   other_small: "package-variant-closed",
 };
 
+// TODO(B2B pricing): this 99–299 SEK band was designed for small consumer
+// pickups, not commercial freight (pallets, multi-stop distribution runs,
+// same-day extra-vehicle dispatch). Kept as-is at launch — do not build a
+// full freight tariff engine. For shipments this band clearly doesn't fit,
+// the plan is a manual quote from Bära admin / the carrier directly, not
+// an automatic price. Revisit once real B2B request volume shows what a
+// commercial pricing model actually needs.
 export function calculatePrice(_jobType: JobType, distanceKm: number): {
   priceTotal: number;
   driverPayout: number;
@@ -291,10 +298,10 @@ export function getStatusLabel(status: string): string {
 
 export function getJobTypeLabel(jobType: string): string {
   switch (jobType) {
-    case "furniture_transport":  return "Furniture Pickup/Delivery";
-    case "bulky_delivery":       return "Bulky Item Transport";
-    case "junk_pickup":          return "Junk Removal";
-    case "secondhand_delivery":  return "Second-hand Delivery";
+    case "furniture_transport":  return "Store-to-Store / Local Distribution";
+    case "bulky_delivery":       return "Bulky Goods";
+    case "junk_pickup":          return "Extra Van/Truck Needed Today";
+    case "secondhand_delivery":  return "Warehouse to Shop";
     case "blocket_pickup":       return "Blocket Pickup";
     case "facebook_pickup":      return "Facebook Marketplace";
     case "small_furniture":      return "Small Furniture";

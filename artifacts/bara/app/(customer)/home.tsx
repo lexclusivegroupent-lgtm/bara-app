@@ -30,10 +30,10 @@ type Category = {
 };
 
 const CATEGORIES: Category[] = [
-  { type: "furniture_transport", labelSV: "Möbeltransport", labelEN: "Furniture Pickup/Delivery", icon: "sofa-outline" },
-  { type: "bulky_delivery", labelSV: "Skrymmande föremål", labelEN: "Bulky Item Transport", icon: "package-variant" },
-  { type: "junk_pickup", labelSV: "Grovsopor & bortforsling", labelEN: "Junk Removal", icon: "trash-can-outline" },
-  { type: "secondhand_delivery", labelSV: "Second hand-leverans", labelEN: "Second-hand Delivery", icon: "tag-outline" },
+  { type: "furniture_transport", labelSV: "Butik till butik / lokal distribution", labelEN: "Store-to-Store / Local Distribution", icon: "store-outline" },
+  { type: "bulky_delivery", labelSV: "Skrymmande gods", labelEN: "Bulky Goods", icon: "package-variant" },
+  { type: "junk_pickup", labelSV: "Extra transport idag", labelEN: "Extra Van/Truck Needed Today", icon: "truck-fast-outline" },
+  { type: "secondhand_delivery", labelSV: "Lager till butik", labelEN: "Warehouse to Shop", icon: "warehouse" },
 ];
 
 export default function CustomerHome() {
@@ -107,12 +107,12 @@ export default function CustomerHome() {
         <View style={styles.heroBanner}>
           <View style={styles.heroBannerLeft}>
             <Text style={styles.heroBannerTitle}>
-              {isSv ? "Boka hämtning av möbler, grovsopor och skrymmande föremål" : "Book bulky item pickup, junk removal and furniture transport"}
+              {isSv ? "Extra lokala transporter mellan företag" : "Extra local transport between businesses"}
             </Text>
             <Text style={styles.heroBannerSub}>
               {isSv
-                ? "Vi skickar din förfrågan till rätt lokal partner — enkelt och tryggt."
-                : "We route your request to the right local service provider — simple and reliable."}
+                ? "Butiker och lager skickar förfrågan. Verifierade åkerier tar jobbet på eget ansvar."
+                : "Stores and warehouses send a request. Verified carrier companies take the job on their own responsibility."}
             </Text>
           </View>
           <View style={styles.heroPriceBadge}>
@@ -121,23 +121,23 @@ export default function CustomerHome() {
           </View>
         </View>
 
-        {/* Featured Blocket quick-launch */}
+        {/* Urgent same-day extra transport — quick launch */}
         <TouchableOpacity
           style={styles.blocketBtn}
-          onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "secondhand_delivery" } })}
+          onPress={() => router.push({ pathname: "/(customer)/post-job", params: { type: "junk_pickup" } })}
           activeOpacity={0.85}
         >
-          <MaterialCommunityIcons name="tag-outline" size={20} color={Colors.navy} />
+          <MaterialCommunityIcons name="truck-fast-outline" size={20} color={Colors.navy} />
           <Text style={styles.blocketBtnText}>
-            {isSv ? "Hämta Blocket/Facebook-fynd" : "Blocket / Facebook pickup"}
+            {isSv ? "Behöver ni extra transport idag?" : "Need extra transport today?"}
           </Text>
           <Feather name="arrow-right" size={16} color={Colors.navy} />
         </TouchableOpacity>
 
         {/* Feature pills */}
         <View style={styles.pillRow}>
-          <FeaturePill icon="map-pin" text={isSv ? "Lokala partners" : "Local partners"} />
-          <FeaturePill icon="check-circle" text={isSv ? "Proffs" : "Professional"} />
+          <FeaturePill icon="briefcase" text={isSv ? "För företag" : "For businesses"} />
+          <FeaturePill icon="check-circle" text={isSv ? "Verifierade åkerier" : "Verified carriers"} />
           <FeaturePill icon="shield" text={isSv ? "Tryggt" : "Reliable"} />
         </View>
 

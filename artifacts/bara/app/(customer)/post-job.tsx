@@ -23,10 +23,10 @@ import { PlacesAutocomplete, type PlaceResult } from "@/components/PlacesAutocom
 import { BaraDateTimePicker } from "@/components/BaraDateTimePicker";
 
 const JOB_LABELS_SV: Record<JobType, string> = {
-  furniture_transport: "Möbeltransport",
-  bulky_delivery: "Skrymmande föremål",
-  junk_pickup: "Grovsopor & bortforsling",
-  secondhand_delivery: "Second hand-leverans",
+  furniture_transport: "Butik till butik / lokal distribution",
+  bulky_delivery: "Skrymmande gods",
+  junk_pickup: "Extra transport idag",
+  secondhand_delivery: "Lager till butik",
   blocket_pickup: "Blocket hämtning",
   facebook_pickup: "Facebook Marketplace",
   small_furniture: "Liten möbel",
@@ -36,10 +36,10 @@ const JOB_LABELS_SV: Record<JobType, string> = {
   other_small: "Övrigt litet",
 };
 const JOB_LABELS_EN: Record<JobType, string> = {
-  furniture_transport: "Furniture Pickup/Delivery",
-  bulky_delivery: "Bulky Item Transport",
-  junk_pickup: "Junk Removal",
-  secondhand_delivery: "Second-hand Delivery",
+  furniture_transport: "Store-to-Store / Local Distribution",
+  bulky_delivery: "Bulky Goods",
+  junk_pickup: "Extra Van/Truck Needed Today",
+  secondhand_delivery: "Warehouse to Shop",
   blocket_pickup: "Blocket Pickup",
   facebook_pickup: "Facebook Marketplace",
   small_furniture: "Small Furniture",
@@ -84,6 +84,11 @@ export default function PostJobScreen() {
   const [weightPreset, setWeightPreset] = useState<string | null>(null);
   // Contact details so the assigned partner can reach the customer
   const [contactPhone, setContactPhone] = useState("");
+  // B2B: the requesting business. Company name required for lead categories
+  // (this is a business-to-business request, not a private consumer one);
+  // org number optional/preferred.
+  const [shipperCompanyName, setShipperCompanyName] = useState("");
+  const [shipperOrgNumber, setShipperOrgNumber] = useState("");
   // Promo code
   const [promoCode, setPromoCode] = useState("");
   const [promoDiscount, setPromoDiscount] = useState<number | null>(null);
@@ -243,6 +248,10 @@ export default function PostJobScreen() {
       setError(isSv ? "Ange ditt telefonnummer så att partnern kan kontakta dig." : "Please enter your phone number so the partner can reach you.");
       return;
     }
+    if (isLeadCategory && !shipperCompanyName.trim()) {
+      setError(isSv ? "Ange företagsnamn för förfrågan." : "Please enter the requesting company's name.");
+      return;
+    }
     if (!agreedToOwnership) {
       setError(t("pleaseConfirmOwnership"));
       return;
@@ -293,6 +302,8 @@ export default function PostJobScreen() {
           discountAmount: promoDiscount,
           contactName: user?.fullName || null,
           contactPhone: contactPhone.trim() || null,
+          shipperCompanyName: shipperCompanyName.trim() || null,
+          shipperOrgNumber: shipperOrgNumber.trim() || null,
         }),
       });
       const data = await safeJson(res);
@@ -772,6 +783,30 @@ export default function PostJobScreen() {
           </View>
         </View>
 
+        {/* Shipper company — this is a business-to-business request */}
+        {isLeadCategory && (
+          <>
+            <FormField label={isSv ? "Företagsnamn" : "Company name"} icon="briefcase">
+              <TextInput
+                style={styles.input}
+                placeholder={isSv ? "t.ex. Nordic Handel AB" : "e.g. Nordic Handel AB"}
+                placeholderTextColor={Colors.textMuted}
+                value={shipperCompanyName}
+                onChangeText={setShipperCompanyName}
+              />
+            </FormField>
+            <FormField label={isSv ? "Organisationsnummer (valfritt)" : "Org. number (optional)"} icon="hash">
+              <TextInput
+                style={styles.input}
+                placeholder="XXXXXX-XXXX"
+                placeholderTextColor={Colors.textMuted}
+                value={shipperOrgNumber}
+                onChangeText={setShipperOrgNumber}
+              />
+            </FormField>
+          </>
+        )}
+
         {/* Contact phone — the assigned partner contacts the customer directly */}
         {isLeadCategory && (
           <FormField label={isSv ? "Telefonnummer" : "Phone number"} icon="phone">
@@ -822,13 +857,13 @@ export default function PostJobScreen() {
           </Text>
         </TouchableOpacity>
 
-        {/* ⚖️ Customer job posting disclaimer */}
+        {/* ⚖️ LEGAL REVIEW NEEDED — intermediary/liability disclaimer */}
         <View style={styles.legalDisclaimerBlock}>
           <Feather name="info" size={13} color={Colors.textMuted} />
           <Text style={styles.legalDisclaimerText}>
             {isSv
-              ? "Genom att skicka denna förfrågan ingår du ett direkt avtal med den tilldelade tjänsteleverantören. Bära förmedlar din förfrågan men är inte part i transportavtalet."
-              : "By submitting this request, you enter into a direct agreement with the assigned service provider. Bära routes your request but is not a party to the transport contract."}
+              ? "Bära förmedlar uppdrag mellan företag. Genom att skicka denna förfrågan ingår du ett direkt avtal med det tilldelade åkeriet. Utförande åkeri ansvarar för fordon, förare, försäkring och gods under transport. Bära är inte arbetsgivare och inte transportör."
+              : "Bära brokers assignments between businesses. By submitting this request, you enter into a direct agreement with the assigned carrier company. The performing carrier is responsible for its vehicle, driver, insurance, and the goods during transport. Bära is not an employer and not a transport operator."}
           </Text>
         </View>
 

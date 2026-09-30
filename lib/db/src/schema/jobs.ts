@@ -67,12 +67,26 @@ export const jobsTable = pgTable("jobs", {
   contactedAt: timestamp("contacted_at"),
   declinedAt: timestamp("declined_at"),
   declineReason: text("decline_reason"),
-  // Customer contact details so the partner can reach out directly
+  // Customer contact details so the partner can reach out directly.
+  // In the B2B model these ARE the shipper's contact person — kept under
+  // their original names to avoid a wider rename across routes/UI that
+  // already read job.contactName/contactPhone.
   contactName: text("contact_name"),
   contactPhone: text("contact_phone"),
+  // B2B: the requesting business. Optional/nullable — a shipper submitting
+  // their first request may not have a org number handy, and legacy rows
+  // predate these columns entirely.
+  shipperCompanyName: text("shipper_company_name"),
+  shipperOrgNumber: text("shipper_org_number"),
   // Trust & safety: set when chat messages contain off-platform payment signals
   flaggedForReview: boolean("flagged_for_review").notNull().default(false),
   flagReason: text("flag_reason"),
+  // B2B: which of the carrier company's own staff is doing the job, chosen
+  // by the carrier (partner_admin) after accepting. Null = not yet assigned
+  // internally, or the carrier is doing it themselves without a sub-account.
+  // driverId remains the carrier COMPANY's user id — assignedWorkerId is
+  // always a usersTable row with parentCompanyId = driverId.
+  assignedWorkerId: integer("assigned_worker_id").references(() => usersTable.id),
 });
 
 export const insertJobSchema = createInsertSchema(jobsTable).omit({ id: true, createdAt: true });
