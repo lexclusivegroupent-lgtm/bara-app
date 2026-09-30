@@ -38,6 +38,13 @@ interface Lead {
   contactedAt: string | null;
   photosCustomer: string[];
   customer: { fullName: string; email: string } | null;
+  assignedWorkerId: number | null;
+  assignedWorker: { id: number; fullName: string } | null;
+}
+
+interface Worker {
+  id: number;
+  fullName: string;
 }
 
 const ACTIVE_STATUSES = ["assigned", "contacted", "accepted", "arrived", "in_progress"];
@@ -65,6 +72,56 @@ export default function PartnerLeadsScreen() {
 
   const activeLeads = (leads || []).filter((l) => ACTIVE_STATUSES.includes(l.status));
   const pastLeads = (leads || []).filter((l) => !ACTIVE_STATUSES.includes(l.status)).slice(0, 10);
+
+  // B2B: workers are this company's own staff. Only the company account
+  // (never a worker) can assign a job internally, so this list is only
+  // useful — and only fetched for — partner_admin accounts.
+  const { data: workers } = useQuery<Worker[]>({
+    queryKey: ["myWorkers", user?.id],
+    queryFn: async () => {
+      const res = await fetch(`${BASE_URL}/api/users/workers`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      return safeJson(res);
+    },
+    enabled: !!token && !!user && user.partnerRole !== "worker",
+  });
+
+  const assignWorker = useCallback(async (leadId: number, workerId: number) => {
+    setActionLoading(leadId);
+    try {
+      const res = await fetch(`${BASE_URL}/api/jobs/${leadId}/assign-worker`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ workerId }),
+      });
+      const data = await safeJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed");
+      refetch();
+    } catch (e: any) {
+      Alert.alert("Error", e.message || "Could not assign the worker.");
+    } finally {
+      setActionLoading(null);
+    }
+  }, [token, refetch]);
+
+  function handleAssignWorker(lead: Lead) {
+    if (!workers || workers.length === 0) {
+      Alert.alert(
+        isSv ? "Inga anställda" : "No staff added",
+        isSv ? "Be Bära lägga till dina anställda för att kunna tilldela jobb internt." : "Ask Bära to add your staff so you can assign jobs to them."
+      );
+      return;
+    }
+    Alert.alert(
+      isSv ? "Tilldela anställd" : "Assign to staff",
+      isSv ? "Vem ska utföra jobbet?" : "Who should do this job?",
+      [
+        ...workers.map((w) => ({ text: w.fullName, onPress: () => assignWorker(lead.id, w.id) })),
+        { text: isSv ? "Avbryt" : "Cancel", style: "cancel" as const },
+      ]
+    );
+  }
 
   const respond = useCallback(async (leadId: number, action: "accept" | "decline" | "contacted", reason?: string) => {
     setActionLoading(leadId);
@@ -203,6 +260,18 @@ export default function PartnerLeadsScreen() {
                   >
                     <Feather name="arrow-right" size={14} color={Colors.gold} />
                     <Text style={styles.secondaryBtnText}>{isSv ? "Öppna bokning" : "Open booking"}</Text>
+                  </TouchableOpacity>
+                )}
+                {["accepted", "arrived", "in_progress"].includes(lead.status) && user?.partnerRole !== "worker" && (
+                  <TouchableOpacity
+                    style={[styles.actionBtn, styles.secondaryBtn]}
+                    onPress={() => handleAssignWorker(lead)}
+                    activeOpacity={0.8}
+                  >
+                    <Feather name="user-plus" size={14} color={Colors.gold} />
+                    <Text style={styles.secondaryBtnText}>
+                      {lead.assignedWorker ? lead.assignedWorker.fullName : (isSv ? "Tilldela anställd" : "Assign staff")}
+                    </Text>
                   </TouchableOpacity>
                 )}
               </>

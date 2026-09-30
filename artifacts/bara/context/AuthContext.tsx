@@ -47,6 +47,11 @@ export interface User {
   phone?: string | null;
   serviceAreas?: string[];
   serviceCategories?: string[];
+  // B2B carrier sub-role — only meaningful when role includes "partner".
+  // "worker" = staff of a carrier company, subordinate to it; can only
+  // view/update jobs assigned to them, never accept/decline/assign.
+  partnerRole?: "admin" | "worker" | null;
+  parentCompanyId?: number | null;
   createdAt: string;
 }
 

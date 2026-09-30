@@ -216,6 +216,7 @@ export default function SettingsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>{t("legal")}</Text>
           <SettingsRow icon="file-text" label={t("termsOfServiceRow")} onPress={() => router.push("/terms")} />
+          <SettingsRow icon="briefcase" label={lang === "sv" ? "Villkor för avsändare" : "Shipper Terms"} onPress={() => router.push("/shipper-terms")} />
           <SettingsRow icon="shield" label={t("privacyPolicy")} onPress={() => router.push("/privacy")} />
           <SettingsRow icon="lock" label={lang === "sv" ? "Data & integritet" : "Data & Privacy"} onPress={() => router.push("/data-privacy")} />
           <SettingsRow icon="shield" label={lang === "sv" ? "Försäkring & säkerhet" : "Insurance & Safety"} onPress={() => router.push("/insurance-safety")} />

@@ -9,6 +9,7 @@ import { db } from "@workspace/db";
 import { usersTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { authenticate, signToken, AuthenticatedRequest } from "../middlewares/auth";
+import { LEAD_GEN_MODE } from "../lib/leadGen";
 
 const router: IRouter = Router();
 
@@ -64,6 +65,18 @@ router.post("/register", registerLimiter, async (req, res) => {
 
   if (!email || !password || !fullName || !role || !city) {
     res.status(400).json({ error: "Missing required fields" });
+    return;
+  }
+
+  // Role-escalation guard: "partner" (carrier company) accounts are always
+  // admin-created (see POST /admin/partners) and worker accounts are always
+  // created by their own company's admin (see POST /admin/partners/:id/workers)
+  // — never via public self-registration. In LEAD_GEN_MODE, self-registration
+  // is customer-only; legacy driver/both signup stays available only when
+  // LEAD_GEN_MODE is off.
+  const SELF_REGISTER_ROLES = LEAD_GEN_MODE ? ["customer"] : ["customer", "driver", "both"];
+  if (!SELF_REGISTER_ROLES.includes(role)) {
+    res.status(403).json({ error: "This account type cannot be self-registered. Carrier companies are onboarded by Bära." });
     return;
   }
 
