@@ -2,9 +2,9 @@ name: Build Bara Static Bundle
 
 on:
   push:
-    branches: [main]
+    branches: [almi-ready]
     paths-ignore:
-      - 'artifacts/bara/static-build/**'
+      - 'artifacts/api-server/static-build/**'
 
 jobs:
   build-static:
@@ -37,6 +37,11 @@ jobs:
 
       # The build script now calls `expo export --platform web` — a single
       # headless command that finishes and exits. No Metro dev server needed.
+      # OUTPUT_DIR points directly at artifacts/api-server/static-build —
+      # the ONLY directory app.ts actually serves (see its `../static-build`
+      # resolution from dist/). artifacts/bara/static-build (the script's
+      # default) is never served by anything; writing there was a silent
+      # no-op bug in this workflow.
       - name: Build Expo web export
         working-directory: artifacts/bara
         env:
@@ -45,13 +50,14 @@ jobs:
           EXPO_PUBLIC_DOMAIN: app.baraapp.se
           NODE_ENV: production
           CI: true
+          OUTPUT_DIR: ../api-server/static-build
         run: node scripts/build.js
 
       - name: Commit and push static-build
         run: |
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          git add artifacts/bara/static-build/
+          git add artifacts/api-server/static-build/
           git diff --staged --quiet \
             && echo "No changes to commit" \
             || git commit -m "chore: rebuild Expo static bundle [skip ci]"
