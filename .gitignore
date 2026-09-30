@@ -19,7 +19,12 @@ node_modules/
 dist/
 build/
 out/
-static-build/
+# artifacts/api-server/static-build/ is intentionally NOT ignored: the
+# server serves the web app directly from it (see app.ts) and it is
+# committed so the app works even if a Railway build skips the Expo
+# export step. artifacts/bara/static-build/ is a different, unused
+# directory (expo export's default output location) that nothing serves.
+artifacts/bara/static-build/
 web-build/
 
 # Expo / React Native
